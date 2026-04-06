@@ -1,1 +1,8 @@
-{"name": "goalweek","version": "0.1.0","private": true}
+{
+  "name": "yoboss",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
