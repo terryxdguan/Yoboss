@@ -9,14 +9,14 @@ import type { TodoItem, TodoTag } from "@/lib/types/database";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 
-const PRIORITY_DOT: Record<string, string> = { high: "bg-[#C65B52]", medium: "bg-[#C6923D]", low: "bg-[#4D8B6A]" };
+const PRIORITY_DOT: Record<string, string> = { high: "bg-[#D5847A]", medium: "bg-[#D4B06A]", low: "bg-[#7FB38A]" };
 const COLUMN_COLORS = [
-  { bg: "bg-[#4D8B6A]/10", text: "text-[#4D8B6A]", border: "border-[#4D8B6A]/30" },
-  { bg: "bg-[#C6923D]/10", text: "text-[#C6923D]", border: "border-[#C6923D]/30" },
-  { bg: "bg-[#626A73]/10", text: "text-[#626A73]", border: "border-[#626A73]/30" },
-  { bg: "bg-[#4C7CF0]/10", text: "text-[#4C7CF0]", border: "border-[#4C7CF0]/30" },
-  { bg: "bg-[#7C6DB0]/10", text: "text-[#7C6DB0]", border: "border-[#7C6DB0]/30" },
-  { bg: "bg-[#C65B52]/10", text: "text-[#C65B52]", border: "border-[#C65B52]/30" },
+  { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", border: "border-[#7FB38A]/30" },
+  { bg: "bg-[#D4B06A]/10", text: "text-[#D4B06A]", border: "border-[#D4B06A]/30" },
+  { bg: "bg-[#6F6A64]/10", text: "text-[#6F6A64]", border: "border-[#6F6A64]/30" },
+  { bg: "bg-[#7FAEE6]/10", text: "text-[#7FAEE6]", border: "border-[#7FAEE6]/30" },
+  { bg: "bg-[#8CB8E8]/10", text: "text-[#8CB8E8]", border: "border-[#8CB8E8]/30" },
+  { bg: "bg-[#D5847A]/10", text: "text-[#D5847A]", border: "border-[#D5847A]/30" },
 ];
 
 function formatDeadline(d: string): string {
@@ -109,15 +109,15 @@ function TodoCard({
         }
         onDragLeaveCard();
       }}
-      className="relative rounded-lg border border-[#E6E1D8] bg-white px-3 py-2 group/card hover:border-[#D8D1C6] transition-colors cursor-grab active:cursor-grabbing"
+      className="relative rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 group/card hover:border-[#DDD3C7] transition-colors cursor-grab active:cursor-grabbing"
     >
-      {insertBefore && <div className="absolute -top-1.5 left-0 right-0 h-0.5 bg-[#4C7CF0] rounded-full z-10 pointer-events-none" />}
-      {insertAfter && <div className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-[#4C7CF0] rounded-full z-10 pointer-events-none" />}
+      {insertBefore && <div className="absolute -top-1.5 left-0 right-0 h-0.5 bg-[#7FAEE6] rounded-full z-10 pointer-events-none" />}
+      {insertAfter && <div className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-[#7FAEE6] rounded-full z-10 pointer-events-none" />}
       {/* Row 1: checkbox + title + actions */}
       <div className="flex items-start gap-2">
         <button
           onClick={onToggle}
-          className="w-[18px] h-[18px] mt-0.5 rounded-full border-2 border-[#D8D1C6] hover:border-[#4C7CF0] shrink-0 flex items-center justify-center transition-colors"
+          className="w-[18px] h-[18px] mt-0.5 rounded-full border-2 border-[#DDD3C7] hover:border-[#7FAEE6] shrink-0 flex items-center justify-center transition-colors"
         />
         {editingText ? (
           <input
@@ -129,26 +129,26 @@ function TodoCard({
               if (e.key === "Enter") commitTextEdit();
               if (e.key === "Escape") { setEditText(item.text); setEditingText(false); }
             }}
-            className="text-sm text-[#1E2227] font-medium leading-snug flex-1 bg-[#F7F5F1] border border-[#4C7CF0] rounded px-1.5 py-0.5 outline-none"
+            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#7FAEE6] rounded px-1.5 py-0.5 outline-none"
           />
         ) : (
           <span
             onDoubleClick={() => { setEditText(item.text); setEditingText(true); }}
-            className="text-sm text-[#1E2227] font-medium leading-snug flex-1 break-words cursor-text"
+            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 break-words cursor-text"
           >
             {item.text}
           </span>
         )}
         <button
           onClick={onSendToAI}
-          className="text-[#4D8B6A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
+          className="text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
           title="Send to AI"
         >
           ▶
         </button>
         <button
           onClick={onDelete}
-          className="text-[#D8D1C6] hover:text-[#C65B52] text-[10px] shrink-0 transition-colors"
+          className="text-[#DDD3C7] hover:text-[#D5847A] text-[10px] shrink-0 transition-colors"
         >
           ✕
         </button>
@@ -158,7 +158,7 @@ function TodoCard({
       <div className="mt-1.5 ml-[26px] flex items-center gap-2 text-xs">
         {editingDeadline ? (
           <span className="relative inline-block">
-            <span className="text-xs px-1 py-0.5 rounded bg-[#F1EEE8] border border-[#4C7CF0] text-[#626A73] inline-block">
+            <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#7FAEE6] text-[#6F6A64] inline-block">
               {item.deadline ? formatDeadline(item.deadline) : formatDeadline(new Date().toISOString())}
             </span>
             <DateTimePicker
@@ -171,14 +171,14 @@ function TodoCard({
           <span className="flex items-center gap-1">
             <button
               onClick={() => setEditingDeadline(true)}
-              className={`flex items-center gap-1 hover:opacity-80 whitespace-nowrap ${overdue ? "text-[#C65B52] font-medium" : "text-[#8C939B]"}`}
+              className={`flex items-center gap-1 hover:opacity-80 whitespace-nowrap ${overdue ? "text-[#D5847A] font-medium" : "text-[#9B948B]"}`}
             >
               {overdue ? "⏰" : "📅"}
               <span>{formatDeadline(item.deadline)}</span>
             </button>
             <button
               onClick={() => onUpdate({ deadline: null })}
-              className="text-[#D8D1C6] hover:text-[#C65B52] opacity-0 group-hover/card:opacity-100 transition-opacity"
+              className="text-[#DDD3C7] hover:text-[#D5847A] opacity-0 group-hover/card:opacity-100 transition-opacity"
             >
               ✕
             </button>
@@ -186,7 +186,7 @@ function TodoCard({
         ) : (
           <button
             onClick={() => setEditingDeadline(true)}
-            className="text-[#D8D1C6] hover:text-[#8C939B] transition-colors"
+            className="text-[#DDD3C7] hover:text-[#9B948B] transition-colors"
           >
             + deadline
           </button>
@@ -198,7 +198,7 @@ function TodoCard({
         <select
           value={item.priority}
           onChange={(e) => onUpdate({ priority: e.target.value as TodoItem["priority"] })}
-          className="text-[11px] px-1 py-0.5 rounded bg-transparent border border-transparent hover:border-[#E6E1D8] text-[#8C939B] outline-none cursor-pointer"
+          className="text-[11px] px-1 py-0.5 rounded bg-transparent border border-transparent hover:border-[#E7DED2] text-[#9B948B] outline-none cursor-pointer"
         >
           <option value="high">High</option>
           <option value="medium">Medium</option>
@@ -256,7 +256,7 @@ function ColumnHeader({
       {tag.id !== "__other__" && (
         <button
           onClick={onDelete}
-          className="text-[#8C939B] hover:text-[#C65B52] text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0"
+          className="text-[#9B948B] hover:text-[#D5847A] text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0"
         >
           ✕
         </button>
@@ -401,7 +401,7 @@ export default function TodosPage() {
       <div className={`${showChat ? "flex-1 min-w-0 px-6 md:px-8 pb-12" : "w-full"}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-[#1E2227]">TODO List</h1>
+        <h1 className="text-2xl font-semibold text-[#2B2B2B]">TODO List</h1>
       </div>
 
       {/* Task bar */}
@@ -412,8 +412,8 @@ export default function TodosPage() {
             onClick={() => setActiveStatus("pending")}
             className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
               activeStatus === "pending"
-                ? "bg-[#4C7CF0] text-white"
-                : "text-[#8C939B] hover:text-[#1E2227] hover:bg-[#F1EEE8]"
+                ? "bg-[#7FAEE6] text-white"
+                : "text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
             }`}
           >
             Pending ({pendingItems.length})
@@ -422,8 +422,8 @@ export default function TodosPage() {
             onClick={() => setActiveStatus("done")}
             className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
               activeStatus === "done"
-                ? "bg-[#4C7CF0] text-white"
-                : "text-[#8C939B] hover:text-[#1E2227] hover:bg-[#F1EEE8]"
+                ? "bg-[#7FAEE6] text-white"
+                : "text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
             }`}
           >
             Done ({doneItems.length})
@@ -439,12 +439,12 @@ export default function TodosPage() {
               onChange={(e) => setNewText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
               placeholder="Add a new task..."
-              className="flex-1 text-sm px-3 py-1.5 rounded-lg bg-white border border-[#D8D1C6] text-[#1E2227] placeholder-[#8C939B] outline-none focus:border-[#4C7CF0] focus:ring-1 focus:ring-[#4C7CF0]/30"
+              className="flex-1 text-sm px-3 py-1.5 rounded-lg bg-[#FFFDF9] border border-[#DDD3C7] text-[#2B2B2B] placeholder-[#9B948B] outline-none focus:border-[#7FAEE6] focus:ring-1 focus:ring-[#7FAEE6]/30"
             />
             <select
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
-              className="text-xs px-2 py-1.5 rounded-lg bg-white border border-[#D8D1C6] text-[#626A73] outline-none"
+              className="text-xs px-2 py-1.5 rounded-lg bg-[#FFFDF9] border border-[#DDD3C7] text-[#6F6A64] outline-none"
             >
               {tags.map((t) => (
                 <option key={t.id} value={t.name}>{t.name}</option>
@@ -453,7 +453,7 @@ export default function TodosPage() {
             <button
               onClick={handleAdd}
               disabled={!newText.trim()}
-              className="text-sm px-6 py-1.5 rounded-lg bg-[#4C7CF0] hover:bg-[#3F6FE4] text-white font-medium transition-colors disabled:opacity-40"
+              className="text-sm px-6 py-1.5 rounded-lg bg-[#7FAEE6] hover:bg-[#6A9DDA] text-white font-medium transition-colors disabled:opacity-40"
             >
               Add
             </button>
@@ -473,15 +473,15 @@ export default function TodosPage() {
                   if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); }
                 }}
                 placeholder="Category name"
-                className="text-xs px-2 py-1 rounded-lg bg-white border border-[#D8D1C6] text-[#1E2227] w-28 outline-none focus:border-[#4C7CF0]"
+                className="text-xs px-2 py-1 rounded-lg bg-[#FFFDF9] border border-[#DDD3C7] text-[#2B2B2B] w-28 outline-none focus:border-[#7FAEE6]"
               />
-              <button onClick={handleAddTag} className="text-xs text-[#4C7CF0]">✓</button>
-              <button onClick={() => { setAddingTag(false); setNewTagName(""); }} className="text-xs text-[#8C939B]">✕</button>
+              <button onClick={handleAddTag} className="text-xs text-[#7FAEE6]">✓</button>
+              <button onClick={() => { setAddingTag(false); setNewTagName(""); }} className="text-xs text-[#9B948B]">✕</button>
             </div>
           ) : (
             <button
               onClick={() => setAddingTag(true)}
-              className="text-xs px-3 py-1 rounded-lg border border-dashed border-[#D8D1C6] text-[#8C939B] hover:text-[#4C7CF0] hover:border-[#4C7CF0] transition-colors shrink-0"
+              className="text-xs px-3 py-1 rounded-lg border border-dashed border-[#DDD3C7] text-[#9B948B] hover:text-[#7FAEE6] hover:border-[#7FAEE6] transition-colors shrink-0"
             >
               + New Category
             </button>
@@ -491,7 +491,7 @@ export default function TodosPage() {
 
       {/* Content */}
       {loading && (
-        <div className="text-center py-12 text-sm text-[#8C939B]">Loading...</div>
+        <div className="text-center py-12 text-sm text-[#9B948B]">Loading...</div>
       )}
 
       {/* PENDING: Kanban columns */}
@@ -535,7 +535,7 @@ export default function TodosPage() {
                 />
                 <div className="space-y-2 mt-2 min-h-[60px]">
                   {colItems.length === 0 && (
-                    <div className="text-xs text-[#D8D1C6] text-center py-6">No items</div>
+                    <div className="text-xs text-[#DDD3C7] text-center py-6">No items</div>
                   )}
                   {colItems.map((item) => (
                     <TodoCard
@@ -565,7 +565,7 @@ export default function TodosPage() {
       {!loading && activeStatus === "done" && (
         <div>
           {doneItems.length === 0 && (
-            <div className="text-center py-12 text-sm text-[#8C939B]">No completed items</div>
+            <div className="text-center py-12 text-sm text-[#9B948B]">No completed items</div>
           )}
           {doneItems.length > 0 && (
             <div className="mb-3 flex items-center gap-3">
@@ -576,20 +576,20 @@ export default function TodosPage() {
                 }}
                 className={`w-[18px] h-[18px] rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
                   selectedDone.size === doneItems.length && doneItems.length > 0
-                    ? "bg-[#4C7CF0] border-[#4C7CF0] text-white"
-                    : "border-[#D8D1C6] hover:border-[#4C7CF0]"
+                    ? "bg-[#7FAEE6] border-[#7FAEE6] text-white"
+                    : "border-[#DDD3C7] hover:border-[#7FAEE6]"
                 }`}
               >
                 {selectedDone.size === doneItems.length && doneItems.length > 0 && <span className="text-[10px]">✓</span>}
               </button>
-              <span className="text-xs text-[#8C939B]">Select all</span>
+              <span className="text-xs text-[#9B948B]">Select all</span>
               {selectedDone.size > 0 && (
                 <button
                   onClick={() => {
                     selectedDone.forEach((id) => handleDelete(id));
                     setSelectedDone(new Set());
                   }}
-                  className="text-xs px-3 py-1 rounded-lg bg-[#C65B52] text-white hover:bg-[#B04A42] transition-colors"
+                  className="text-xs px-3 py-1 rounded-lg bg-[#D5847A] text-white hover:bg-[#C06E64] transition-colors"
                 >
                   Delete selected ({selectedDone.size})
                 </button>
@@ -605,22 +605,22 @@ export default function TodosPage() {
                 else next.add(item.id);
                 setSelectedDone(next);
               }}
-              className={`flex items-center gap-3 px-4 py-2.5 border-b border-[#E6E1D8] hover:bg-[#F1EEE8]/50 transition-colors group cursor-pointer ${
-                selectedDone.has(item.id) ? "bg-[#4C7CF0]/5" : ""
+              className={`flex items-center gap-3 px-4 py-2.5 border-b border-[#E7DED2] hover:bg-[#F1ECE4]/50 transition-colors group cursor-pointer ${
+                selectedDone.has(item.id) ? "bg-[#7FAEE6]/5" : ""
               }`}
             >
               <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[item.priority]}`} />
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggle(item.id); }}
-                className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center bg-[#4D8B6A] border-[#4D8B6A] text-white"
+                className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center bg-[#7FB38A] border-[#7FB38A] text-white"
               >
                 <span className="text-[10px]">✓</span>
               </button>
-              <span className="flex-1 text-sm truncate text-[#8C939B] line-through">{item.text}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F1EEE8] text-[#8C939B] shrink-0">{item.tag}</span>
+              <span className="flex-1 text-sm truncate text-[#9B948B] line-through">{item.text}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F1ECE4] text-[#9B948B] shrink-0">{item.tag}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                className="text-[#D8D1C6] hover:text-[#C65B52] text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                className="text-[#DDD3C7] hover:text-[#D5847A] text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
               >
                 🗑
               </button>

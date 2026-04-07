@@ -49,57 +49,73 @@
 }
 
 :root {
-  /* YoBoss warm-neutral palette — from DESIGN.md */
-  --background: #F7F5F1;
-  --foreground: #1E2227;
-  --card: #FFFFFF;
-  --card-foreground: #1E2227;
-  --popover: #FFFFFF;
-  --popover-foreground: #1E2227;
-  --primary: #4C7CF0;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F1EEE8;
-  --secondary-foreground: #1E2227;
-  --muted: #F1EEE8;
-  --muted-foreground: #626A73;
-  --accent: #4C7CF0;
-  --accent-foreground: #FFFFFF;
-  --destructive: #C65B52;
-  --border: #D8D1C6;
-  --input: #E6E1D8;
-  --ring: #4C7CF0;
-  --chart-1: #4C7CF0;
-  --chart-2: #4D8B6A;
-  --chart-3: #C6923D;
-  --chart-4: #C65B52;
-  --chart-5: #3F6FE4;
+  /* YoBoss Brand Design Tokens */
+  --background: #F6F3EE;
+  --foreground: #2B2B2B;
+  --card: #FFFDF9;
+  --card-foreground: #2B2B2B;
+  --popover: #FFFDF9;
+  --popover-foreground: #2B2B2B;
+  --primary: #7FAEE6;
+  --primary-foreground: #FFFDF9;
+  --secondary: #F1ECE4;
+  --secondary-foreground: #2B2B2B;
+  --muted: #F1ECE4;
+  --muted-foreground: #6F6A64;
+  --accent: #7FAEE6;
+  --accent-foreground: #FFFDF9;
+  --destructive: #D5847A;
+  --border: #DDD3C7;
+  --input: #E7DED2;
+  --ring: #7FAEE6;
+  --chart-1: #7FAEE6;
+  --chart-2: #8DCB96;
+  --chart-3: #DDBE73;
+  --chart-4: #E9A7A0;
+  --chart-5: #BDD8F2;
   --radius: 0.5rem;
-  --sidebar: #F1EEE8;
-  --sidebar-foreground: #1E2227;
-  --sidebar-primary: #4C7CF0;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #EAF0FF;
-  --sidebar-accent-foreground: #1E2227;
-  --sidebar-border: #E6E1D8;
-  --sidebar-ring: #4C7CF0;
+  --sidebar: #F1ECE4;
+  --sidebar-foreground: #2B2B2B;
+  --sidebar-primary: #7FAEE6;
+  --sidebar-primary-foreground: #FFFDF9;
+  --sidebar-accent: #EAF3FD;
+  --sidebar-accent-foreground: #2B2B2B;
+  --sidebar-border: #E7DED2;
+  --sidebar-ring: #7FAEE6;
 
   /* YoBoss custom tokens */
-  --bg-page: #F7F5F1;
-  --bg-card: #FFFFFF;
-  --bg-soft: #F1EEE8;
-  --bg-dark: #1F2328;
-  --text-primary: #1E2227;
-  --text-secondary: #626A73;
-  --text-muted: #8C939B;
-  --text-on-dark: #F7F5F1;
-  --border-light: #E6E1D8;
-  --border-default: #D8D1C6;
-  --accent-blue: #4C7CF0;
-  --accent-blue-hover: #3F6FE4;
-  --accent-soft: #EAF0FF;
-  --success: #4D8B6A;
-  --warning: #C6923D;
-  --error: #C65B52;
+  --bg-page: #F6F3EE;
+  --bg-card: #FFFDF9;
+  --bg-soft: #F1ECE4;
+  --bg-soft-2: #EAE4DA;
+  --bg-dark: #2B2B2B;
+  --text-primary: #2B2B2B;
+  --text-secondary: #6F6A64;
+  --text-muted: #9B948B;
+  --text-on-dark: #FFFDF9;
+  --border-light: #E7DED2;
+  --border-default: #DDD3C7;
+  --border-strong: #CFC3B5;
+  --accent-blue: #7FAEE6;
+  --accent-blue-hover: #6A9DDA;
+  --accent-soft: #EAF3FD;
+  --success: #7FB38A;
+  --success-soft: #EAF5EC;
+  --warning: #D4B06A;
+  --warning-soft: #F8F1E3;
+  --error: #D5847A;
+  --error-soft: #F9EAE7;
+  --info: #8BB7E8;
+
+  /* Character palette */
+  --pink-soft: #F4C7C3;
+  --pink-base: #E9A7A0;
+  --yellow-soft: #EED9A5;
+  --yellow-base: #DDBE73;
+  --blue-soft: #BDD8F2;
+  --blue-base: #8CB8E8;
+  --green-soft: #C7E6C8;
+  --green-base: #8DCB96;
 }
 
 .dark {
@@ -206,10 +222,10 @@
   padding: 0;
 }
 .prose-chat blockquote {
-  border-left: 3px solid #4C7CF0;
+  border-left: 3px solid #7FAEE6;
   padding-left: 0.75em;
   margin: 0.5em 0;
-  color: #626A73;
+  color: #6F6A64;
 }
 .prose-chat table {
   border-collapse: collapse;
@@ -218,23 +234,23 @@
   font-size: 0.88em;
 }
 .prose-chat th, .prose-chat td {
-  border: 1px solid #E6E1D8;
+  border: 1px solid #E7DED2;
   padding: 0.4em 0.6em;
   text-align: left;
 }
 .prose-chat th {
-  background: #F1EEE8;
+  background: #F1ECE4;
   font-weight: 600;
 }
 .prose-chat hr {
   border: none;
-  border-top: 1px solid #E6E1D8;
+  border-top: 1px solid #E7DED2;
   margin: 0.75em 0;
 }
 .prose-chat strong {
   font-weight: 600;
 }
 .prose-chat a {
-  color: #4C7CF0;
+  color: #7FAEE6;
   text-decoration: underline;
 }

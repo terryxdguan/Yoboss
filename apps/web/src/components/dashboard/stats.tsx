@@ -19,7 +19,7 @@ const STATS: StatCard[] = [
     value: "84.2%",
     detail: "Active goal completion rate",
     badge: "+12%",
-    badgeColor: "#4D8B6A",
+    badgeColor: "#7FB38A",
     badgeBg: "rgba(77,139,106,0.10)",
   },
   {
@@ -28,8 +28,8 @@ const STATS: StatCard[] = [
     value: "12 / 15",
     detail: "",
     badge: "Weekly",
-    badgeColor: "#626A73",
-    badgeBg: "#F1EEE8",
+    badgeColor: "#6F6A64",
+    badgeBg: "#F1ECE4",
   },
   {
     icon: ListChecks,
@@ -37,8 +37,8 @@ const STATS: StatCard[] = [
     value: "38",
     detail: "Completed this week",
     badge: "4 Pending",
-    badgeColor: "#4C7CF0",
-    badgeBg: "#EAF0FF",
+    badgeColor: "#7FAEE6",
+    badgeBg: "#EAF3FD",
   },
   {
     icon: RefreshCw,
@@ -46,7 +46,7 @@ const STATS: StatCard[] = [
     value: "06",
     detail: "Active automations",
     badge: "Critical",
-    badgeColor: "#C6923D",
+    badgeColor: "#D4B06A",
     badgeBg: "rgba(198,146,61,0.10)",
   },
 ];
@@ -59,10 +59,10 @@ export function DashboardStats() {
         return (
           <div
             key={stat.label}
-            className="rounded-[18px] border border-[#E6E1D8] bg-white p-6 shadow-[0_8px_24px_rgba(30,34,39,0.05)]"
+            className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDF9] p-6 shadow-[0_8px_24px_rgba(30,34,39,0.05)]"
           >
             <div className="mb-4 flex items-start justify-between">
-              <span className="rounded-xl bg-[#EAF0FF] p-2 text-[#4C7CF0]">
+              <span className="rounded-xl bg-[#EAF3FD] p-2 text-[#7FAEE6]">
                 <Icon className="h-5 w-5" />
               </span>
               <span
@@ -75,19 +75,19 @@ export function DashboardStats() {
                 {stat.badge}
               </span>
             </div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-[#8C939B] font-semibold">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-[#9B948B] font-semibold">
               {stat.label}
             </p>
-            <h3 className="mt-1 text-3xl font-semibold text-[#1E2227]">
+            <h3 className="mt-1 text-3xl font-semibold text-[#2B2B2B]">
               {stat.value}
             </h3>
             {stat.label === "Goals" ? (
-              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#F1EEE8]">
-                <div className="h-full w-[80%] rounded-full bg-[#4C7CF0]" />
+              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
+                <div className="h-full w-[80%] rounded-full bg-[#7FAEE6]" />
               </div>
             ) : (
               stat.detail && (
-                <p className="mt-2 text-sm text-[#626A73]">{stat.detail}</p>
+                <p className="mt-2 text-sm text-[#6F6A64]">{stat.detail}</p>
               )
             )}
           </div>

@@ -16,6 +16,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
+import { setAgentStatus } from "@/lib/stores/agent-status";
 import {
   getAgentSessions,
   createChatSession,
@@ -125,6 +126,7 @@ export default function AgentChatPage() {
   const sendToApi = useCallback(async (apiMessages: { role: string; content: string | object[] }[]) => {
     if (!agent || !activeSessionId) return;
     setIsStreaming(true);
+    setAgentStatus(agentId, "working");
     const assistantId = genId();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
@@ -215,6 +217,7 @@ export default function AgentChatPage() {
       );
     } finally {
       setIsStreaming(false);
+      setAgentStatus(agentId, "idle");
     }
   }, [agent, activeSessionId, messages, inputText]);
 
@@ -305,8 +308,8 @@ export default function AgentChatPage() {
   if (!agent) {
     return (
       <div className="text-center py-24">
-        <p className="text-[#626A73]">Agent not found</p>
-        <button onClick={() => router.push("/team")} className="text-sm text-[#4C7CF0] mt-2 hover:underline">
+        <p className="text-[#6F6A64]">Agent not found</p>
+        <button onClick={() => router.push("/team")} className="text-sm text-[#7FAEE6] mt-2 hover:underline">
           Back to Team
         </button>
       </div>
@@ -318,29 +321,29 @@ export default function AgentChatPage() {
   return (
     <div className="flex h-[calc(100vh-96px)] -mx-6 md:-mx-8 -mb-12">
       {/* Session Sidebar */}
-      <div className="w-56 shrink-0 border-r border-[#E6E1D8] bg-[#F7F5F1] flex flex-col">
+      <div className="w-56 shrink-0 border-r border-[#E7DED2] bg-[#F6F3EE] flex flex-col">
         {/* Back + Agent info */}
-        <div className="px-3 py-4 border-b border-[#E6E1D8]">
+        <div className="px-3 py-4 border-b border-[#E7DED2]">
           <button
             onClick={() => router.push("/team")}
-            className="flex items-center gap-1.5 text-xs text-[#626A73] hover:text-[#1E2227] transition-colors mb-3"
+            className="flex items-center gap-1.5 text-xs text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-3"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to Team
           </button>
           <div className="flex items-center gap-2.5">
             {agent.avatar ? (
-              <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#E6E1D8] shrink-0">
+              <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#E7DED2] shrink-0">
                 <Image src={agent.avatar} alt={agent.name} width={32} height={32} className="w-full h-full object-cover" />
               </div>
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-[#4C7CF0]/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-[#4C7CF0]">{agent.name.charAt(0)}</span>
+              <div className="w-8 h-8 rounded-lg bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
+                <span className="text-sm font-semibold text-[#7FAEE6]">{agent.name.charAt(0)}</span>
               </div>
             )}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#1E2227] truncate">{displayName}</p>
-              <p className="text-[10px] text-[#8C939B] truncate">{agent.description.slice(0, 40)}...</p>
+              <p className="text-sm font-semibold text-[#2B2B2B] truncate">{displayName}</p>
+              <p className="text-[10px] text-[#9B948B] truncate">{agent.description.slice(0, 40)}...</p>
             </div>
           </div>
         </div>
@@ -349,7 +352,7 @@ export default function AgentChatPage() {
         <div className="px-3 py-2">
           <button
             onClick={handleNewSession}
-            className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#4C7CF0] hover:bg-[#4C7CF0]/5 transition-colors"
+            className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#7FAEE6] hover:bg-[#7FAEE6]/5 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             New Chat
@@ -359,15 +362,15 @@ export default function AgentChatPage() {
         {/* Session List */}
         <div className="flex-1 overflow-y-auto px-2">
           {loading ? (
-            <p className="text-xs text-[#8C939B] text-center py-4">Loading...</p>
+            <p className="text-xs text-[#9B948B] text-center py-4">Loading...</p>
           ) : (
             sessions.map((session) => (
               <div
                 key={session.id}
                 className={`group flex items-center gap-1 px-2 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${
                   activeSessionId === session.id
-                    ? "bg-[#4C7CF0]/10 text-[#1E2227]"
-                    : "text-[#626A73] hover:bg-[#E6E1D8]/50"
+                    ? "bg-[#7FAEE6]/10 text-[#2B2B2B]"
+                    : "text-[#6F6A64] hover:bg-[#E7DED2]/50"
                 }`}
                 onClick={() => setActiveSessionId(session.id)}
               >
@@ -379,7 +382,7 @@ export default function AgentChatPage() {
                     onChange={(e) => setEditTitleText(e.target.value)}
                     onBlur={() => handleTitleSave(session.id)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleTitleSave(session.id); if (e.key === "Escape") setEditingTitleId(null); }}
-                    className="flex-1 text-xs bg-white border border-[#4C7CF0]/40 rounded px-1 py-0.5 outline-none"
+                    className="flex-1 text-xs bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
@@ -396,9 +399,9 @@ export default function AgentChatPage() {
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#C65B52]/10 transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#D5847A]/10 transition-all"
                 >
-                  <Trash2 className="h-3 w-3 text-[#C65B52]" />
+                  <Trash2 className="h-3 w-3 text-[#D5847A]" />
                 </button>
               </div>
             ))
@@ -407,13 +410,13 @@ export default function AgentChatPage() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-white min-w-0">
+      <div className="flex-1 flex flex-col bg-[#FFFDF9] min-w-0">
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           {messages.length === 0 && !isStreaming && (
             <div className="text-center py-16">
-              <MessageSquare className="h-10 w-10 text-[#E6E1D8] mx-auto mb-3" />
-              <p className="text-sm text-[#8C939B]">Start a conversation with {displayName}</p>
+              <MessageSquare className="h-10 w-10 text-[#E7DED2] mx-auto mb-3" />
+              <p className="text-sm text-[#9B948B]">Start a conversation with {displayName}</p>
             </div>
           )}
 
@@ -421,8 +424,8 @@ export default function AgentChatPage() {
             <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm ${
                 msg.role === "user"
-                  ? "bg-[#4C7CF0] text-white"
-                  : "bg-[#F7F5F1] border border-[#E6E1D8] text-[#1E2227]"
+                  ? "bg-[#7FAEE6] text-white"
+                  : "bg-[#F6F3EE] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
                 {msg.images && msg.images.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -447,7 +450,7 @@ export default function AgentChatPage() {
 
           {isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
             <div className="flex justify-start">
-              <div className="bg-[#F7F5F1] border border-[#E6E1D8] rounded-xl px-4 py-3 text-sm text-[#8C939B]">
+              <div className="bg-[#F6F3EE] border border-[#E7DED2] rounded-xl px-4 py-3 text-sm text-[#9B948B]">
                 <span className="inline-flex gap-1">
                   <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
                   <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
@@ -463,7 +466,7 @@ export default function AgentChatPage() {
           {/* Drag handle */}
           <div className="flex justify-center py-1">
             <div
-              className="w-10 h-1 rounded-full bg-[#D8D1C6] cursor-row-resize hover:bg-[#8C939B] transition-colors"
+              className="w-10 h-1 rounded-full bg-[#DDD3C7] cursor-row-resize hover:bg-[#9B948B] transition-colors"
               onMouseDown={(e) => {
                 e.preventDefault();
                 inputDragging.current = true;
@@ -490,7 +493,7 @@ export default function AgentChatPage() {
           </div>
 
           <div
-            className="rounded-xl border border-[#D8D1C6] bg-[#F7F5F1] focus-within:ring-2 focus-within:ring-[#4C7CF0]/30 focus-within:border-[#4C7CF0]/50 transition-all flex flex-col"
+            className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] focus-within:ring-2 focus-within:ring-[#7FAEE6]/30 focus-within:border-[#7FAEE6]/50 transition-all flex flex-col"
             style={{ height: inputHeight }}
           >
             {/* Pending images */}
@@ -498,10 +501,10 @@ export default function AgentChatPage() {
               <div className="px-3 pt-3 flex gap-2 flex-wrap shrink-0">
                 {pendingImages.map((img, i) => (
                   <div key={i} className="relative group">
-                    <img src={img.preview} alt="" className="h-14 rounded-lg border border-[#E6E1D8] object-cover" />
+                    <img src={img.preview} alt="" className="h-14 rounded-lg border border-[#E7DED2] object-cover" />
                     <button
                       onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#C65B52] text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#D5847A] text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       x
                     </button>
@@ -521,14 +524,14 @@ export default function AgentChatPage() {
               }}
               placeholder={`Type a message... (Enter to send)`}
               disabled={isStreaming}
-              className="flex-1 w-full px-4 py-3 text-sm bg-transparent outline-none placeholder:text-[#8C939B] text-[#1E2227] disabled:opacity-50 resize-none leading-relaxed"
+              className="flex-1 w-full px-4 py-3 text-sm bg-transparent outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none leading-relaxed"
             />
 
             {/* Toolbar */}
             <div className="flex items-center justify-between px-3 pb-2 shrink-0">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-md text-[#8C939B] hover:text-[#4C7CF0] hover:bg-[#E6E1D8] transition-colors"
+                className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7FAEE6] hover:bg-[#E7DED2] transition-colors"
               >
                 <ImagePlus className="h-4 w-4" />
               </button>
@@ -536,7 +539,7 @@ export default function AgentChatPage() {
               <button
                 onClick={handleSend}
                 disabled={(!inputText.trim() && pendingImages.length === 0) || isStreaming}
-                className="px-4 py-1.5 rounded-lg bg-[#4C7CF0] text-white text-xs font-medium hover:bg-[#3F6FE4] active:scale-[0.97] transition-all disabled:opacity-40"
+                className="px-4 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-xs font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40"
               >
                 Send
               </button>

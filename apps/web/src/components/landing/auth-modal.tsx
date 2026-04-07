@@ -25,7 +25,7 @@ function getPasswordStrength(password: string): PasswordStrength {
   ];
   const score = checks.filter((c) => c.passed).length;
   const labels = ["Too weak", "Weak", "Fair", "Good", "Strong"];
-  const colors = ["#C65B52", "#C65B52", "#C6923D", "#4C7CF0", "#4D8B6A"];
+  const colors = ["#D5847A", "#D5847A", "#D4B06A", "#7FAEE6", "#7FB38A"];
   return { score, label: labels[score], color: colors[score], checks };
 }
 
@@ -142,20 +142,20 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-white rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.12)] w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto"
+          className="bg-[#FFFDF9] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.12)] w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 rounded-md text-[#8C939B] hover:text-[#1E2227] hover:bg-[#F1EEE8] transition-colors"
+            className="absolute top-4 right-4 p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <h2 className="text-2xl font-bold text-[#1E2227] mb-1">
+          <h2 className="text-2xl font-bold text-[#2B2B2B] mb-1">
             {mode === "signup" ? "Create your account" : "Welcome back"}
           </h2>
-          <p className="text-sm text-[#626A73] mb-6">
+          <p className="text-sm text-[#6F6A64] mb-6">
             {mode === "signup"
               ? "Sign up to start achieving your goals"
               : "Log in to continue your progress"}
@@ -165,7 +165,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 border border-[#D8D1C6] rounded-lg px-4 py-3 text-sm font-medium text-[#1E2227] hover:bg-[#F7F5F1] active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 border border-[#DDD3C7] rounded-lg px-4 py-3 text-sm font-medium text-[#2B2B2B] hover:bg-[#F6F3EE] active:scale-[0.98] transition-all disabled:opacity-50"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -177,34 +177,34 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
           </button>
 
           <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-[#E6E1D8]" />
-            <span className="text-xs text-[#8C939B]">or</span>
-            <div className="flex-1 h-px bg-[#E6E1D8]" />
+            <div className="flex-1 h-px bg-[#E7DED2]" />
+            <span className="text-xs text-[#9B948B]">or</span>
+            <div className="flex-1 h-px bg-[#E7DED2]" />
           </div>
 
           {/* Email form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-sm text-[#626A73] mb-1.5">
+              <label className="block text-sm text-[#6F6A64] mb-1.5">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => validateEmail(e.target.value)}
-                className={`w-full border rounded-lg px-4 py-2.5 text-sm text-[#1E2227] placeholder:text-[#8C939B] focus:outline-none focus:ring-2 focus:border-transparent bg-white ${
+                className={`w-full border rounded-lg px-4 py-2.5 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:border-transparent bg-[#FFFDF9] ${
                   emailError
-                    ? "border-[#C65B52] focus:ring-[#C65B52]/40"
+                    ? "border-[#D5847A] focus:ring-[#D5847A]/40"
                     : email && isValidEmail
-                      ? "border-[#4D8B6A] focus:ring-[#4D8B6A]/40"
-                      : "border-[#D8D1C6] focus:ring-[#4C7CF0]/40"
+                      ? "border-[#7FB38A] focus:ring-[#7FB38A]/40"
+                      : "border-[#DDD3C7] focus:ring-[#7FAEE6]/40"
                 }`}
                 placeholder="you@example.com"
                 required
               />
               {emailError && (
-                <p className="text-xs text-[#C65B52] mt-1 flex items-center gap-1">
+                <p className="text-xs text-[#D5847A] mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {emailError}
                 </p>
@@ -213,7 +213,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
 
             {/* Password */}
             <div>
-              <label className="block text-sm text-[#626A73] mb-1.5">
+              <label className="block text-sm text-[#6F6A64] mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -221,7 +221,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-[#D8D1C6] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#1E2227] placeholder:text-[#8C939B] focus:outline-none focus:ring-2 focus:ring-[#4C7CF0]/40 focus:border-transparent bg-white"
+                  className="w-full border border-[#DDD3C7] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/40 focus:border-transparent bg-[#FFFDF9]"
                   placeholder={
                     mode === "signup"
                       ? "Create a strong password"
@@ -233,7 +233,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C939B] hover:text-[#626A73] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9B948B] hover:text-[#6F6A64] transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -255,7 +255,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                           backgroundColor:
                             i < passwordStrength.score
                               ? passwordStrength.color
-                              : "#E6E1D8",
+                              : "#E7DED2",
                         }}
                       />
                     ))}
@@ -271,13 +271,13 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                       <p
                         key={check.label}
                         className={`text-xs flex items-center gap-1.5 ${
-                          check.passed ? "text-[#4D8B6A]" : "text-[#8C939B]"
+                          check.passed ? "text-[#7FB38A]" : "text-[#9B948B]"
                         }`}
                       >
                         {check.passed ? (
                           <Check className="h-3 w-3" />
                         ) : (
-                          <span className="h-3 w-3 inline-block rounded-full border border-[#D8D1C6]" />
+                          <span className="h-3 w-3 inline-block rounded-full border border-[#DDD3C7]" />
                         )}
                         {check.label}
                       </p>
@@ -288,15 +288,15 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-[#C65B52]/5 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-[#C65B52] mt-0.5 shrink-0" />
-                <p className="text-sm text-[#C65B52]">{error}</p>
+              <div className="flex items-start gap-2 p-3 bg-[#D5847A]/5 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-[#D5847A] mt-0.5 shrink-0" />
+                <p className="text-sm text-[#D5847A]">{error}</p>
               </div>
             )}
             {success && (
-              <div className="flex items-start gap-2 p-3 bg-[#4D8B6A]/5 rounded-lg">
-                <Check className="h-4 w-4 text-[#4D8B6A] mt-0.5 shrink-0" />
-                <p className="text-sm text-[#4D8B6A]">{success}</p>
+              <div className="flex items-start gap-2 p-3 bg-[#7FB38A]/5 rounded-lg">
+                <Check className="h-4 w-4 text-[#7FB38A] mt-0.5 shrink-0" />
+                <p className="text-sm text-[#7FB38A]">{success}</p>
               </div>
             )}
 
@@ -306,7 +306,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                 loading ||
                 (mode === "signup" ? !canSubmitSignup : !canSubmitLogin)
               }
-              className="w-full bg-[#4C7CF0] text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-[#3F6FE4] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-[#7FAEE6] text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading
@@ -319,13 +319,13 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             </button>
           </form>
 
-          <p className="text-sm text-[#626A73] text-center mt-6">
+          <p className="text-sm text-[#6F6A64] text-center mt-6">
             {mode === "signup" ? (
               <>
                 Already have an account?{" "}
                 <button
                   onClick={() => setMode("login")}
-                  className="text-[#4C7CF0] font-medium hover:underline"
+                  className="text-[#7FAEE6] font-medium hover:underline"
                 >
                   Log in
                 </button>
@@ -335,7 +335,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                 Don&apos;t have an account?{" "}
                 <button
                   onClick={() => setMode("signup")}
-                  className="text-[#4C7CF0] font-medium hover:underline"
+                  className="text-[#7FAEE6] font-medium hover:underline"
                 >
                   Sign up
                 </button>

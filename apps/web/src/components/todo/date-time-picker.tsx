@@ -99,20 +99,20 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-[calc(100%+4px)] z-50 bg-white border border-[#D8D1C6] rounded-xl shadow-[0_8px_32px_rgba(30,34,39,0.15)] p-3 select-none"
+      className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#FFFDF9] border border-[#DDD3C7] rounded-xl shadow-[0_8px_32px_rgba(30,34,39,0.15)] p-3 select-none"
       style={{ width: 300 }}
     >
       {/* Calendar */}
       <div className="mb-2">
         <div className="flex items-center justify-between mb-2">
-          <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1EEE8] text-[#8C939B] hover:text-[#1E2227] flex items-center justify-center text-sm">◀</button>
-          <span className="text-sm font-semibold text-[#1E2227]">{MONTHS[month]} {year}</span>
-          <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1EEE8] text-[#8C939B] hover:text-[#1E2227] flex items-center justify-center text-sm">▶</button>
+          <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1ECE4] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">◀</button>
+          <span className="text-sm font-semibold text-[#2B2B2B]">{MONTHS[month]} {year}</span>
+          <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1ECE4] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">▶</button>
         </div>
 
         <div className="grid grid-cols-7 gap-px mb-1">
           {WEEKDAYS.map((d) => (
-            <div key={d} className="text-center text-[10px] text-[#8C939B] font-medium py-0.5">{d}</div>
+            <div key={d} className="text-center text-[10px] text-[#9B948B] font-medium py-0.5">{d}</div>
           ))}
         </div>
 
@@ -126,8 +126,8 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
                 d === null
                   ? ""
                   : d === day
-                    ? "bg-[#4C7CF0] text-white font-bold"
-                    : "text-[#1E2227] hover:bg-[#F1EEE8]"
+                    ? "bg-[#7FAEE6] text-white font-bold"
+                    : "text-[#2B2B2B] hover:bg-[#F1ECE4]"
               }`}
             >
               {d ?? ""}
@@ -137,9 +137,9 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
       </div>
 
       {/* Time */}
-      <div className="flex items-center gap-2 border-t border-[#E6E1D8] pt-2 mt-1">
+      <div className="flex items-center gap-2 border-t border-[#E7DED2] pt-2 mt-1">
         <div className="flex flex-col items-center gap-0.5">
-          <button onClick={() => setHour12((h) => (h === 12 ? 1 : h + 1))} className="text-[#8C939B] hover:text-[#1E2227] text-[10px]">▲</button>
+          <button onClick={() => setHour12((h) => (h === 12 ? 1 : h + 1))} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▲</button>
           <input
             type="text"
             inputMode="numeric"
@@ -150,13 +150,13 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
               if (!isNaN(v) && v >= 1 && v <= 12) setHour12(v);
               else if (e.target.value === "" || e.target.value === "0") setHour12(12);
             }}
-            className="w-9 h-7 rounded bg-[#F1EEE8] text-[#1E2227] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#4C7CF0]"
+            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7FAEE6]"
           />
-          <button onClick={() => setHour12((h) => (h === 1 ? 12 : h - 1))} className="text-[#8C939B] hover:text-[#1E2227] text-[10px]">▼</button>
+          <button onClick={() => setHour12((h) => (h === 1 ? 12 : h - 1))} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▼</button>
         </div>
-        <span className="text-[#8C939B] font-bold text-sm">:</span>
+        <span className="text-[#9B948B] font-bold text-sm">:</span>
         <div className="flex flex-col items-center gap-0.5">
-          <button onClick={() => setMinute((m) => (m + 1) % 60)} className="text-[#8C939B] hover:text-[#1E2227] text-[10px]">▲</button>
+          <button onClick={() => setMinute((m) => (m + 1) % 60)} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▲</button>
           <input
             type="text"
             inputMode="numeric"
@@ -167,20 +167,20 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
               if (!isNaN(v) && v >= 0 && v <= 59) setMinute(v);
               else if (e.target.value === "") setMinute(0);
             }}
-            className="w-9 h-7 rounded bg-[#F1EEE8] text-[#1E2227] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#4C7CF0]"
+            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7FAEE6]"
           />
-          <button onClick={() => setMinute((m) => (m - 1 + 60) % 60)} className="text-[#8C939B] hover:text-[#1E2227] text-[10px]">▼</button>
+          <button onClick={() => setMinute((m) => (m - 1 + 60) % 60)} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▼</button>
         </div>
         <button
           onClick={() => setAmpm((p) => (p === "AM" ? "PM" : "AM"))}
-          className="w-10 h-7 rounded bg-[#4C7CF0]/10 hover:bg-[#4C7CF0]/20 text-[#4C7CF0] text-xs font-bold flex items-center justify-center transition-colors"
+          className="w-10 h-7 rounded bg-[#7FAEE6]/10 hover:bg-[#7FAEE6]/20 text-[#7FAEE6] text-xs font-bold flex items-center justify-center transition-colors"
         >
           {ampm}
         </button>
         <div className="flex-1" />
         <button
           onClick={confirm}
-          className="px-3 py-1.5 rounded-lg bg-[#4C7CF0] hover:bg-[#3F6FE4] text-white text-xs font-semibold transition-colors"
+          className="px-3 py-1.5 rounded-lg bg-[#7FAEE6] hover:bg-[#6A9DDA] text-white text-xs font-semibold transition-colors"
         >
           Confirm ✓
         </button>

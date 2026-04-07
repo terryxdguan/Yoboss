@@ -20,8 +20,8 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
           <div
             className={`rounded-lg px-4 py-3 text-sm leading-relaxed ${
               isUser
-                ? "bg-[#4C7CF0] text-white"
-                : "bg-[#F1EEE8] text-[#1E2227]"
+                ? "bg-[#7FAEE6] text-white"
+                : "bg-[#F1ECE4] text-[#2B2B2B]"
             }`}
           >
             {message.content}
@@ -42,14 +42,14 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
 
         {/* Plan generated indicator */}
         {message.toolUse?.name === "create_goal_plan" && (
-          <div className="mt-2 border border-[#4D8B6A] bg-[#4D8B6A]/5 rounded-lg px-4 py-3 text-sm text-[#4D8B6A] font-medium">
+          <div className="mt-2 border border-[#7FB38A] bg-[#7FB38A]/5 rounded-lg px-4 py-3 text-sm text-[#7FB38A] font-medium">
             Plan generated — review it below
           </div>
         )}
 
         {/* Weekly plan generated indicator */}
         {message.toolUse?.name === "create_weekly_plan" && (
-          <div className="mt-2 border border-[#4D8B6A] bg-[#4D8B6A]/5 rounded-lg px-4 py-3 text-sm text-[#4D8B6A] font-medium">
+          <div className="mt-2 border border-[#7FB38A] bg-[#7FB38A]/5 rounded-lg px-4 py-3 text-sm text-[#7FB38A] font-medium">
             Weekly plan generated — review below
           </div>
         )}

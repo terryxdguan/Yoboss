@@ -60,17 +60,17 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
   }, []);
 
   return (
-    <div className="w-96 shrink-0 border-l border-[#E6E1D8] bg-[#F7F5F1] flex flex-col h-[calc(100vh-96px)] sticky top-0">
+    <div className="w-96 shrink-0 border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col h-[calc(100vh-96px)] sticky top-0">
       {/* Header */}
-      <div className="flex items-center justify-between h-14 px-4 border-b border-[#E6E1D8]">
+      <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-[#4C7CF0]" />
-          <span className="text-sm font-medium text-[#1E2227]">Notes</span>
+          <FileText className="h-4 w-4 text-[#7FAEE6]" />
+          <span className="text-sm font-medium text-[#2B2B2B]">Notes</span>
           {saveStatus === "saving" && (
-            <span className="text-[10px] text-[#8C939B]">Saving...</span>
+            <span className="text-[10px] text-[#9B948B]">Saving...</span>
           )}
           {saveStatus === "saved" && (
-            <span className="text-[10px] text-[#4D8B6A] flex items-center gap-0.5">
+            <span className="text-[10px] text-[#7FB38A] flex items-center gap-0.5">
               <Check className="h-3 w-3" />
               Saved
             </span>
@@ -78,7 +78,7 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
         </div>
         <button
           onClick={() => { handleBlur(); onClose(); }}
-          className="p-1.5 rounded-md text-[#626A73] hover:bg-[#F1EEE8] hover:text-[#1E2227] transition-colors"
+          className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -87,7 +87,7 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
       {/* Editor */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-[#8C939B]">Loading...</p>
+          <p className="text-sm text-[#9B948B]">Loading...</p>
         </div>
       ) : (
         <textarea
@@ -95,7 +95,7 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
           onChange={(e) => handleChange(e.target.value)}
           onBlur={handleBlur}
           placeholder="Write your notes here...&#10;&#10;Supports plain text and markdown formatting."
-          className="flex-1 px-4 py-4 text-sm text-[#1E2227] bg-transparent outline-none resize-none placeholder:text-[#C4BFB6] leading-relaxed"
+          className="flex-1 px-4 py-4 text-sm text-[#2B2B2B] bg-transparent outline-none resize-none placeholder:text-[#9B948B] leading-relaxed"
           autoFocus
         />
       )}

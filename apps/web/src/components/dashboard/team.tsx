@@ -1,136 +1,93 @@
-import { CheckCircle2, Circle } from "lucide-react";
+"use client";
 
-interface TeamMember {
-  name: string;
-  role: string;
-  avatar?: string;
-  initials?: string;
-  initialsColor?: string;
-  progress: number;
-  tasks: { title: string; done: boolean }[];
+import { useState } from "react";
+import { Circle, ChevronDown, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
+import type { AgentConfig } from "@/lib/types/agent";
+
+function AgentDashCard({ agent }: { agent: AgentConfig }) {
+  const router = useRouter();
+  const [showExpertise, setShowExpertise] = useState(false);
+  const displayName = agent.id === "general_assistant" ? agent.name : agent.label;
+  const subtitle = agent.id === "general_assistant" ? agent.label : agent.category.toUpperCase();
+
+  return (
+    <div
+      className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_4px_16px_rgba(43,43,43,0.04)] hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7] transition-all cursor-pointer"
+      onClick={() => router.push(`/team/chat/${agent.id}`)}
+    >
+      {/* Header: avatar + name */}
+      <div className="mb-3 flex items-center gap-3">
+        {agent.avatar ? (
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
+            <Image
+              src={agent.avatar}
+              alt={displayName}
+              width={56}
+              height={56}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#7FAEE6]/10 text-lg font-semibold text-[#7FAEE6] shrink-0">
+            {displayName.charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#2B2B2B] truncate">{displayName}</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#9B948B]">{subtitle}</p>
+        </div>
+      </div>
+
+      {/* Recent tasks */}
+      <div className="mb-3">
+        <p className="text-[10px] font-medium text-[#9B948B] uppercase tracking-wider mb-1.5">Recent Tasks</p>
+        <div className="flex items-center gap-1.5 text-xs text-[#9B948B]">
+          <Circle className="h-3 w-3 shrink-0" />
+          <span>No active tasks</span>
+        </div>
+      </div>
+
+      {/* Expertise toggle */}
+      <button
+        onClick={(e) => { e.stopPropagation(); setShowExpertise(!showExpertise); }}
+        className="flex items-center gap-0.5 text-[11px] text-[#7FAEE6] hover:underline"
+      >
+        Expertise
+        {showExpertise ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+
+      {showExpertise && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {agent.expertise.map((skill, i) => (
+            <span
+              key={i}
+              className="text-[10px] px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
-
-const TEAM: TeamMember[] = [
-  {
-    name: "Adam J.",
-    role: "UI Design",
-    initials: "AJ",
-    initialsColor: "#4C7CF0",
-    progress: 75,
-    tasks: [
-      { title: "Styleguide update", done: true },
-      { title: "Final review assets", done: false },
-    ],
-  },
-  {
-    name: "Eve K.",
-    role: "Engineering",
-    initials: "EK",
-    initialsColor: "#4D8B6A",
-    progress: 42,
-    tasks: [
-      { title: "API Migration", done: true },
-      { title: "Bug fix #404", done: false },
-    ],
-  },
-  {
-    name: "Ben T.",
-    role: "Marketing",
-    initials: "BT",
-    initialsColor: "#C6923D",
-    progress: 90,
-    tasks: [
-      { title: "Draft newsletter", done: true },
-      { title: "Approve social ads", done: false },
-    ],
-  },
-  {
-    name: "Angel L.",
-    role: "Product Lead",
-    initials: "AL",
-    initialsColor: "#7C6DB0",
-    progress: 60,
-    tasks: [
-      { title: "Quarterly review", done: true },
-      { title: "Strategy roadmap", done: false },
-    ],
-  },
-];
 
 export function DashboardTeam() {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-[#1E2227]">Team</h2>
-        <p className="mt-1 text-sm text-[#626A73]">
-          Track each person&apos;s focus area and progress for today.
+        <h2 className="text-xl font-semibold text-[#2B2B2B]">Team</h2>
+        <p className="mt-1 text-sm text-[#6F6A64]">
+          Your AI employees — click to chat.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-        {TEAM.map((member) => (
-          <div
-            key={member.name}
-            className="rounded-[18px] border border-[#E6E1D8] bg-white p-5 shadow-[0_8px_24px_rgba(30,34,39,0.05)]"
-          >
-            <div className="mb-4 flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: member.initialsColor }}
-              >
-                {member.initials}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#1E2227]">
-                  {member.name}
-                </p>
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[#8C939B]">
-                  {member.role}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <div className="mb-1 flex justify-between text-[11px]">
-                  <span className="text-[#626A73] font-medium">Progress</span>
-                  <span className="text-[#4C7CF0] font-semibold">
-                    {member.progress}%
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-[#F1EEE8] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#4C7CF0]"
-                    style={{ width: `${member.progress}%` }}
-                  />
-                </div>
-              </div>
-
-              <ul className="space-y-2">
-                {member.tasks.map((task) => (
-                  <li
-                    key={task.title}
-                    className="flex items-start gap-2 text-sm"
-                  >
-                    {task.done ? (
-                      <CheckCircle2 className="h-[18px] w-[18px] text-[#4D8B6A] shrink-0 fill-[#4D8B6A] stroke-white" />
-                    ) : (
-                      <Circle className="h-[18px] w-[18px] text-[#8C939B] shrink-0" />
-                    )}
-                    <span
-                      className={
-                        task.done
-                          ? "text-[#626A73] line-through"
-                          : "text-[#1E2227]"
-                      }
-                    >
-                      {task.title}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+        {DEFAULT_AGENTS.map((agent) => (
+          <AgentDashCard key={agent.id} agent={agent} />
         ))}
       </div>
     </div>

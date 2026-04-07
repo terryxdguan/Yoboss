@@ -20,13 +20,13 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
   const [confirmFire, setConfirmFire] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-[#E6E1D8] bg-white shadow-[0_8px_24px_rgba(30,34,39,0.05)] overflow-hidden">
+    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] shadow-[0_8px_24px_rgba(30,34,39,0.05)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between p-6 border-b border-[#E6E1D8]">
+      <div className="flex items-start justify-between p-6 border-b border-[#E7DED2]">
         <div className="flex items-start gap-4">
           {/* Avatar */}
           {agent.avatar ? (
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F1EEE8] shrink-0">
+            <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F1ECE4] shrink-0">
               <Image
                 src={agent.avatar}
                 alt={agent.name}
@@ -36,8 +36,8 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
               />
             </div>
           ) : (
-            <div className="w-16 h-16 rounded-xl bg-[#4C7CF0]/10 flex items-center justify-center shrink-0">
-              <span className="text-2xl font-semibold text-[#4C7CF0]">
+            <div className="w-16 h-16 rounded-xl bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
+              <span className="text-2xl font-semibold text-[#7FAEE6]">
                 {agent.name.charAt(0)}
               </span>
             </div>
@@ -45,15 +45,15 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
 
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-[#1E2227]">{agent.name}</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#F1EEE8] text-[#626A73]">
+              <h2 className="text-lg font-semibold text-[#2B2B2B]">{agent.name}</h2>
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]">
                 {agent.label}
               </span>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#4C7CF0]/10 text-[#4C7CF0]">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7FAEE6]/10 text-[#7FAEE6]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
             </div>
-            <p className="text-sm text-[#626A73] mt-1">{agent.description}</p>
+            <p className="text-sm text-[#6F6A64] mt-1">{agent.description}</p>
           </div>
         </div>
 
@@ -61,16 +61,16 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           {!isDefault && (
             confirmFire ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#C65B52]">Confirm?</span>
+                <span className="text-xs text-[#D5847A]">Confirm?</span>
                 <button
                   onClick={() => { onFire(); setConfirmFire(false); }}
-                  className="px-3 py-1.5 rounded-lg bg-[#C65B52] text-white text-xs font-medium hover:bg-[#B04A42] transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-[#D5847A] text-white text-xs font-medium hover:bg-[#C06E64] transition-colors"
                 >
                   Fire
                 </button>
                 <button
                   onClick={() => setConfirmFire(false)}
-                  className="px-3 py-1.5 rounded-lg border border-[#D8D1C6] text-xs text-[#626A73] hover:bg-[#F1EEE8] transition-colors"
+                  className="px-3 py-1.5 rounded-lg border border-[#DDD3C7] text-xs text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
                 >
                   Cancel
                 </button>
@@ -78,7 +78,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             ) : (
               <button
                 onClick={() => setConfirmFire(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#C65B52] hover:bg-[#C65B52]/5 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#D5847A] hover:bg-[#D5847A]/5 transition-colors"
               >
                 <Flame className="h-3.5 w-3.5" />
                 Fire
@@ -87,7 +87,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           )}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-[#626A73] hover:bg-[#F1EEE8] hover:text-[#1E2227] transition-colors"
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -95,12 +95,12 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
       </div>
 
       {/* Expertise */}
-      <div className="px-6 py-5 border-b border-[#E6E1D8]">
-        <h3 className="text-sm font-semibold text-[#1E2227] mb-3">Expertise</h3>
+      <div className="px-6 py-5 border-b border-[#E7DED2]">
+        <h3 className="text-sm font-semibold text-[#2B2B2B] mb-3">Expertise</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {agent.expertise.map((item, i) => (
-            <div key={i} className="flex items-start gap-2 text-sm text-[#626A73]">
-              <CheckCircle2 className="h-4 w-4 text-[#4D8B6A] shrink-0 mt-0.5" />
+            <div key={i} className="flex items-start gap-2 text-sm text-[#6F6A64]">
+              <CheckCircle2 className="h-4 w-4 text-[#7FB38A] shrink-0 mt-0.5" />
               {item}
             </div>
           ))}
@@ -109,13 +109,13 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
 
       {/* Work Tabs */}
       <div className="px-6 pt-4">
-        <div className="flex items-center gap-1 border-b border-[#E6E1D8]">
+        <div className="flex items-center gap-1 border-b border-[#E7DED2]">
           <button
             onClick={() => setTab("current")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === "current"
-                ? "border-[#4C7CF0] text-[#4C7CF0]"
-                : "border-transparent text-[#8C939B] hover:text-[#626A73]"
+                ? "border-[#7FAEE6] text-[#7FAEE6]"
+                : "border-transparent text-[#9B948B] hover:text-[#6F6A64]"
             }`}
           >
             Current Work
@@ -124,8 +124,8 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             onClick={() => setTab("history")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === "history"
-                ? "border-[#4C7CF0] text-[#4C7CF0]"
-                : "border-transparent text-[#8C939B] hover:text-[#626A73]"
+                ? "border-[#7FAEE6] text-[#7FAEE6]"
+                : "border-transparent text-[#9B948B] hover:text-[#6F6A64]"
             }`}
           >
             History
@@ -137,17 +137,17 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
       <div className="px-6 py-5">
         {tab === "current" ? (
           <div className="text-center py-6">
-            <Circle className="h-8 w-8 text-[#E6E1D8] mx-auto mb-2" />
-            <p className="text-sm text-[#8C939B]">No active tasks</p>
-            <p className="text-xs text-[#8C939B] mt-1">
+            <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
+            <p className="text-sm text-[#9B948B]">No active tasks</p>
+            <p className="text-xs text-[#9B948B] mt-1">
               Start a conversation with {agent.name} to assign work
             </p>
           </div>
         ) : (
           <div className="text-center py-6">
-            <Clock className="h-8 w-8 text-[#E6E1D8] mx-auto mb-2" />
-            <p className="text-sm text-[#8C939B]">No history yet</p>
-            <p className="text-xs text-[#8C939B] mt-1">
+            <Clock className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
+            <p className="text-sm text-[#9B948B]">No history yet</p>
+            <p className="text-xs text-[#9B948B] mt-1">
               Completed work will appear here
             </p>
           </div>

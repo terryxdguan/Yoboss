@@ -48,12 +48,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect logged-in users away from landing page to dashboard
-  if (user && request.nextUrl.pathname === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // Logged-in users can still visit landing page (via YoBoss logo click)
 
   return supabaseResponse;
 }

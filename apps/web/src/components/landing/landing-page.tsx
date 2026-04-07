@@ -9,14 +9,12 @@ import { createClient } from "@/lib/db/client";
 export function LandingPage() {
   const [goalText, setGoalText] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
 
-  // Redirect if already logged in
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        window.location.href = "/dashboard";
-      }
+      if (user) setLoggedIn(true);
     });
   }, []);
 
@@ -30,29 +28,29 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F5F1] text-[#1E2227] selection:bg-[#EAF0FF] selection:text-[#4C7CF0]">
+    <div className="min-h-screen bg-[#F6F3EE] text-[#2B2B2B] selection:bg-[#EAF3FD] selection:text-[#7FAEE6]">
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 bg-[#F7F5F1]/80 backdrop-blur-md">
+      <nav className="fixed top-0 w-full z-50 bg-[#F6F3EE]/80 backdrop-blur-md">
         <div className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto font-medium tracking-tight">
           <div className="flex items-center gap-8">
-            <span className="text-xl font-bold tracking-tighter text-[#1E2227]">
+            <span className="text-xl font-bold tracking-tighter text-[#2B2B2B]">
               YoBoss
             </span>
             <div className="hidden md:flex items-center gap-6">
               <a
-                className="text-[#626A73] hover:text-[#4C7CF0] transition-colors duration-200"
+                className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
                 href="#"
               >
                 Product
               </a>
               <a
-                className="text-[#626A73] hover:text-[#4C7CF0] transition-colors duration-200"
+                className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
                 href="#"
               >
                 Features
               </a>
               <a
-                className="text-[#626A73] hover:text-[#4C7CF0] transition-colors duration-200"
+                className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
                 href="#"
               >
                 Pricing
@@ -60,18 +58,29 @@ export function LandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={handleLogin}
-              className="text-[#626A73] hover:text-[#4C7CF0] transition-colors duration-200 active:scale-95 px-4 py-2"
-            >
-              Login
-            </button>
-            <button
-              onClick={handleLogin}
-              className="bg-[#4C7CF0] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#3F6FE4] active:scale-95 transition-all"
-            >
-              Sign Up
-            </button>
+            {loggedIn ? (
+              <a
+                href="/dashboard"
+                className="bg-[#7FAEE6] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all"
+              >
+                Dashboard
+              </a>
+            ) : (
+              <>
+                <button
+                  onClick={handleLogin}
+                  className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200 active:scale-95 px-4 py-2"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={handleLogin}
+                  className="bg-[#7FAEE6] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -88,7 +97,7 @@ export function LandingPage() {
             />
           </div>
 
-          <p className="text-xl md:text-2xl text-[#1E2227] mb-4 max-w-4xl mx-auto whitespace-nowrap">
+          <p className="text-xl md:text-2xl text-[#2B2B2B] mb-4 max-w-4xl mx-auto whitespace-nowrap">
             Describe your goal and your digital employees plan &amp; execute
           </p>
 
@@ -102,59 +111,16 @@ export function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer className="w-full border-t border-[#E6E1D8] bg-[#F1EEE8]">
-          <div className="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-7xl mx-auto">
-            <div className="mb-8 md:mb-0">
-              <span className="text-lg font-bold text-[#1E2227]">YoBoss</span>
-              <p className="text-sm text-[#626A73] mt-2 max-w-xs">
-                Build intentional habits and reach your peak performance with
-                AI-driven planning.
-              </p>
+        <footer className="w-full border-t border-[#E7DED2] mt-14">
+          <div className="flex items-center justify-between px-8 py-2 w-full max-w-7xl mx-auto">
+            <span className="text-xs font-semibold text-[#2B2B2B]">YoBoss</span>
+            <div className="flex items-center gap-6">
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Features</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Pricing</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Privacy</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Terms</a>
             </div>
-            <div className="flex flex-wrap justify-center gap-12 mb-8 md:mb-0">
-              <div className="flex flex-col gap-4">
-                <span className="text-sm tracking-wide uppercase font-bold text-[#1E2227]">
-                  Product
-                </span>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Features
-                </a>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Integrations
-                </a>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Pricing
-                </a>
-              </div>
-              <div className="flex flex-col gap-4">
-                <span className="text-sm tracking-wide uppercase font-bold text-[#1E2227]">
-                  Company
-                </span>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  About Us
-                </a>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Blog
-                </a>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Contact
-                </a>
-              </div>
-              <div className="flex flex-col gap-4">
-                <span className="text-sm tracking-wide uppercase font-bold text-[#1E2227]">
-                  Legal
-                </span>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Privacy Policy
-                </a>
-                <a className="text-sm text-[#626A73] hover:underline" href="#">
-                  Terms of Service
-                </a>
-              </div>
-            </div>
-            <div className="text-sm text-[#626A73]">
-              &copy; 2025 YoBoss. All rights reserved.
-            </div>
+            <span className="text-xs text-[#9B948B]">&copy; 2026 YoBoss</span>
           </div>
         </footer>
       </main>

@@ -41,12 +41,12 @@ function AgentRow({
   const [confirmFire, setConfirmFire] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-[#E6E1D8] bg-white shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden">
+    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden">
       <div className="flex items-stretch">
         {/* Avatar — fixed square, object-fit cover */}
         <div
           onClick={onChat}
-          className="w-36 shrink-0 bg-[#F1EEE8] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
+          className="w-36 shrink-0 bg-[#F1ECE4] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
           title={`Chat with ${agent.name}`}
         >
           {agent.avatar ? (
@@ -59,7 +59,7 @@ function AgentRow({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="text-3xl font-semibold text-[#4C7CF0]">
+              <span className="text-3xl font-semibold text-[#7FAEE6]">
                 {agent.name.charAt(0)}
               </span>
             </div>
@@ -74,15 +74,15 @@ function AgentRow({
               {/* Only show name for the first default agent (Eve) */}
               {agent.id === "general_assistant" ? (
                 <>
-                  <h2 className="text-sm font-semibold text-[#1E2227]">{agent.name}</h2>
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F1EEE8] text-[#626A73]">
+                  <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.name}</h2>
+                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]">
                     {agent.label}
                   </span>
                 </>
               ) : (
-                <h2 className="text-sm font-semibold text-[#1E2227]">{agent.label}</h2>
+                <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</h2>
               )}
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#4C7CF0]/10 text-[#4C7CF0]">
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7FAEE6]/10 text-[#7FAEE6]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
             </div>
@@ -91,13 +91,13 @@ function AgentRow({
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => { onFire(); setConfirmFire(false); }}
-                    className="px-2.5 py-1 rounded-lg bg-[#C65B52] text-white text-[11px] font-medium"
+                    className="px-2.5 py-1 rounded-lg bg-[#D5847A] text-white text-[11px] font-medium"
                   >
                     Confirm
                   </button>
                   <button
                     onClick={() => setConfirmFire(false)}
-                    className="px-2.5 py-1 rounded-lg border border-[#D8D1C6] text-[11px] text-[#626A73]"
+                    className="px-2.5 py-1 rounded-lg border border-[#DDD3C7] text-[11px] text-[#6F6A64]"
                   >
                     Cancel
                   </button>
@@ -105,7 +105,7 @@ function AgentRow({
               ) : (
                 <button
                   onClick={() => setConfirmFire(true)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-[#C65B52] hover:bg-[#C65B52]/5 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-[#D5847A] hover:bg-[#D5847A]/5 transition-colors"
                 >
                   <Flame className="h-3 w-3" />
                   Fire
@@ -116,10 +116,10 @@ function AgentRow({
 
           {/* Row 2: Description + expertise toggle */}
           <div className="flex items-start gap-1 mb-3">
-            <p className="text-xs text-[#626A73] flex-1">{agent.description}</p>
+            <p className="text-xs text-[#6F6A64] flex-1">{agent.description}</p>
             <button
               onClick={() => setShowExpertise(!showExpertise)}
-              className="shrink-0 flex items-center gap-0.5 text-[11px] text-[#4C7CF0] hover:underline mt-0.5"
+              className="shrink-0 flex items-center gap-0.5 text-[11px] text-[#7FAEE6] hover:underline mt-0.5"
             >
               Expertise
               {showExpertise ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -132,7 +132,7 @@ function AgentRow({
               {agent.expertise.map((item, i) => (
                 <span
                   key={i}
-                  className="text-[11px] px-2 py-0.5 rounded-md bg-[#F7F5F1] text-[#626A73] border border-[#E6E1D8]"
+                  className="text-[11px] px-2 py-0.5 rounded-md bg-[#F6F3EE] text-[#6F6A64] border border-[#E7DED2]"
                 >
                   {item}
                 </span>
@@ -141,17 +141,17 @@ function AgentRow({
           )}
 
           {/* Row 3: Current task */}
-          <div className="flex items-center gap-4 text-[11px] border-t border-[#E6E1D8] pt-2">
-            <div className="flex items-center gap-1.5 text-[#8C939B]">
+          <div className="flex items-center gap-4 text-[11px] border-t border-[#E7DED2] pt-2">
+            <div className="flex items-center gap-1.5 text-[#9B948B]">
               <Circle className="h-3 w-3" />
               <span>Current: </span>
-              <span className="text-[#626A73]">No active tasks</span>
+              <span className="text-[#6F6A64]">No active tasks</span>
             </div>
 
             {/* History — collapsible */}
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="flex items-center gap-0.5 text-[#8C939B] hover:text-[#626A73] transition-colors"
+              className="flex items-center gap-0.5 text-[#9B948B] hover:text-[#6F6A64] transition-colors"
             >
               <Clock className="h-3 w-3" />
               <span>History</span>
@@ -160,7 +160,7 @@ function AgentRow({
           </div>
 
           {showHistory && (
-            <div className="mt-2 pt-2 border-t border-dashed border-[#E6E1D8] text-[11px] text-[#8C939B]">
+            <div className="mt-2 pt-2 border-t border-dashed border-[#E7DED2] text-[11px] text-[#9B948B]">
               No history yet
             </div>
           )}
@@ -206,7 +206,7 @@ export default function TeamPage() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-[#8C939B]">Loading...</div>
+        <div className="text-sm text-[#9B948B]">Loading...</div>
       </div>
     );
   }
@@ -216,14 +216,14 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-[#1E2227]">Team</h1>
-          <p className="text-sm text-[#626A73] mt-1">
+          <h1 className="text-2xl font-semibold text-[#2B2B2B]">Team</h1>
+          <p className="text-sm text-[#6F6A64] mt-1">
             Your AI employees — {team.length} members
           </p>
         </div>
         <button
           onClick={() => setShowHire(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4C7CF0] text-white text-sm font-medium hover:bg-[#3F6FE4] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] active:scale-[0.98] transition-all"
         >
           <Plus className="h-4 w-4" />
           Hire

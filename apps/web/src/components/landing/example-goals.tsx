@@ -10,6 +10,7 @@ import type { LucideIcon } from "lucide-react";
 
 interface ExampleGoalsProps {
   onSelect: (text: string) => void;
+  compact?: boolean;
 }
 
 const EXAMPLES: {
@@ -56,31 +57,33 @@ const EXAMPLES: {
   },
   {
     icon: Plane,
-    color: "#4C7CF0",    // accent blue (lightbulb/ideas)
+    color: "#7FAEE6",    // accent blue (lightbulb/ideas)
     title: "Plan a six-day trip",
     description: "Map the itinerary, routes, and key bookings for both cities.",
     text: "I want to plan a 6-day trip to Tokyo and Kyoto",
   },
 ];
 
-export function ExampleGoals({ onSelect }: ExampleGoalsProps) {
+export function ExampleGoals({ onSelect, compact }: ExampleGoalsProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 max-w-3xl mx-auto">
+    <div className={`grid grid-cols-2 md:grid-cols-3 mx-auto ${compact ? "gap-2.5 max-w-3xl" : "gap-3 max-w-4xl"}`}>
       {EXAMPLES.map((example) => {
         const Icon = example.icon;
         return (
           <button
             key={example.title}
             onClick={() => onSelect(example.text)}
-            className="group cursor-pointer px-3.5 py-3 bg-[#F1EEE8] hover:bg-white rounded-lg text-left transition-all duration-200 border border-transparent hover:border-[#E6E1D8] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0"
+            className={`group cursor-pointer bg-[#F1ECE4] hover:bg-[#FFFDF9] rounded-xl text-left transition-all duration-200 border border-transparent hover:border-[#E7DED2] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0 ${
+              compact ? "px-3.5 py-3" : "px-5 py-4"
+            }`}
           >
-            <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
-              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} style={{ color: example.color }} />
-              <h3 className="text-xs font-medium text-[#1E2227] truncate">
+            <div className={`flex items-center gap-2 flex-nowrap overflow-hidden ${compact ? "" : "mb-1"}`}>
+              <Icon className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0`} strokeWidth={1.75} style={{ color: example.color }} />
+              <h3 className={`font-medium text-[#2B2B2B] ${compact ? "text-xs truncate" : "text-sm"}`}>
                 {example.title}
               </h3>
             </div>
-            <p className="text-[11px] text-[#626A73] mt-1 line-clamp-1">
+            <p className={`text-[#6F6A64] mt-1 ${compact ? "text-[11px] line-clamp-1" : "text-xs leading-relaxed"}`}>
               {example.description}
             </p>
           </button>

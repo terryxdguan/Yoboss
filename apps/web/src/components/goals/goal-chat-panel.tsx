@@ -14,6 +14,7 @@ import {
   updateSessionSummary,
 } from "@/lib/db/actions";
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
+import { setAgentStatus } from "@/lib/stores/agent-status";
 
 interface GoalChatPanelProps {
   goalId: string;
@@ -173,6 +174,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
   const sendToApi = useCallback(async (apiMessages: ApiMessage[]) => {
     setIsStreaming(true);
+    setAgentStatus("general_assistant", "working");
     const assistantId = genId();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
@@ -308,6 +310,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       );
     } finally {
       setIsStreaming(false);
+      setAgentStatus("general_assistant", "idle");
     }
   }, [goalContext]);
 
@@ -415,29 +418,29 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
   return (
     <div
-      className="shrink-0 border-l border-[#E6E1D8] bg-[#F7F5F1] flex flex-col h-[calc(100vh-96px)] sticky top-0 relative"
+      className="shrink-0 border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col h-[calc(100vh-96px)] sticky top-0 relative"
       style={{ width: panelWidth }}
     >
       {/* Resize handle */}
       <div
         onMouseDown={onResizeMouseDown}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#4C7CF0]/20 active:bg-[#4C7CF0]/30 transition-colors z-10"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#7FAEE6]/20 active:bg-[#7FAEE6]/30 transition-colors z-10"
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between h-14 px-4 border-b border-[#E6E1D8]">
+      <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-[#F1EEE8]">
+          <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4]">
             <Image src="/pink.png" alt="Eve" width={36} height={36} className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-[#1E2227] block truncate">Eve</span>
-            <span className="text-[10px] text-[#8C939B]">{panelTitle || "Goal Coach"}</span>
+            <span className="text-sm font-semibold text-[#2B2B2B] block truncate">Eve</span>
+            <span className="text-[10px] text-[#9B948B]">{panelTitle || "Goal Coach"}</span>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-md text-[#626A73] hover:bg-[#F1EEE8] hover:text-[#1E2227] transition-colors"
+          className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -449,14 +452,14 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[90%] rounded-xl px-4 py-3 text-sm ${
               msg.role === "user"
-                ? "bg-[#4C7CF0] text-white"
-                : "bg-white border border-[#E6E1D8] text-[#1E2227]"
+                ? "bg-[#7FAEE6] text-white"
+                : "bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B]"
             }`}>
               {/* Tool activity badges */}
               {msg.toolActivity && msg.toolActivity.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {msg.toolActivity.map((tool, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#F1EEE8] text-[#626A73]">
+                    <span key={i} className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]">
                       {tool.type === "web_search" || tool.type === "web_fetch" ? (
                         <Globe className="h-3 w-3" />
                       ) : (
@@ -498,13 +501,13 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
               {/* Generated files */}
               {msg.generatedFiles && msg.generatedFiles.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-[#E6E1D8] space-y-1.5">
+                <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1.5">
                   {msg.generatedFiles.map((f, i) => (
                     <a
                       key={i}
                       href={`/api/ai/files/${f.fileId}`}
                       download={f.filename}
-                      className="flex items-center gap-2 text-xs text-[#4C7CF0] hover:underline"
+                      className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
                     >
                       <Download className="h-3.5 w-3.5" />
                       {f.filename}
@@ -518,7 +521,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
         {isStreaming && displayMessages.length > 0 && displayMessages[displayMessages.length - 1]?.role === "user" && (
           <div className="flex justify-start">
-            <div className="bg-white border border-[#E6E1D8] rounded-xl px-4 py-3 text-sm text-[#8C939B]">
+            <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl px-4 py-3 text-sm text-[#9B948B]">
               <span className="inline-flex gap-1">
                 <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
                 <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
@@ -531,16 +534,16 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
       {/* Input area */}
       <div className="px-4 py-3">
-        <div className="rounded-xl border border-[#D8D1C6] bg-white focus-within:ring-2 focus-within:ring-[#4C7CF0]/30 focus-within:border-[#4C7CF0]/50 transition-all">
+        <div className="rounded-xl border border-[#DDD3C7] bg-[#FFFDF9] focus-within:ring-2 focus-within:ring-[#7FAEE6]/30 focus-within:border-[#7FAEE6]/50 transition-all">
           {/* Pending images preview */}
           {pendingImages.length > 0 && (
             <div className="px-3 pt-3 flex gap-2 flex-wrap">
               {pendingImages.map((img, i) => (
                 <div key={i} className="relative group">
-                  <img src={img.preview} alt="" className="h-16 rounded-lg border border-[#E6E1D8] object-cover" />
+                  <img src={img.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
                   <button
                     onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#C65B52] text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#D5847A] text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     x
                   </button>
@@ -564,14 +567,14 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             placeholder="Ask about your goal..."
             disabled={isStreaming}
             rows={3}
-            className="w-full px-3 py-3 text-sm bg-transparent outline-none placeholder:text-[#8C939B] text-[#1E2227] disabled:opacity-50 resize-none leading-relaxed"
+            className="w-full px-3 py-3 text-sm bg-transparent outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none leading-relaxed"
           />
 
           {/* Bottom toolbar */}
           <div className="flex items-center justify-between px-3 pb-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-md text-[#8C939B] hover:text-[#4C7CF0] hover:bg-[#F1EEE8] transition-colors"
+              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7FAEE6] hover:bg-[#F1ECE4] transition-colors"
               title="Upload image"
             >
               <ImagePlus className="h-4 w-4" />
@@ -587,7 +590,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             <button
               onClick={handleSend}
               disabled={(!inputText.trim() && pendingImages.length === 0) || isStreaming}
-              className="px-3 py-1.5 rounded-lg bg-[#4C7CF0] text-white text-xs font-medium hover:bg-[#3F6FE4] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-xs font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Send
             </button>

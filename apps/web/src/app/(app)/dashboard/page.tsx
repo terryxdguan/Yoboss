@@ -15,10 +15,10 @@ export default async function TodayPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-[32px] font-semibold tracking-tight text-[#1E2227]">
+        <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">
           Dashboard
         </h1>
-        <p className="mt-1 text-sm text-[#626A73]">
+        <p className="mt-1 text-sm text-[#6F6A64]">
           Overview of today&apos;s progress, tasks, and team activity
         </p>
       </div>

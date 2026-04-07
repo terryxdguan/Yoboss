@@ -70,17 +70,17 @@ export function DashboardTodos() {
   const totalTasks = TIME_BLOCKS.reduce((sum, b) => sum + b.tasks.length, 0);
 
   return (
-    <div className="rounded-[18px] border border-[#E6E1D8] bg-white p-6 shadow-[0_8px_24px_rgba(30,34,39,0.05)]">
+    <div className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDF9] p-6 shadow-[0_8px_24px_rgba(30,34,39,0.05)]">
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-[#1E2227]">
+          <h2 className="text-xl font-semibold text-[#2B2B2B]">
             Today&apos;s To-Do List
           </h2>
-          <p className="mt-1 text-sm text-[#626A73]">
+          <p className="mt-1 text-sm text-[#6F6A64]">
             Organized by time of day so the team can stay focused.
           </p>
         </div>
-        <span className="rounded-full bg-[#EAF0FF] px-3 py-1 text-xs font-semibold text-[#4C7CF0]">
+        <span className="rounded-full bg-[#EAF3FD] px-3 py-1 text-xs font-semibold text-[#7FAEE6]">
           {totalTasks} items
         </span>
       </div>
@@ -89,13 +89,13 @@ export function DashboardTodos() {
         {TIME_BLOCKS.map((block) => (
           <div
             key={block.label}
-            className="rounded-[18px] border border-[#E6E1D8] bg-[#F1EEE8] p-5"
+            className="rounded-[18px] border border-[#E7DED2] bg-[#F1ECE4] p-5"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#1E2227]">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#2B2B2B]">
                 {block.label}
               </h3>
-              <span className="text-[11px] font-semibold text-[#8C939B]">
+              <span className="text-[11px] font-semibold text-[#9B948B]">
                 {block.tasks.length} tasks
               </span>
             </div>
@@ -103,15 +103,15 @@ export function DashboardTodos() {
               {block.tasks.map((task) => (
                 <li key={task.title} className="flex items-start gap-3">
                   {task.done ? (
-                    <CheckCircle2 className="h-5 w-5 text-[#4D8B6A] shrink-0 mt-0.5 fill-[#4D8B6A] stroke-white" />
+                    <CheckCircle2 className="h-5 w-5 text-[#7FB38A] shrink-0 mt-0.5 fill-[#7FB38A] stroke-white" />
                   ) : (
-                    <Circle className="h-5 w-5 text-[#8C939B] shrink-0 mt-0.5" />
+                    <Circle className="h-5 w-5 text-[#9B948B] shrink-0 mt-0.5" />
                   )}
                   <div>
-                    <p className="text-sm font-medium text-[#1E2227]">
+                    <p className="text-sm font-medium text-[#2B2B2B]">
                       {task.title}
                     </p>
-                    <p className="text-[12px] text-[#626A73] mt-0.5">
+                    <p className="text-[12px] text-[#6F6A64] mt-0.5">
                       {task.description}
                     </p>
                   </div>

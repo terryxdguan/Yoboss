@@ -75,13 +75,13 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onCancel}
-          className="flex items-center gap-1.5 text-sm text-[#626A73] hover:text-[#1E2227] transition-colors"
+          className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </button>
-        <div className="h-4 w-px bg-[#E6E1D8]" />
-        <h2 className="text-lg font-semibold text-[#1E2227]">
+        <div className="h-4 w-px bg-[#E7DED2]" />
+        <h2 className="text-lg font-semibold text-[#2B2B2B]">
           Goal Coach
         </h2>
       </div>
@@ -104,7 +104,7 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
 
         {isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start">
-            <div className="bg-[#F1EEE8] rounded-lg px-4 py-3 text-sm text-[#8C939B]">
+            <div className="bg-[#F1ECE4] rounded-lg px-4 py-3 text-sm text-[#9B948B]">
               <span className="inline-flex gap-1">
                 <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
                 <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
@@ -116,7 +116,7 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
 
         {error && (
           <div className="flex justify-center">
-            <div className="bg-[#C65B52]/5 border border-[#C65B52]/20 rounded-lg px-4 py-2 text-sm text-[#C65B52]">
+            <div className="bg-[#D5847A]/5 border border-[#D5847A]/20 rounded-lg px-4 py-2 text-sm text-[#D5847A]">
               {error}
             </div>
           </div>
@@ -124,7 +124,7 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-[#E6E1D8] pt-4">
+      <div className="border-t border-[#E7DED2] pt-4">
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
@@ -139,12 +139,12 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
             }}
             placeholder="Type a message..."
             disabled={isStreaming}
-            className="flex-1 border border-[#D8D1C6] rounded-lg px-4 py-2.5 text-sm text-[#1E2227] placeholder:text-[#8C939B] focus:outline-none focus:ring-2 focus:ring-[#4C7CF0]/40 focus:border-transparent bg-white disabled:opacity-50"
+            className="flex-1 border border-[#DDD3C7] rounded-lg px-4 py-2.5 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/40 focus:border-transparent bg-[#FFFDF9] disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={!inputText.trim() || isStreaming}
-            className="h-10 w-10 flex items-center justify-center rounded-lg bg-[#4C7CF0] text-white hover:bg-[#3F6FE4] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-10 w-10 flex items-center justify-center rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="h-4 w-4" />
           </button>

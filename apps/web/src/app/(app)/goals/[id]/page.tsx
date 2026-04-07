@@ -155,7 +155,7 @@ export default function GoalDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-[#8C939B]">Loading...</div>
+        <div className="text-sm text-[#9B948B]">Loading...</div>
       </div>
     );
   }
@@ -163,10 +163,10 @@ export default function GoalDetailPage() {
   if (!goal) {
     return (
       <div className="text-center py-24">
-        <p className="text-[#626A73]">Goal not found</p>
+        <p className="text-[#6F6A64]">Goal not found</p>
         <button
           onClick={() => router.push("/goals")}
-          className="text-sm text-[#4C7CF0] mt-2 hover:underline"
+          className="text-sm text-[#7FAEE6] mt-2 hover:underline"
         >
           Back to Goals
         </button>
@@ -202,7 +202,7 @@ export default function GoalDetailPage() {
       {/* Header */}
       <button
         onClick={() => router.push("/goals")}
-        className="flex items-center gap-1.5 text-sm text-[#626A73] hover:text-[#1E2227] transition-colors mb-4"
+        className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Goals
@@ -211,19 +211,19 @@ export default function GoalDetailPage() {
       <div className="mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#1E2227]">{goal.title}</h1>
+            <h1 className="text-2xl font-semibold text-[#2B2B2B]">{goal.title}</h1>
             {goal.description && (
-              <p className="text-sm text-[#626A73] mt-1 max-w-2xl">{goal.description}</p>
+              <p className="text-sm text-[#6F6A64] mt-1 max-w-2xl">{goal.description}</p>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1 border border-[#E6E1D8] rounded-lg p-1">
+            <div className="flex items-center gap-1 border border-[#E7DED2] rounded-lg p-1">
               <button
                 onClick={() => togglePanel("ai")}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   rightPanel === "ai"
-                    ? "bg-[#4C7CF0] text-white"
-                    : "text-[#626A73] hover:bg-[#F1EEE8] hover:text-[#1E2227]"
+                    ? "bg-[#7FAEE6] text-white"
+                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
                 }`}
                 title="AI Coach"
               >
@@ -234,8 +234,8 @@ export default function GoalDetailPage() {
                 onClick={() => togglePanel("deliverables")}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   rightPanel === "deliverables"
-                    ? "bg-[#4C7CF0] text-white"
-                    : "text-[#626A73] hover:bg-[#F1EEE8] hover:text-[#1E2227]"
+                    ? "bg-[#7FAEE6] text-white"
+                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
                 }`}
                 title="Deliverables"
               >
@@ -245,15 +245,15 @@ export default function GoalDetailPage() {
                 onClick={() => togglePanel("notes")}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   rightPanel === "notes"
-                    ? "bg-[#4C7CF0] text-white"
-                    : "text-[#626A73] hover:bg-[#F1EEE8] hover:text-[#1E2227]"
+                    ? "bg-[#7FAEE6] text-white"
+                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
                 }`}
                 title="Notes"
               >
                 <FileText className="h-3.5 w-3.5" />
               </button>
             </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#4D8B6A]/10 text-[#4D8B6A]">
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#7FB38A]/10 text-[#7FB38A]">
               {goal.status}
             </span>
           </div>
@@ -263,17 +263,17 @@ export default function GoalDetailPage() {
       {/* Overall Progress */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#1E2227]">Overall Progress</h2>
-          <span className="text-sm font-semibold text-[#1E2227]">{progressPct}%</span>
+          <h2 className="text-base font-semibold text-[#2B2B2B]">Overall Progress</h2>
+          <span className="text-sm font-semibold text-[#2B2B2B]">{progressPct}%</span>
         </div>
-        <div className="rounded-2xl border border-[#E6E1D8] bg-white p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
-          <div className="h-2 bg-[#E6E1D8] rounded-full overflow-hidden">
+        <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+          <div className="h-2 bg-[#E7DED2] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#4D8B6A] rounded-full transition-all duration-500"
+              className="h-full bg-[#7FB38A] rounded-full transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="text-xs text-[#8C939B] mt-2">
+          <p className="text-xs text-[#9B948B] mt-2">
             {completedTasks} / {totalTasks} tasks completed
           </p>
         </div>
@@ -282,10 +282,10 @@ export default function GoalDetailPage() {
       {/* Roadmap */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#1E2227]">Roadmap</h2>
-          <span className="text-xs text-[#8C939B]">{phases.length} phases</span>
+          <h2 className="text-base font-semibold text-[#2B2B2B]">Roadmap</h2>
+          <span className="text-xs text-[#9B948B]">{phases.length} phases</span>
         </div>
-        <div className="rounded-2xl border border-[#E6E1D8] bg-white p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+        <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
         <div className="flex items-center gap-1 overflow-x-auto pb-1">
           {phases.map((phase, idx) => {
             const isSelected = phase.id === selectedPhaseId;
@@ -295,17 +295,17 @@ export default function GoalDetailPage() {
                   onClick={() => setSelectedPhaseId(phase.id)}
                   className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[120px] ${
                     isSelected
-                      ? "bg-[#4C7CF0]/8 ring-1 ring-[#4C7CF0]/30"
-                      : "hover:bg-[#F1EEE8]"
+                      ? "bg-[#7FAEE6]/8 ring-1 ring-[#7FAEE6]/30"
+                      : "hover:bg-[#F1ECE4]"
                   }`}
                 >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
                       phase.status === "completed"
-                        ? "bg-[#4D8B6A] text-white"
+                        ? "bg-[#7FB38A] text-white"
                         : phase.status === "active"
-                          ? "bg-[#4C7CF0] text-white"
-                          : "bg-[#E6E1D8] text-[#8C939B]"
+                          ? "bg-[#7FAEE6] text-white"
+                          : "bg-[#E7DED2] text-[#9B948B]"
                     }`}
                   >
                     {phase.status === "completed" ? (
@@ -315,7 +315,7 @@ export default function GoalDetailPage() {
                     )}
                   </div>
                   <span className={`text-[11px] font-medium text-center leading-tight line-clamp-2 ${
-                    isSelected ? "text-[#1E2227]" : "text-[#8C939B]"
+                    isSelected ? "text-[#2B2B2B]" : "text-[#9B948B]"
                   }`}>
                     {phase.title.replace(/^Phase \d+:\s*/, "")}
                   </span>
@@ -323,7 +323,7 @@ export default function GoalDetailPage() {
                 {idx < phases.length - 1 && (
                   <div
                     className={`w-6 h-0.5 shrink-0 ${
-                      phase.status === "completed" ? "bg-[#4D8B6A]" : "bg-[#E6E1D8]"
+                      phase.status === "completed" ? "bg-[#7FB38A]" : "bg-[#E7DED2]"
                     }`}
                   />
                 )}
@@ -334,15 +334,15 @@ export default function GoalDetailPage() {
 
         {/* Selected phase info */}
         {selectedPhase && (
-          <div className="mt-4 pt-4 border-t border-[#E6E1D8]">
+          <div className="mt-4 pt-4 border-t border-[#E7DED2]">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-semibold text-[#1E2227]">{selectedPhase.title}</h3>
+                <h3 className="text-base font-semibold text-[#2B2B2B]">{selectedPhase.title}</h3>
                 {selectedPhase.description && (
-                  <p className="text-sm text-[#626A73] mt-1">{selectedPhase.description}</p>
+                  <p className="text-sm text-[#6F6A64] mt-1">{selectedPhase.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-[#8C939B] shrink-0">
+              <div className="flex items-center gap-1.5 text-xs text-[#9B948B] shrink-0">
                 <Clock className="h-3.5 w-3.5" />
                 {selectedPhase.estimated_weeks} week{selectedPhase.estimated_weeks !== 1 ? "s" : ""}
               </div>
@@ -356,13 +356,13 @@ export default function GoalDetailPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[#4C7CF0]" />
-            <h2 className="text-base font-semibold text-[#1E2227]">Weekly Schedule</h2>
+            <Calendar className="h-4 w-4 text-[#7FAEE6]" />
+            <h2 className="text-base font-semibold text-[#2B2B2B]">Weekly Schedule</h2>
           </div>
           {hasTasks ? (
             <button
               onClick={() => setRightPanel("plan-chat")}
-              className="flex items-center gap-1.5 text-xs text-[#4C7CF0] font-medium hover:underline"
+              className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Regenerate
@@ -370,7 +370,7 @@ export default function GoalDetailPage() {
           ) : (
             <button
               onClick={() => setRightPanel("plan-chat")}
-              className="flex items-center gap-1.5 text-xs text-[#4C7CF0] font-medium hover:underline"
+              className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Generate with AI
@@ -379,10 +379,10 @@ export default function GoalDetailPage() {
         </div>
 
         {!hasTasks && (
-          <div className="rounded-2xl border border-dashed border-[#D8D1C6] bg-white p-12 text-center">
-            <Circle className="h-8 w-8 text-[#E6E1D8] mx-auto mb-2" />
-            <p className="text-sm text-[#8C939B]">No weekly plan yet</p>
-            <p className="text-xs text-[#8C939B] mt-1">
+          <div className="rounded-2xl border border-dashed border-[#DDD3C7] bg-[#FFFDF9] p-12 text-center">
+            <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
+            <p className="text-sm text-[#9B948B]">No weekly plan yet</p>
+            <p className="text-xs text-[#9B948B] mt-1">
               Generate a plan to see your daily schedule
             </p>
           </div>
@@ -504,30 +504,30 @@ function DayCard({
 
   return (
     <div
-      className={`rounded-xl border bg-white min-h-[140px] shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden ${
+      className={`rounded-xl border bg-[#FFFDF9] min-h-[140px] shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden ${
         isToday
-          ? "border-[#4C7CF0]/40 ring-1 ring-[#4C7CF0]/15"
-          : "border-[#E6E1D8]"
+          ? "border-[#7FAEE6]/40 ring-1 ring-[#7FAEE6]/15"
+          : "border-[#E7DED2]"
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E6E1D8]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold ${isToday ? "text-[#4C7CF0]" : "text-[#1E2227]"}`}>
+          <span className={`text-sm font-semibold ${isToday ? "text-[#7FAEE6]" : "text-[#2B2B2B]"}`}>
             {dayName}
             {isToday && <span className="ml-1 text-[11px] font-normal">(Today)</span>}
           </span>
         </div>
-        <span className={`text-[11px] ${isToday ? "text-[#4C7CF0]" : "text-[#8C939B]"}`}>{date}</span>
+        <span className={`text-[11px] ${isToday ? "text-[#7FAEE6]" : "text-[#9B948B]"}`}>{date}</span>
       </div>
 
       {/* Tasks */}
       {tasks.length === 0 ? (
         <div className="px-4 py-4">
-          <p className="text-xs text-[#D8D1C6] italic">No tasks</p>
+          <p className="text-xs text-[#DDD3C7] italic">No tasks</p>
         </div>
       ) : (
-        <div className="divide-y divide-[#E6E1D8]">
+        <div className="divide-y divide-[#E7DED2]">
           {tasks.map((task) => (
             <TaskItem
               key={task.id}
@@ -541,11 +541,11 @@ function DayCard({
       )}
 
       {tasks.length > 0 && (
-        <div className="px-4 py-2 border-t border-[#E6E1D8] bg-[#F7F5F1]/50">
+        <div className="px-4 py-2 border-t border-[#E7DED2] bg-[#F6F3EE]/50">
           <span className={`text-[10px] font-medium ${
             completedCount === tasks.length
-              ? "text-[#4D8B6A]"
-              : "text-[#8C939B]"
+              ? "text-[#7FB38A]"
+              : "text-[#9B948B]"
           }`}>
             {completedCount}/{tasks.length} done
           </span>
@@ -592,7 +592,7 @@ function TaskItem({
   };
 
   return (
-    <div className="group/item px-4 py-3 hover:bg-[#F7F5F1]/60 transition-colors relative">
+    <div className="group/item px-4 py-3 hover:bg-[#F6F3EE]/60 transition-colors relative">
       {/* Time slot */}
       {editingTime ? (
         <input
@@ -601,12 +601,12 @@ function TaskItem({
           onChange={(e) => setTimeDraft(e.target.value)}
           onBlur={commitTime}
           onKeyDown={(e) => { if (e.key === "Enter") commitTime(); if (e.key === "Escape") { setTimeDraft(task.time_slot || ""); setEditingTime(false); } }}
-          className="text-[10px] text-[#8C939B] bg-white border border-[#4C7CF0]/40 rounded px-1 py-0.5 outline-none w-full mb-1"
+          className="text-[10px] text-[#9B948B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none w-full mb-1"
         />
       ) : (
         task.time_slot && (
           <p
-            className="text-[10px] text-[#8C939B] mb-1 cursor-text"
+            className="text-[10px] text-[#9B948B] mb-1 cursor-text"
             onDoubleClick={() => setEditingTime(true)}
           >
             {task.time_slot}
@@ -621,9 +621,9 @@ function TaskItem({
           className="shrink-0 mt-0.5"
         >
           {task.completed ? (
-            <CheckCircle2 className="h-4 w-4 text-[#4D8B6A] fill-[#4D8B6A] stroke-white" />
+            <CheckCircle2 className="h-4 w-4 text-[#7FB38A] fill-[#7FB38A] stroke-white" />
           ) : (
-            <Circle className="h-4 w-4 text-[#C4BFB6] group-hover/item:text-[#4C7CF0] transition-colors" />
+            <Circle className="h-4 w-4 text-[#9B948B] group-hover/item:text-[#7FAEE6] transition-colors" />
           )}
         </button>
 
@@ -635,14 +635,14 @@ function TaskItem({
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setTitleDraft(task.title); setEditingTitle(false); } }}
-              className="text-xs text-[#1E2227] bg-white border border-[#4C7CF0]/40 rounded px-1 py-0.5 outline-none w-full"
+              className="text-xs text-[#2B2B2B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none w-full"
             />
           ) : (
             <p
               className={`text-xs leading-snug cursor-text ${
                 task.completed
-                  ? "text-[#C4BFB6] line-through"
-                  : "text-[#1E2227]"
+                  ? "text-[#9B948B] line-through"
+                  : "text-[#2B2B2B]"
               }`}
               onDoubleClick={() => setEditingTitle(true)}
             >
@@ -654,10 +654,10 @@ function TaskItem({
         {/* AI button — visible on hover */}
         <button
           onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
-          className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 rounded hover:bg-[#4C7CF0]/10"
+          className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 rounded hover:bg-[#7FAEE6]/10"
           title="Ask AI Coach"
         >
-          <MessageSquare className="h-3.5 w-3.5 text-[#4C7CF0]" />
+          <MessageSquare className="h-3.5 w-3.5 text-[#7FAEE6]" />
         </button>
       </div>
     </div>

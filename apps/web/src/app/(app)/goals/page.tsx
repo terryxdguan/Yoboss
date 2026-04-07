@@ -63,7 +63,7 @@ export default function GoalsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-[#8C939B]">Loading...</div>
+        <div className="text-sm text-[#9B948B]">Loading...</div>
       </div>
     );
   }
@@ -73,12 +73,12 @@ export default function GoalsPage() {
   return (
     <div className="-mx-6 md:-mx-8 -mb-12">
       {/* Tab Bar */}
-      <div className="flex items-center border-b border-[#E6E1D8] bg-[#F7F5F1] px-2">
+      <div className="flex items-center border-b border-[#E7DED2] bg-[#F6F3EE] px-2">
         {/* Scroll left */}
         {activeGoals.length > 4 && (
           <button
             onClick={() => scrollTabs("left")}
-            className="p-1 text-[#8C939B] hover:text-[#1E2227] shrink-0"
+            className="p-1 text-[#9B948B] hover:text-[#2B2B2B] shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -91,8 +91,8 @@ export default function GoalsPage() {
             onClick={() => { setActiveTab("new"); setChatActive(false); }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 ${
               activeTab === "new"
-                ? "border-[#4C7CF0] text-[#4C7CF0] bg-white"
-                : "border-transparent text-[#626A73] hover:text-[#1E2227] hover:bg-[#F1EEE8]"
+                ? "border-[#7FAEE6] text-[#7FAEE6] bg-[#FFFDF9]"
+                : "border-transparent text-[#6F6A64] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
             }`}
           >
             Goal
@@ -100,26 +100,26 @@ export default function GoalsPage() {
 
           {/* Goal tabs */}
           {activeGoals.map((goal) => (
-            <button
+            <div
               key={goal.id}
               onClick={() => { setActiveTab(goal.id); setChatActive(false); }}
-              className={`group flex items-center gap-1.5 pl-4 pr-2 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 max-w-[200px] ${
+              className={`group flex items-center gap-1.5 pl-4 pr-2 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 max-w-[200px] cursor-pointer ${
                 activeTab === goal.id
-                  ? "border-[#4C7CF0] text-[#1E2227] bg-white"
-                  : "border-transparent text-[#626A73] hover:text-[#1E2227] hover:bg-[#F1EEE8]"
+                  ? "border-[#7FAEE6] text-[#2B2B2B] bg-[#FFFDF9]"
+                  : "border-transparent text-[#6F6A64] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
               }`}
             >
               <span className={`w-2 h-2 rounded-full shrink-0 ${
-                goal.status === "active" ? "bg-[#4D8B6A]" : "bg-[#8C939B]"
+                goal.status === "active" ? "bg-[#7FB38A]" : "bg-[#9B948B]"
               }`} />
               <span className="truncate">{goal.title}</span>
               <button
                 onClick={(e) => handleCloseTab(goal.id, e)}
-                className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-[#C65B52]/10 transition-all shrink-0 ml-1"
+                className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-[#D5847A]/10 transition-all shrink-0 ml-1"
               >
-                <X className="h-3 w-3 text-[#8C939B] hover:text-[#C65B52]" />
+                <X className="h-3 w-3 text-[#9B948B] hover:text-[#D5847A]" />
               </button>
-            </button>
+            </div>
           ))}
         </div>
 
@@ -127,7 +127,7 @@ export default function GoalsPage() {
         {activeGoals.length > 4 && (
           <button
             onClick={() => scrollTabs("right")}
-            className="p-1 text-[#8C939B] hover:text-[#1E2227] shrink-0"
+            className="p-1 text-[#9B948B] hover:text-[#2B2B2B] shrink-0"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -136,7 +136,7 @@ export default function GoalsPage() {
         {/* History button */}
         <button
           onClick={() => setShowHistory(true)}
-          className="flex items-center gap-1 px-3 py-2 text-xs text-[#8C939B] hover:text-[#1E2227] transition-colors shrink-0 border-l border-[#E6E1D8] ml-1"
+          className="flex items-center gap-1 px-3 py-2 text-xs text-[#9B948B] hover:text-[#2B2B2B] transition-colors shrink-0 border-l border-[#E7DED2] ml-1"
         >
           <Clock className="h-3.5 w-3.5" />
           History
@@ -191,10 +191,10 @@ function NewGoalView({
         />
       </div>
 
-      <h1 className="text-xl md:text-2xl font-semibold text-[#1E2227] mb-1">
+      <h1 className="text-xl md:text-2xl font-semibold text-[#2B2B2B] mb-1">
         What&apos;s the next thing you want to do?
       </h1>
-      <p className="text-xs text-[#626A73] mb-4">
+      <p className="text-xs text-[#6F6A64] mb-4">
         Describe your goal and we&apos;ll help you create an actionable plan
       </p>
 
@@ -205,7 +205,7 @@ function NewGoalView({
       />
 
       <div className="mt-3">
-        <ExampleGoals onSelect={(text) => setGoalText(text)} />
+        <ExampleGoals onSelect={(text) => setGoalText(text)} compact />
       </div>
     </section>
   );
@@ -220,7 +220,7 @@ function GoalRedirect({ goalId }: { goalId: string }) {
 
   return (
     <div className="flex items-center justify-center py-24">
-      <div className="text-sm text-[#8C939B]">Loading goal...</div>
+      <div className="text-sm text-[#9B948B]">Loading goal...</div>
     </div>
   );
 }
@@ -237,13 +237,13 @@ function HistoryModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[70vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E6E1D8]">
+      <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[70vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
           <div>
-            <h2 className="text-lg font-semibold text-[#1E2227]">Goal History</h2>
-            <p className="text-sm text-[#626A73] mt-0.5">{goals.length} goals total</p>
+            <h2 className="text-lg font-semibold text-[#2B2B2B]">Goal History</h2>
+            <p className="text-sm text-[#6F6A64] mt-0.5">{goals.length} goals total</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-[#626A73] hover:bg-[#F1EEE8]">
+          <button onClick={onClose} className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4]">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -253,24 +253,24 @@ function HistoryModal({
             <button
               key={goal.id}
               onClick={() => onSelect(goal.id)}
-              className="w-full text-left rounded-xl border border-[#E6E1D8] bg-white p-4 hover:border-[#4C7CF0]/30 transition-all group"
+              className="w-full text-left rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 hover:border-[#7FAEE6]/30 transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-[#1E2227]">{goal.title}</h3>
+                  <h3 className="text-sm font-semibold text-[#2B2B2B]">{goal.title}</h3>
                   {goal.description && (
-                    <p className="text-xs text-[#626A73] mt-0.5 line-clamp-1">{goal.description}</p>
+                    <p className="text-xs text-[#6F6A64] mt-0.5 line-clamp-1">{goal.description}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-3">
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                    goal.status === "active" ? "bg-[#4D8B6A]/10 text-[#4D8B6A]"
-                    : goal.status === "completed" ? "bg-[#4C7CF0]/10 text-[#4C7CF0]"
-                    : "bg-[#F1EEE8] text-[#8C939B]"
+                    goal.status === "active" ? "bg-[#7FB38A]/10 text-[#7FB38A]"
+                    : goal.status === "completed" ? "bg-[#7FAEE6]/10 text-[#7FAEE6]"
+                    : "bg-[#F1ECE4] text-[#9B948B]"
                   }`}>
                     {goal.status}
                   </span>
-                  <span className="text-[10px] text-[#8C939B]">
+                  <span className="text-[10px] text-[#9B948B]">
                     {new Date(goal.created_at).toLocaleDateString()}
                   </span>
                 </div>
