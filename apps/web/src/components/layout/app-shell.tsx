@@ -38,7 +38,6 @@ export function AppShell({ children, userAvatar, userName }: AppShellProps) {
         <div className="max-w-[1440px] mx-auto">{children}</div>
       </main>
 
-      <ChatFab onClick={openChat} />
       <ChatPanel open={chatOpen} onClose={closeChat} />
     </div>
   );

@@ -1,0 +1,266 @@
+[
+  {
+    "original_name": "AutoGPT.md",
+    "fixed_filename": "auto_gpt.txt"
+  },
+  {
+    "original_name": "Beauty_DND.txt",
+    "fixed_filename": "beauty_dnd.txt"
+  },
+  {
+    "original_name": "LearnOS_PRO.txt",
+    "fixed_filename": "learn_os_pro.txt"
+  },
+  {
+    "original_name": "SuperPrompt.md",
+    "fixed_filename": "super_prompt.txt"
+  },
+  {
+    "original_name": "Vampire The Masquerade Lore Expert.md",
+    "fixed_filename": "vampire_the_masquerade_lore_expert.txt"
+  },
+  {
+    "original_name": "flux_image_gen.txt",
+    "fixed_filename": "flux_image_gen.txt"
+  },
+  {
+    "original_name": "video_gen_prompting.txt",
+    "fixed_filename": "video_gen_prompting.txt"
+  },
+  {
+    "original_name": "meta_prompt.txt",
+    "fixed_filename": "meta_prompt.txt"
+  },
+  {
+    "original_name": "\u270f\ufe0fAll-around Writer (Professional Version).md",
+    "fixed_filename": "all_around_writer.txt"
+  },
+  {
+    "original_name": "\ud83d\udc4cAcademic Assistant Pro.md",
+    "fixed_filename": "academic_assistant_pro.txt"
+  },
+  {
+    "original_name": "\ud83d\udcbbProfessional Coder.md",
+    "fixed_filename": "professional_coder.txt"
+  },
+  {
+    "original_name": "\ud83d\udcd7All-around Teacher.md",
+    "fixed_filename": "all_around_teacher.txt"
+  },
+  {
+    "original_name": "QuickSilver OS.md",
+    "fixed_filename": "quicksilver_os.txt"
+  },
+  {
+    "original_name": "Literature_Professor.md",
+    "fixed_filename": "literature_professor.txt"
+  },
+  {
+    "original_name": "Meta MJ.md",
+    "fixed_filename": "meta_mj.txt"
+  },
+  {
+    "original_name": "Mr_Ranedeer.txt",
+    "fixed_filename": "mr_ranedeer.txt"
+  },
+  {
+    "original_name": "Prompt Creater.md",
+    "fixed_filename": "prompt_creater.txt"
+  },
+  {
+    "original_name": "agentic_coder.txt",
+    "fixed_filename": "agentic_coder.txt"
+  },
+  {
+    "original_name": "analytics_engineer.txt",
+    "fixed_filename": "analytics_engineer.txt"
+  },
+  {
+    "original_name": "api_integration_architect.txt",
+    "fixed_filename": "api_integration_architect.txt"
+  },
+  {
+    "original_name": "brand_strategist.txt",
+    "fixed_filename": "brand_strategist.txt"
+  },
+  {
+    "original_name": "cfo_financial_strategy.txt",
+    "fixed_filename": "cfo_financial_strategy.txt"
+  },
+  {
+    "original_name": "change_management_leader.txt",
+    "fixed_filename": "change_management_leader.txt"
+  },
+  {
+    "original_name": "claude_artifacts_prompt.md",
+    "fixed_filename": "claude_artifacts_prompt.txt"
+  },
+  {
+    "original_name": "code_reviewer_security.txt",
+    "fixed_filename": "code_reviewer_security.txt"
+  },
+  {
+    "original_name": "community_manager.txt",
+    "fixed_filename": "community_manager.txt"
+  },
+  {
+    "original_name": "content_moderator.txt",
+    "fixed_filename": "content_moderator.txt"
+  },
+  {
+    "original_name": "customer_success_strategist.txt",
+    "fixed_filename": "customer_success_strategist.txt"
+  },
+  {
+    "original_name": "customer_support_agent.txt",
+    "fixed_filename": "customer_support_agent.txt"
+  },
+  {
+    "original_name": "data_analysis.txt",
+    "fixed_filename": "data_analysis.txt"
+  },
+  {
+    "original_name": "data_analyst.txt",
+    "fixed_filename": "data_analyst.txt"
+  },
+  {
+    "original_name": "data_engineer.md",
+    "fixed_filename": "data_engineer.txt"
+  },
+  {
+    "original_name": "database_schema_designer.txt",
+    "fixed_filename": "database_schema_designer.txt"
+  },
+  {
+    "original_name": "debugging_agent.txt",
+    "fixed_filename": "debugging_agent.txt"
+  },
+  {
+    "original_name": "deep_research.txt",
+    "fixed_filename": "deep_research.txt"
+  },
+  {
+    "original_name": "eval_benchmark_architect.txt",
+    "fixed_filename": "eval_benchmark_architect.txt"
+  },
+  {
+    "original_name": "financial_advisor.txt",
+    "fixed_filename": "financial_advisor.txt"
+  },
+  {
+    "original_name": "growth_hacker.txt",
+    "fixed_filename": "growth_hacker.txt"
+  },
+  {
+    "original_name": "hr_talent_development.txt",
+    "fixed_filename": "hr_talent_development.txt"
+  },
+  {
+    "original_name": "incident_response_commander.md",
+    "fixed_filename": "incident_response_commander.txt"
+  },
+  {
+    "original_name": "investment_research_analyst.txt",
+    "fixed_filename": "investment_research_analyst.txt"
+  },
+  {
+    "original_name": "knowledge_management_architect.txt",
+    "fixed_filename": "knowledge_management_architect.txt"
+  },
+  {
+    "original_name": "legal_analyst.txt",
+    "fixed_filename": "legal_analyst.txt"
+  },
+  {
+    "original_name": "market_research_strategist.txt",
+    "fixed_filename": "market_research_strategist.txt"
+  },
+  {
+    "original_name": "ml_systems_architect.txt",
+    "fixed_filename": "ml_systems_architect.txt"
+  },
+  {
+    "original_name": "multi_agent_orchestrator.txt",
+    "fixed_filename": "multi_agent_orchestrator.txt"
+  },
+  {
+    "original_name": "multimodal_analyst.txt",
+    "fixed_filename": "multimodal_analyst.txt"
+  },
+  {
+    "original_name": "operations_manager.txt",
+    "fixed_filename": "operations_manager.txt"
+  },
+  {
+    "original_name": "pdf_translator.txt",
+    "fixed_filename": "pdf_translator.txt"
+  },
+  {
+    "original_name": "performance_profiler.txt",
+    "fixed_filename": "performance_profiler.txt"
+  },
+  {
+    "original_name": "product_manager.md",
+    "fixed_filename": "product_manager.txt"
+  },
+  {
+    "original_name": "productivity_assistant_gtd.txt",
+    "fixed_filename": "productivity_assistant_gtd.txt"
+  },
+  {
+    "original_name": "qa_agent.txt",
+    "fixed_filename": "qa_agent.txt"
+  },
+  {
+    "original_name": "reasoning_specialist.txt",
+    "fixed_filename": "reasoning_specialist.txt"
+  },
+  {
+    "original_name": "recruitment_strategist.txt",
+    "fixed_filename": "recruitment_strategist.txt"
+  },
+  {
+    "original_name": "refactoring_coach.txt",
+    "fixed_filename": "refactoring_coach.txt"
+  },
+  {
+    "original_name": "sales_strategist.txt",
+    "fixed_filename": "sales_strategist.txt"
+  },
+  {
+    "original_name": "security_researcher.txt",
+    "fixed_filename": "security_researcher.txt"
+  },
+  {
+    "original_name": "socratic_tutor.txt",
+    "fixed_filename": "socratic_tutor.txt"
+  },
+  {
+    "original_name": "sql_assistant.txt",
+    "fixed_filename": "sql_assistant.txt"
+  },
+  {
+    "original_name": "sre.md",
+    "fixed_filename": "sre.txt"
+  },
+  {
+    "original_name": "structured_output_extractor.txt",
+    "fixed_filename": "structured_output_extractor.txt"
+  },
+  {
+    "original_name": "system_design.txt",
+    "fixed_filename": "system_design.txt"
+  },
+  {
+    "original_name": "technical_writer.txt",
+    "fixed_filename": "technical_writer.txt"
+  },
+  {
+    "original_name": "test_strategy_architect.txt",
+    "fixed_filename": "test_strategy_architect.txt"
+  },
+  {
+    "original_name": "ux_research_specialist.txt",
+    "fixed_filename": "ux_research_specialist.txt"
+  }
+]

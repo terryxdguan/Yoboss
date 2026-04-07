@@ -18,6 +18,19 @@ export interface GoalPlanData {
   }[];
 }
 
+// create_weekly_plan tool output
+export interface WeeklyPlanData {
+  ai_summary: string;
+  tasks: {
+    day_of_week: number;
+    title: string;
+    description: string;
+    time_estimate_minutes: number;
+    time_slot: string;
+    sort_order: number;
+  }[];
+}
+
 // User's answer to an ask_question
 export interface UserAnswer {
   question: string;
@@ -33,7 +46,7 @@ export interface ChatMessage {
   toolUse?: {
     id: string; // tool_use_id from Anthropic
     name: string;
-    data: AskQuestionData | GoalPlanData;
+    data: AskQuestionData | GoalPlanData | WeeklyPlanData;
   } | null;
   answered?: boolean; // for ask_question: has user answered?
 }

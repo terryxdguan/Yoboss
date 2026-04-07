@@ -46,6 +46,13 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
             Plan generated — review it below
           </div>
         )}
+
+        {/* Weekly plan generated indicator */}
+        {message.toolUse?.name === "create_weekly_plan" && (
+          <div className="mt-2 border border-[#4D8B6A] bg-[#4D8B6A]/5 rounded-lg px-4 py-3 text-sm text-[#4D8B6A] font-medium">
+            Weekly plan generated — review below
+          </div>
+        )}
       </div>
     </div>
   );

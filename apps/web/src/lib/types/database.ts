@@ -91,6 +91,69 @@ export interface PushSubscription {
   created_at: string;
 }
 
+export interface GoalNote {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  content: string;
+  updated_at: string;
+  created_at: string;
+}
+
+export interface GoalDeliverable {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  title: string;
+  url: string | null;
+  file_type: string | null;
+  source: "manual" | "ai_generated";
+  created_at: string;
+}
+
+export interface ChatSession {
+  id: string;
+  user_id: string;
+  agent_id: string | null;
+  goal_id: string | null;
+  title: string;
+  summary: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  role: string;
+  content: string;
+  created_at: string;
+}
+
+export interface TodoItem {
+  id: string;
+  user_id: string;
+  text: string;
+  tag: string;
+  completed: boolean;
+  priority: "high" | "medium" | "low";
+  deadline: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface TodoTag {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string | null;
+  is_default: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 // Composite types
 export interface GoalWithPhases extends Goal {
   phases: Phase[];

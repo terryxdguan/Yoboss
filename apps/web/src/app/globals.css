@@ -158,3 +158,83 @@
 .animate-spin-slow {
   animation: spin-slow 4s linear infinite;
 }
+
+/* Chat markdown styles */
+.prose-chat {
+  line-height: 1.6;
+}
+.prose-chat p {
+  margin: 0.4em 0;
+}
+.prose-chat p:first-child {
+  margin-top: 0;
+}
+.prose-chat p:last-child {
+  margin-bottom: 0;
+}
+.prose-chat h1, .prose-chat h2, .prose-chat h3, .prose-chat h4 {
+  font-weight: 600;
+  margin: 0.8em 0 0.4em;
+}
+.prose-chat h1 { font-size: 1.15em; }
+.prose-chat h2 { font-size: 1.05em; }
+.prose-chat h3 { font-size: 1em; }
+.prose-chat ul, .prose-chat ol {
+  margin: 0.4em 0;
+  padding-left: 1.4em;
+}
+.prose-chat li {
+  margin: 0.15em 0;
+}
+.prose-chat ul { list-style-type: disc; }
+.prose-chat ol { list-style-type: decimal; }
+.prose-chat code {
+  background: rgba(0,0,0,0.06);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+.prose-chat pre {
+  background: rgba(0,0,0,0.06);
+  padding: 0.75em 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.prose-chat pre code {
+  background: none;
+  padding: 0;
+}
+.prose-chat blockquote {
+  border-left: 3px solid #4C7CF0;
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: #626A73;
+}
+.prose-chat table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+  font-size: 0.88em;
+}
+.prose-chat th, .prose-chat td {
+  border: 1px solid #E6E1D8;
+  padding: 0.4em 0.6em;
+  text-align: left;
+}
+.prose-chat th {
+  background: #F1EEE8;
+  font-weight: 600;
+}
+.prose-chat hr {
+  border: none;
+  border-top: 1px solid #E6E1D8;
+  margin: 0.75em 0;
+}
+.prose-chat strong {
+  font-weight: 600;
+}
+.prose-chat a {
+  color: #4C7CF0;
+  text-decoration: underline;
+}

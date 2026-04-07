@@ -3,6 +3,8 @@ import { createClient } from "@/lib/db/server";
 import { chatWithCoach } from "@/lib/ai/decompose";
 import { chatWithGoalCoach } from "@/lib/ai/goal-chat-prompt";
 import { generateWeeklyPlan } from "@/lib/ai/weekly-plan";
+import { chatWithWeeklyPlanCoach } from "@/lib/ai/weekly-plan-chat";
+import { streamGoalDetailChat, type GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import { generateWeeklyReview } from "@/lib/ai/review";
 import type { ConversationMessage } from "@/lib/ai/decompose";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -54,6 +56,37 @@ export async function POST(request: NextRequest) {
       const stream = await generateWeeklyReview(context);
 
       return new Response(stream.toReadableStream(), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    if (action === "weekly-chat") {
+      // Weekly plan generation with chat (streaming + tool_use)
+      const { messages } = body as { messages: Anthropic.MessageParam[] };
+      const stream = await chatWithWeeklyPlanCoach(messages);
+
+      return new Response(stream.toReadableStream(), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    if (action === "goal-detail-chat") {
+      // General goal discussion with server-side tools (web search, code execution)
+      const { messages, context } = body as {
+        messages: Anthropic.MessageParam[];
+        context: GoalDetailChatContext;
+      };
+      const readableStream = streamGoalDetailChat(messages, context);
+
+      return new Response(readableStream, {
         headers: {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",

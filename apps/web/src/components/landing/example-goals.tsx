@@ -65,22 +65,22 @@ const EXAMPLES: {
 
 export function ExampleGoals({ onSelect }: ExampleGoalsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto mb-32">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 max-w-3xl mx-auto">
       {EXAMPLES.map((example) => {
         const Icon = example.icon;
         return (
           <button
             key={example.title}
             onClick={() => onSelect(example.text)}
-            className="group cursor-pointer p-6 bg-[#F1EEE8] hover:bg-white rounded-xl text-left transition-all duration-200 border border-transparent hover:border-[#E6E1D8] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0"
+            className="group cursor-pointer px-3.5 py-3 bg-[#F1EEE8] hover:bg-white rounded-lg text-left transition-all duration-200 border border-transparent hover:border-[#E6E1D8] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0"
           >
-            <div className="mb-3 flex items-center gap-3 flex-nowrap whitespace-nowrap overflow-hidden">
-              <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} style={{ color: example.color }} />
-              <h3 className="font-semibold text-[#1E2227] truncate">
+            <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} style={{ color: example.color }} />
+              <h3 className="text-xs font-medium text-[#1E2227] truncate">
                 {example.title}
               </h3>
             </div>
-            <p className="text-sm text-[#626A73] leading-relaxed">
+            <p className="text-[11px] text-[#626A73] mt-1 line-clamp-1">
               {example.description}
             </p>
           </button>

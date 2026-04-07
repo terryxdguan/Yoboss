@@ -8,6 +8,12 @@ import type {
   DailyTask,
   CoachingMessage,
   Streak,
+  GoalNote,
+  GoalDeliverable,
+  ChatSession,
+  ChatMessage,
+  TodoItem,
+  TodoTag,
 } from "../types/database";
 
 // ============================================================
@@ -327,5 +333,422 @@ export async function updateStreak(userId: string, date: string) {
     })
     .eq("user_id", userId);
 
+  if (error) throw error;
+}
+
+// ============================================================
+// Goal Notes
+// ============================================================
+
+export async function getGoalNote(goalId: string): Promise<GoalNote | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("goal_notes")
+    .select("*")
+    .eq("goal_id", goalId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error;
+  return data;
+}
+
+export async function upsertGoalNote(
+  goalId: string,
+  content: string
+): Promise<GoalNote> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("goal_notes")
+    .upsert(
+      {
+        goal_id: goalId,
+        user_id: user.id,
+        content,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "goal_id,user_id" }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// ============================================================
+// Goal Deliverables
+// ============================================================
+
+export async function getGoalDeliverables(
+  goalId: string
+): Promise<GoalDeliverable[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("goal_deliverables")
+    .select("*")
+    .eq("goal_id", goalId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addGoalDeliverable(data: {
+  goalId: string;
+  title: string;
+  url?: string;
+  fileType?: string;
+  source?: "manual" | "ai_generated";
+}): Promise<GoalDeliverable> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: deliverable, error } = await supabase
+    .from("goal_deliverables")
+    .insert({
+      goal_id: data.goalId,
+      user_id: user.id,
+      title: data.title,
+      url: data.url || null,
+      file_type: data.fileType || null,
+      source: data.source || "manual",
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return deliverable;
+}
+
+export async function deleteGoalDeliverable(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("goal_deliverables")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+// ============================================================
+// Chat Sessions & Messages
+// ============================================================
+
+export async function getAgentSessions(agentId: string): Promise<ChatSession[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("agent_id", agentId)
+    .is("goal_id", null)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createChatSession(params: {
+  agentId?: string;
+  goalId?: string;
+  title?: string;
+}): Promise<ChatSession> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({
+      user_id: user.id,
+      agent_id: params.agentId || null,
+      goal_id: params.goalId || null,
+      title: params.title || "New Chat",
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateSessionTitle(
+  sessionId: string,
+  title: string
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ title, updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("chat_sessions")
+    .delete()
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+export async function getOrCreateGoalSession(goalId: string): Promise<ChatSession> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Try to find existing
+  const { data: existing } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("goal_id", goalId)
+    .single();
+
+  if (existing) return existing;
+
+  // Create new
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({
+      user_id: user.id,
+      agent_id: "general_assistant",
+      goal_id: goalId,
+      title: "Goal Chat",
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getSessionMessages(
+  sessionId: string,
+  limit = 20,
+  offset = 0
+): Promise<ChatMessage[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getSessionMessageCount(sessionId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("chat_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", sessionId);
+
+  if (error) throw error;
+  return count || 0;
+}
+
+export async function saveMessage(
+  sessionId: string,
+  role: string,
+  content: string
+): Promise<ChatMessage> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert({ session_id: sessionId, role, content })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Update session's updated_at
+  await supabase
+    .from("chat_sessions")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  return data;
+}
+
+export async function updateSessionSummary(
+  sessionId: string,
+  summary: string
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ summary })
+    .eq("id", sessionId);
+
+  if (error) throw error;
+}
+
+export async function getSession(sessionId: string): Promise<ChatSession | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error;
+  return data;
+}
+
+// ============================================================
+// TODO Items
+// ============================================================
+
+export async function getTodos(): Promise<TodoItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("todos")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("sort_order");
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addTodo(text: string, tag?: string, priority?: string, deadline?: string | null): Promise<TodoItem> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("todos")
+    .insert({
+      user_id: user.id,
+      text,
+      tag: tag || "Work",
+      priority: priority || "medium",
+      deadline: deadline || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateTodo(id: string, patch: Partial<Pick<TodoItem, "text" | "tag" | "completed" | "priority" | "deadline" | "sort_order">>): Promise<void> {
+  const supabase = await createClient();
+  const updates: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
+  if (patch.completed === true) updates.completed_at = new Date().toISOString();
+  if (patch.completed === false) updates.completed_at = null;
+
+  const { error } = await supabase.from("todos").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteTodo(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("todos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function reorderTodos(orderedIds: string[]): Promise<void> {
+  const supabase = await createClient();
+  for (let i = 0; i < orderedIds.length; i++) {
+    await supabase.from("todos").update({ sort_order: i }).eq("id", orderedIds[i]);
+  }
+}
+
+// ============================================================
+// TODO Tags
+// ============================================================
+
+export async function getTodoTags(): Promise<TodoTag[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("todo_tags")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("sort_order");
+
+  if (error) throw error;
+
+  // Create default tags if none exist
+  if (!data || data.length === 0) {
+    const defaults = ["Work", "AIProject", "Life", "Other"];
+    const inserts = defaults.map((name, i) => ({
+      user_id: user.id,
+      name,
+      is_default: i === 0,
+      sort_order: i,
+    }));
+    const { data: created, error: createErr } = await supabase
+      .from("todo_tags")
+      .insert(inserts)
+      .select();
+    if (createErr) throw createErr;
+    return created || [];
+  }
+
+  return data;
+}
+
+export async function addTodoTag(name: string): Promise<TodoTag> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("todo_tags")
+    .insert({ user_id: user.id, name })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateTodoTag(id: string, patch: Partial<Pick<TodoTag, "name" | "color">>): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("todo_tags").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteTodoTag(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("todo_tags").delete().eq("id", id);
   if (error) throw error;
 }
