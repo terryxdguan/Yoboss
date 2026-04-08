@@ -14,7 +14,6 @@ export type AgentCategory =
 
 export interface AgentConfig {
   id: string;
-  name: string;
   label: string;
   description: string;
   expertise: string[];

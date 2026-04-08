@@ -29,7 +29,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F1ECE4] shrink-0">
               <Image
                 src={agent.avatar}
-                alt={agent.name}
+                alt={agent.label}
                 width={64}
                 height={64}
                 className="w-full h-full object-cover"
@@ -38,17 +38,14 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           ) : (
             <div className="w-16 h-16 rounded-xl bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
               <span className="text-2xl font-semibold text-[#7FAEE6]">
-                {agent.name.charAt(0)}
+                {agent.label.charAt(0)}
               </span>
             </div>
           )}
 
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-[#2B2B2B]">{agent.name}</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]">
-                {agent.label}
-              </span>
+              <h2 className="text-lg font-semibold text-[#2B2B2B]">{agent.label}</h2>
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7FAEE6]/10 text-[#7FAEE6]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
@@ -140,7 +137,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
             <p className="text-sm text-[#9B948B]">No active tasks</p>
             <p className="text-xs text-[#9B948B] mt-1">
-              Start a conversation with {agent.name} to assign work
+              Start a conversation with {agent.label} to assign work
             </p>
           </div>
         ) : (

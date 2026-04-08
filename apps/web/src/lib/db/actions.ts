@@ -15,6 +15,10 @@ import type {
   TodoItem,
   TodoTag,
 } from "../types/database";
+import type {
+  Workflow,
+  WorkflowRun,
+} from "../types/workflow";
 
 // ============================================================
 // Goals
@@ -750,5 +754,128 @@ export async function updateTodoTag(id: string, patch: Partial<Pick<TodoTag, "na
 export async function deleteTodoTag(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("todo_tags").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ============================================================
+// Workflows
+// ============================================================
+
+export async function getWorkflows(): Promise<Workflow[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("workflows")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createWorkflow(input: {
+  name: string;
+  description?: string;
+  steps: Workflow["steps"];
+  isTemplate?: boolean;
+}): Promise<Workflow> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("workflows")
+    .insert({
+      user_id: user.id,
+      name: input.name,
+      description: input.description || null,
+      steps: input.steps,
+      is_template: input.isTemplate || false,
+      status: "ready",
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateWorkflow(
+  id: string,
+  patch: Partial<Pick<Workflow, "name" | "description" | "steps" | "status" | "last_run_at" | "last_run_status" | "is_template">>
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("workflows")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteWorkflow(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("workflows").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ============================================================
+// Workflow Runs
+// ============================================================
+
+export async function getWorkflowRuns(workflowId: string): Promise<WorkflowRun[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workflow_runs")
+    .select("*")
+    .eq("workflow_id", workflowId)
+    .order("started_at", { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createWorkflowRun(input: {
+  workflowId: string;
+  totalSteps: number;
+  stepResults: WorkflowRun["step_results"];
+}): Promise<WorkflowRun> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("workflow_runs")
+    .insert({
+      workflow_id: input.workflowId,
+      user_id: user.id,
+      total_steps: input.totalSteps,
+      step_results: input.stepResults,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateWorkflowRun(
+  id: string,
+  patch: Partial<Pick<WorkflowRun, "status" | "current_step" | "step_results" | "completed_at">>
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("workflow_runs")
+    .update(patch)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteWorkflowRun(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("workflow_runs").delete().eq("id", id);
   if (error) throw error;
 }

@@ -75,9 +75,7 @@ export function Sidebar() {
                     {DEFAULT_AGENTS.map((agent) => {
                       const agentPath = `/team/chat/${agent.id}`;
                       const isAgentActive = pathname === agentPath;
-                      const displayName = agent.id === "general_assistant"
-                        ? `${agent.name} (${agent.label})`
-                        : agent.label;
+                      const displayName = agent.label;
 
                       return (
                         <Link

@@ -24,7 +24,7 @@ export function AgentCard({ agent, isSelected, onClick }: AgentCardProps) {
         <div className="w-14 h-14 rounded-full overflow-hidden bg-[#F1ECE4]">
           <Image
             src={agent.avatar}
-            alt={agent.name}
+            alt={agent.label}
             width={56}
             height={56}
             className="w-full h-full object-cover"
@@ -33,15 +33,14 @@ export function AgentCard({ agent, isSelected, onClick }: AgentCardProps) {
       ) : (
         <div className="w-14 h-14 rounded-full bg-[#7FAEE6]/10 flex items-center justify-center">
           <span className="text-lg font-semibold text-[#7FAEE6]">
-            {agent.name.charAt(0)}
+            {agent.label.charAt(0)}
           </span>
         </div>
       )}
 
       {/* Info */}
       <div className="text-center">
-        <p className="text-sm font-semibold text-[#2B2B2B]">{agent.name}</p>
-        <p className="text-[11px] text-[#9B948B] mt-0.5">{agent.label}</p>
+        <p className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</p>
       </div>
     </button>
   );

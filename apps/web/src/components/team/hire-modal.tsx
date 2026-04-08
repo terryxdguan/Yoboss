@@ -42,7 +42,6 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return (
-        agent.name.toLowerCase().includes(q) ||
         agent.label.toLowerCase().includes(q) ||
         agent.description.toLowerCase().includes(q)
       );

@@ -431,10 +431,10 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4]">
-            <Image src="/pink.png" alt="Eve" width={36} height={36} className="w-full h-full object-cover" />
+            <Image src="/pink.png" alt="General Assistant" width={36} height={36} className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-[#2B2B2B] block truncate">Eve</span>
+            <span className="text-sm font-semibold text-[#2B2B2B] block truncate">General Assistant</span>
             <span className="text-[10px] text-[#9B948B]">{panelTitle || "Goal Coach"}</span>
           </div>
         </div>

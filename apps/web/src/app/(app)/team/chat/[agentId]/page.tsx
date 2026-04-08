@@ -316,7 +316,7 @@ export default function AgentChatPage() {
     );
   }
 
-  const displayName = agent.id === "general_assistant" ? agent.name : agent.label;
+  const displayName = agent.label;
 
   return (
     <div className="flex h-[calc(100vh-96px)] -mx-6 md:-mx-8 -mb-12">
@@ -334,11 +334,11 @@ export default function AgentChatPage() {
           <div className="flex items-center gap-2.5">
             {agent.avatar ? (
               <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#E7DED2] shrink-0">
-                <Image src={agent.avatar} alt={agent.name} width={32} height={32} className="w-full h-full object-cover" />
+                <Image src={agent.avatar} alt={agent.label} width={32} height={32} className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className="w-8 h-8 rounded-lg bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-[#7FAEE6]">{agent.name.charAt(0)}</span>
+                <span className="text-sm font-semibold text-[#7FAEE6]">{agent.label.charAt(0)}</span>
               </div>
             )}
             <div className="min-w-0">

@@ -38,15 +38,16 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { promptFile, messages, extraContext } = body as {
+  const { promptFile, messages, extraContext, useOpus } = body as {
     promptFile: string;
     messages: Anthropic.MessageParam[];
     extraContext?: string;
+    useOpus?: boolean;
   };
 
   try {
     const basePrompt = await loadPromptFile(promptFile);
-    const yobossPrefix = `IMPORTANT: Always address the user as "YoBoss" at the start of each conversation. Be respectful and professional.\n\n`;
+    const yobossPrefix = `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.\n\n`;
     const fullPrompt = yobossPrefix + basePrompt;
     const systemPrompt = extraContext
       ? `${fullPrompt}\n\n---\nADDITIONAL CONTEXT:\n${extraContext}`
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
         try {
           while (continuations < MAX_CONTINUATIONS) {
             const apiStream = client.messages.stream({
-              model: MODELS.sonnet,
+              model: useOpus ? MODELS.opus : MODELS.sonnet,
               max_tokens: 16000,
               system: systemPrompt,
               tools: SERVER_TOOLS,
@@ -112,8 +113,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Agent chat error:", error);
+    const msg = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "AI service error. Please try again." },
+      { error: `AI service error: ${msg}` },
       { status: 500 }
     );
   }

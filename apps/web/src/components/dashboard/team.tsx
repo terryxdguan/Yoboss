@@ -10,7 +10,7 @@ import type { AgentConfig } from "@/lib/types/agent";
 function AgentDashCard({ agent }: { agent: AgentConfig }) {
   const router = useRouter();
   const [showExpertise, setShowExpertise] = useState(false);
-  const displayName = agent.id === "general_assistant" ? agent.name : agent.label;
+  const displayName = agent.label;
   const subtitle = agent.id === "general_assistant" ? agent.label : agent.category.toUpperCase();
 
   return (

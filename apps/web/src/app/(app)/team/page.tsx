@@ -47,12 +47,12 @@ function AgentRow({
         <div
           onClick={onChat}
           className="w-36 shrink-0 bg-[#F1ECE4] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
-          title={`Chat with ${agent.name}`}
+          title={`Chat with ${agent.label}`}
         >
           {agent.avatar ? (
             <Image
               src={agent.avatar}
-              alt={agent.name}
+              alt={agent.label}
               width={200}
               height={200}
               className="w-[115%] h-[115%] object-cover object-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -60,7 +60,7 @@ function AgentRow({
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="text-3xl font-semibold text-[#7FAEE6]">
-                {agent.name.charAt(0)}
+                {agent.label.charAt(0)}
               </span>
             </div>
           )}
@@ -72,16 +72,7 @@ function AgentRow({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               {/* Only show name for the first default agent (Eve) */}
-              {agent.id === "general_assistant" ? (
-                <>
-                  <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.name}</h2>
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]">
-                    {agent.label}
-                  </span>
-                </>
-              ) : (
-                <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</h2>
-              )}
+              <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</h2>
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7FAEE6]/10 text-[#7FAEE6]">
                 {CATEGORY_LABELS[agent.category]}
               </span>

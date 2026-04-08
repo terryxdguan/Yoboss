@@ -32,7 +32,7 @@ function buildSystemPrompt(context: GoalDetailChatContext): string {
         .join("\n")
     : "  No tasks scheduled yet.";
 
-  return `IMPORTANT: Always address the user as "YoBoss" at the start of each conversation. Be respectful and professional.
+  return `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
 
 You are a friendly and knowledgeable AI goal coach. The user is working on a specific goal and you have full context about their progress.
 

@@ -4,7 +4,6 @@ import type { AgentConfig } from "@/lib/types/agent";
 export const DEFAULT_AGENTS: AgentConfig[] = [
   {
     id: "general_assistant",
-    name: "Eve",
     label: "General Assistant",
     description: "Your all-in-one AI assistant. Handles any question, task, or conversation that doesn't fit a specialist.",
     expertise: [
@@ -22,7 +21,6 @@ export const DEFAULT_AGENTS: AgentConfig[] = [
   },
   {
     id: "all_around_writer",
-    name: "Adam",
     label: "Content Writer",
     description: "Professional writer for articles, blogs, marketing copy, emails, and all forms of written content.",
     expertise: [
@@ -40,7 +38,6 @@ export const DEFAULT_AGENTS: AgentConfig[] = [
   },
   {
     id: "market_research_strategist",
-    name: "Alex",
     label: "Market Research",
     description: "Market research director who provides industry analysis, competitive intelligence, and strategic insights.",
     expertise: [
@@ -58,7 +55,6 @@ export const DEFAULT_AGENTS: AgentConfig[] = [
   },
   {
     id: "ppt_expert",
-    name: "Max",
     label: "PPT Expert",
     description: "Presentation specialist who creates compelling slide decks, pitch decks, and visual storytelling.",
     expertise: [
@@ -81,7 +77,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Writing & Content ---
   {
     id: "all_around_writer",
-    name: "Adam",
     label: "Content Writer",
     description: "Professional writer for articles, blogs, marketing copy, and all forms of content.",
     expertise: ["Blog posts & articles", "Marketing copy", "Email campaigns", "Social media content", "Creative writing", "Editing & proofreading"],
@@ -91,7 +86,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "academic_assistant_pro",
-    name: "Dr. Chen",
     label: "Academic Writer",
     description: "Academic writing expert for research papers, theses, literature reviews, and scholarly documents.",
     expertise: ["Research papers & theses", "Literature reviews", "Citation formatting (APA, MLA, Chicago)", "Abstract & methodology writing", "Academic editing & revision", "Grant proposals"],
@@ -101,7 +95,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "technical_writer",
-    name: "Sam",
     label: "Tech Writer",
     description: "Technical documentation specialist for API docs, user guides, and developer documentation.",
     expertise: ["API documentation", "User guides & manuals", "README & onboarding docs", "Release notes & changelogs", "Knowledge base articles", "Tutorial & how-to guides"],
@@ -111,7 +104,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "literature_professor",
-    name: "Prof. Blake",
     label: "Literary Analyst",
     description: "Literature professor for essay writing, literary analysis, and critical reading.",
     expertise: ["Literary analysis & criticism", "Essay structure & argumentation", "Comparative literature", "Poetry interpretation", "Book reviews", "Writing style coaching"],
@@ -123,7 +115,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Research & Analysis ---
   {
     id: "deep_research",
-    name: "Iris",
     label: "Deep Research",
     description: "Deep research agent that conducts thorough multi-source investigations and produces comprehensive reports.",
     expertise: ["Multi-source research (10+ sources)", "Fact verification & cross-referencing", "Structured report generation", "Industry & company deep dives", "Trend analysis", "Literature & data synthesis"],
@@ -133,7 +124,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "market_research_strategist",
-    name: "Alex",
     label: "Market Research",
     description: "Market research director for industry analysis, competitive intelligence, and GTM strategy.",
     expertise: ["Market sizing (TAM/SAM/SOM)", "Competitive analysis", "Consumer segmentation", "Trend forecasting", "Go-to-market strategy", "Survey design"],
@@ -143,7 +133,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "data_analysis",
-    name: "Nova",
     label: "Data Analyst",
     description: "Data analysis expert for spreadsheets, charts, A/B testing, and data-driven insights.",
     expertise: ["Excel & spreadsheet analysis", "Data visualization & charts", "A/B test analysis", "Cohort analysis", "Statistical summaries", "Dashboard & report design"],
@@ -155,7 +144,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Finance & Investment ---
   {
     id: "financial_advisor",
-    name: "James",
     label: "Financial Advisor",
     description: "Personal financial advisor for budgeting, investment planning, tax strategy, and wealth management.",
     expertise: ["Personal budgeting & saving", "Investment portfolio strategy", "Tax planning basics", "Retirement planning", "Debt management", "Financial goal setting"],
@@ -165,7 +153,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "investment_research_analyst",
-    name: "Victor",
     label: "Investment Research",
     description: "Equity research analyst for stock analysis, valuation models, and investment reports.",
     expertise: ["DCF & valuation modeling", "Company fundamental analysis", "Industry comparables", "Earnings analysis", "Risk assessment", "Investment memo writing"],
@@ -177,7 +164,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Sales & Marketing ---
   {
     id: "brand_strategist",
-    name: "Mia",
     label: "Brand Strategy",
     description: "Brand strategist for positioning, visual identity, messaging frameworks, and brand audits.",
     expertise: ["Brand positioning & differentiation", "Visual identity guidelines", "Messaging architecture", "Brand audit & health check", "Naming & tagline creation", "Brand voice development"],
@@ -187,7 +173,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "growth_hacker",
-    name: "Zack",
     label: "Growth Hacker",
     description: "Growth specialist for user acquisition, conversion optimization, and data-driven growth experiments.",
     expertise: ["Growth experiment design", "Funnel analysis & optimization", "User acquisition channels", "Retention & engagement tactics", "Viral loop design", "A/B testing strategy"],
@@ -197,7 +182,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "sales_strategist",
-    name: "Ryan",
     label: "Sales Strategy",
     description: "Sales strategist for pipeline management, deal negotiation, and revenue growth planning.",
     expertise: ["Sales process optimization", "Deal qualification (BANT/MEDDIC)", "Pipeline management", "Negotiation tactics", "Territory planning", "Sales enablement"],
@@ -209,7 +193,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- HR & Recruitment ---
   {
     id: "hr_talent_development",
-    name: "Grace",
     label: "HR & Talent",
     description: "HR leader for talent assessment, performance management, training, and organizational development.",
     expertise: ["Performance review frameworks", "Training & development programs", "Org design & culture building", "Compensation benchmarking", "Employee engagement", "DEI initiatives"],
@@ -219,7 +202,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "recruitment_strategist",
-    name: "Sophie",
     label: "Recruiter",
     description: "Recruitment strategist for hiring pipeline design, job descriptions, and candidate evaluation.",
     expertise: ["Job description writing", "Interview question design", "Candidate scoring rubrics", "Hiring pipeline optimization", "Employer branding", "Offer negotiation guidance"],
@@ -229,7 +211,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "community_manager",
-    name: "Kai",
     label: "Community Manager",
     description: "Community manager for online community building, engagement strategies, and user advocacy.",
     expertise: ["Community strategy & growth", "Engagement campaigns", "Content moderation guidelines", "Ambassador programs", "Event planning", "Community health metrics"],
@@ -241,7 +222,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Legal ---
   {
     id: "legal_analyst",
-    name: "Diana",
     label: "Legal Analyst",
     description: "Legal analyst for contract review, compliance assessment, and legal research.",
     expertise: ["Contract review & redlining", "Compliance assessment", "Legal research (IRAC method)", "Privacy policy analysis (GDPR/CCPA)", "IP basics & trademark", "Risk identification"],
@@ -253,7 +233,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Customer Service ---
   {
     id: "customer_support_agent",
-    name: "Lily",
     label: "Customer Support",
     description: "Customer support agent for ticket resolution, FAQ management, and customer communication.",
     expertise: ["Ticket triage & resolution", "FAQ & knowledge base creation", "Customer communication templates", "Escalation handling", "SLA management", "CSAT improvement"],
@@ -263,7 +242,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "customer_success_strategist",
-    name: "Ethan",
     label: "Customer Success",
     description: "Customer success strategist for retention, upselling, and customer health monitoring.",
     expertise: ["Customer health scoring", "Onboarding playbooks", "Churn prevention strategies", "Account expansion planning", "QBR preparation", "NPS & satisfaction analysis"],
@@ -275,7 +253,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Product & Operations ---
   {
     id: "product_manager",
-    name: "Olivia",
     label: "Product Manager",
     description: "Product manager for requirements analysis, PRDs, roadmap planning, and feature prioritization.",
     expertise: ["Product Requirements Documents (PRD)", "Feature prioritization frameworks", "User story writing", "Roadmap planning", "Stakeholder management", "Competitive product analysis"],
@@ -285,7 +262,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "operations_manager",
-    name: "Marcus",
     label: "Operations",
     description: "Operations manager for process optimization, efficiency improvement, and workflow design.",
     expertise: ["Process mapping & optimization", "Lean / Six Sigma methodology", "KPI design & tracking", "Vendor management", "SOP creation", "Cost reduction analysis"],
@@ -295,7 +271,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "change_management_leader",
-    name: "Nina",
     label: "Change Management",
     description: "Change management leader for organizational transformation, stakeholder alignment, and adoption planning.",
     expertise: ["Change readiness assessment", "Stakeholder mapping & alignment", "Communication planning", "Training & adoption strategy", "Resistance management", "Post-change evaluation"],
@@ -305,7 +280,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "ux_research_specialist",
-    name: "Chloe",
     label: "UX Research",
     description: "UX researcher for user interviews, usability testing, persona creation, and design insights.",
     expertise: ["User interview design & analysis", "Usability testing", "Persona & journey mapping", "Survey design", "Heuristic evaluation", "Design recommendation reports"],
@@ -317,7 +291,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Tech ---
   {
     id: "professional_coder",
-    name: "Dev",
     label: "Coding Assistant",
     description: "Programming assistant for writing code, debugging, learning to code, and technical problem-solving.",
     expertise: ["Write code in any language", "Debug errors & fix bugs", "Code explanation for beginners", "Algorithm & data structure help", "API integration guidance", "Best practices & code review"],
@@ -327,7 +300,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "sql_assistant",
-    name: "Quinn",
     label: "SQL Expert",
     description: "SQL expert for writing queries, database design, and data extraction across all major databases.",
     expertise: ["SQL query writing & optimization", "Database schema design", "Data extraction & reporting", "Stored procedures & views", "Performance tuning", "Cross-dialect support (PostgreSQL, MySQL, etc.)"],
@@ -337,7 +309,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "system_design",
-    name: "Theo",
     label: "System Design",
     description: "Systems architect for distributed system design, architecture decisions, and technical planning.",
     expertise: ["System architecture diagrams", "Scalability & reliability design", "Database selection & modeling", "API design patterns", "Microservices vs monolith decisions", "Performance & cost tradeoffs"],
@@ -347,7 +318,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "analytics_engineer",
-    name: "Felix",
     label: "Data Modeling",
     description: "Analytics engineer for data modeling, dbt, data warehousing, and BI pipeline design.",
     expertise: ["dbt model design", "Data warehouse architecture (Snowflake, BigQuery)", "ETL/ELT pipeline design", "Data quality & testing", "Metrics layer design", "BI dashboard planning"],
@@ -359,7 +329,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Education ---
   {
     id: "mr_ranedeer",
-    name: "Reindeer",
     label: "Tutor",
     description: "Personalized AI tutor that adapts to your learning style, pace, and goals across any subject.",
     expertise: ["Personalized curriculum planning", "Concept explanation at any level", "Practice exercises & quizzes", "Study schedule creation", "Learning progress tracking", "Multi-subject support"],
@@ -371,7 +340,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Translation ---
   {
     id: "pdf_translator",
-    name: "Riko",
     label: "Translator",
     description: "Translation assistant for documents, PDFs, and academic texts with formatting preservation.",
     expertise: ["PDF & document translation", "Academic paper translation", "Multi-language support", "Terminology consistency", "Format-preserving translation", "Technical & legal translation"],
@@ -383,7 +351,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Productivity ---
   {
     id: "productivity_assistant_gtd",
-    name: "Sage",
     label: "Productivity Coach",
     description: "GTD productivity coach for task management, weekly reviews, and personal effectiveness.",
     expertise: ["Getting Things Done (GTD) methodology", "Weekly review facilitation", "Project & task breakdown", "Priority matrix (Eisenhower)", "Time blocking strategies", "Habit tracking & accountability"],
@@ -395,7 +362,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   // --- Media Generation ---
   {
     id: "image_generation",
-    name: "Pixel",
     label: "Image Creator",
     description: "AI image generation specialist for creating photos, illustrations, and graphics via ChatGPT or Gemini.",
     expertise: ["Photorealistic image prompts", "Artistic & stylized imagery", "Product photography prompts", "Social media graphics", "Logo & icon concepts", "Platform optimization (ChatGPT / Gemini)"],
@@ -405,7 +371,6 @@ export const ALL_AGENTS: AgentConfig[] = [
   },
   {
     id: "video_generation",
-    name: "Reel",
     label: "Video Creator",
     description: "AI video generation specialist for creating clips via Runway, Kling, Veo, Sora, or Seedance.",
     expertise: ["Cinematic video prompts", "Commercial & product videos", "Social media reels & shorts", "Multi-shot storytelling", "Camera movement & lighting design", "Platform selection (Runway / Kling / Sora / Seedance)"],
