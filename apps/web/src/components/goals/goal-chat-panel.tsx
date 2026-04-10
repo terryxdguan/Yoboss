@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Send, ImagePlus, Globe, Code, Download } from "lucide-react";
+import { X, Send, Paperclip, FileText, Globe, Code, Download } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/actions";
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
 import { setAgentStatus } from "@/lib/stores/agent-status";
+import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
 
 interface GoalChatPanelProps {
   goalId: string;
@@ -22,12 +23,6 @@ interface GoalChatPanelProps {
   taskContext?: DailyTask | null;
   onClose: () => void;
   panelTitle?: string;
-}
-
-interface ImageAttachment {
-  base64: string;
-  mimeType: string;
-  preview: string; // data URL for display
 }
 
 interface GeneratedFile {
@@ -44,38 +39,19 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  images?: ImageAttachment[];
+  attachments?: FileAttachment[];
   toolActivity?: ToolActivity[];
   generatedFiles?: GeneratedFile[];
 }
 
-interface ApiContentBlock {
-  type: "text" | "image";
-  text?: string;
-  source?: { type: "base64"; media_type: string; data: string };
-}
-
 interface ApiMessage {
   role: "user" | "assistant";
-  content: string | ApiContentBlock[];
+  content: string | object[];
 }
 
 let counter = 0;
 function genId() {
   return `gcm_${Date.now()}_${++counter}`;
-}
-
-function readFileAsBase64(file: File): Promise<{ base64: string; mimeType: string; preview: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(",")[1];
-      resolve({ base64, mimeType: file.type, preview: dataUrl });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 // --- Resize hook ---
@@ -115,7 +91,7 @@ function useResize(initialWidth: number, minWidth: number, maxWidth: number) {
 export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panelTitle }: GoalChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
-  const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionSummary, setSessionSummary] = useState<string | null>(null);
@@ -142,6 +118,8 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           id: m.id,
           role: m.role as "user" | "assistant",
           content: m.content,
+          generatedFiles: m.metadata?.generatedFiles as GeneratedFile[] | undefined,
+          toolActivity: m.metadata?.toolActivity as ToolActivity[] | undefined,
         }));
         setMessages(uiMsgs);
         historyRef.current = dbMessages.map((m) => ({
@@ -159,17 +137,8 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
   }, [goalId]);
 
   // --- Build API content blocks ---
-  function buildApiContent(text: string, images?: ImageAttachment[]): string | ApiContentBlock[] {
-    if (!images || images.length === 0) return text;
-    const blocks: ApiContentBlock[] = [];
-    for (const img of images) {
-      blocks.push({
-        type: "image",
-        source: { type: "base64", media_type: img.mimeType, data: img.base64 },
-      });
-    }
-    if (text) blocks.push({ type: "text", text });
-    return blocks;
+  function buildApiContent(text: string, attachments?: FileAttachment[]): string | object[] {
+    return buildContentBlocks(text, attachments);
   }
 
   const sendToApi = useCallback(async (apiMessages: ApiMessage[]) => {
@@ -212,6 +181,15 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           let event;
           try { event = JSON.parse(jsonStr); } catch { continue; }
 
+          if (event.type !== "content_block_delta" || event.delta?.type !== "text_delta") {
+            console.log("[DEBUG API Event] goal-chat-panel:", event);
+          }
+
+          // Error from API
+          if (event.type === "error") {
+            throw new Error(event.error?.message || "AI service error");
+          }
+
           // Text content
           if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
             text += event.delta.text;
@@ -240,12 +218,12 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           }
 
           // Code execution result — check for generated files
-          if (event.type === "content_block_start" && event.content_block?.type === "bash_code_execution_tool_result") {
+          if (event.type === "content_block_start" && (event.content_block?.type === "bash_code_execution_tool_result" || event.content_block?.type === "code_execution_tool_result")) {
             const result = event.content_block.content;
-            if (result?.type === "bash_code_execution_result" && result.content) {
+            if (result?.content && Array.isArray(result.content)) {
               for (const item of result.content) {
-                if (item.type === "bash_code_execution_output" && item.file_id) {
-                  files.push({ fileId: item.file_id, filename: item.filename || "output" });
+                if ((item.type === "bash_code_execution_output" || item.type === "code_execution_output") && item.file_id) {
+                  files.push({ fileId: item.file_id, filename: item.filename || "download" });
                 }
               }
               if (files.length > 0) {
@@ -277,7 +255,11 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
       // Persist to DB
       if (sessionId && text) {
-        saveMessage(sessionId, "assistant", text).catch(console.error);
+        const metadata = (files.length > 0 || tools.length > 0) ? {
+          generatedFiles: files.length > 0 ? files : undefined,
+          toolActivity: tools.length > 0 ? tools : undefined,
+        } : undefined;
+        saveMessage(sessionId, "assistant", text, metadata).catch(console.error);
 
         // Session memory: generate rolling summary when messages exceed threshold
         const totalMessages = historyRef.current.length;
@@ -362,8 +344,8 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
         e.preventDefault();
         const file = items[i].getAsFile();
         if (file) {
-          const img = await readFileAsBase64(file);
-          setPendingImages((prev) => [...prev, img]);
+          const att = await processFile(file);
+          setPendingAttachments((prev) => [...prev, att]);
         }
         return;
       }
@@ -375,10 +357,8 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
     const files = e.target.files;
     if (!files) return;
     for (let i = 0; i < files.length; i++) {
-      if (files[i].type.startsWith("image/")) {
-        const img = await readFileAsBase64(files[i]);
-        setPendingImages((prev) => [...prev, img]);
-      }
+      const att = await processFile(files[i]);
+      setPendingAttachments((prev) => [...prev, att]);
     }
     e.target.value = "";
   };
@@ -386,13 +366,13 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
   // --- Send ---
   const handleSend = () => {
     const text = inputText.trim();
-    if ((!text && pendingImages.length === 0) || isStreaming) return;
+    if ((!text && pendingAttachments.length === 0) || isStreaming) return;
 
     const userMsg: Message = {
       id: genId(),
       role: "user",
       content: text,
-      images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+      attachments: pendingAttachments.length > 0 ? [...pendingAttachments] : undefined,
     };
     setMessages((prev) => [...prev, userMsg]);
 
@@ -401,13 +381,13 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       saveMessage(sessionId, "user", text).catch(console.error);
     }
 
-    const apiContent = buildApiContent(text, pendingImages.length > 0 ? pendingImages : undefined);
+    const apiContent = buildApiContent(text, pendingAttachments.length > 0 ? pendingAttachments : undefined);
     const apiMsg: ApiMessage = { role: "user", content: apiContent };
     historyRef.current.push(apiMsg);
     sendToApi([...historyRef.current]);
 
     setInputText("");
-    setPendingImages([]);
+    setPendingAttachments([]);
     textareaRef.current?.focus();
   };
 
@@ -450,38 +430,48 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {displayMessages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[90%] rounded-xl px-4 py-3 text-sm ${
-              msg.role === "user"
+            <div className={`max-w-[90%] rounded-xl px-4 py-3 text-sm ${msg.role === "user"
                 ? "bg-[#7FAEE6] text-white"
                 : "bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B]"
-            }`}>
+              }`}>
               {/* Tool activity badges */}
               {msg.toolActivity && msg.toolActivity.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {msg.toolActivity.map((tool, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#F1ECE4] text-[#6F6A64]">
-                      {tool.type === "web_search" || tool.type === "web_fetch" ? (
-                        <Globe className="h-3 w-3" />
-                      ) : (
-                        <Code className="h-3 w-3" />
-                      )}
-                      {tool.label}
-                    </span>
-                  ))}
+                  {msg.toolActivity.map((tool, i) => {
+                    const isLatest = isStreaming && msg === displayMessages[displayMessages.length - 1] && i === msg.toolActivity!.length - 1;
+                    return (
+                      <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7FAEE6]/10 text-[#7FAEE6]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
+                        {isLatest && (
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                          </span>
+                        )}
+                        {tool.type === "web_search" || tool.type === "web_fetch" ? (
+                          <Globe className="h-3 w-3" />
+                        ) : (
+                          <Code className="h-3 w-3" />
+                        )}
+                        {tool.label}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* User images */}
-              {msg.images && msg.images.length > 0 && (
+              {/* User attachments */}
+              {msg.attachments && msg.attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {msg.images.map((img, i) => (
-                    <img
-                      key={i}
-                      src={img.preview}
-                      alt="attachment"
-                      className="rounded-lg max-h-32 max-w-full object-cover"
-                    />
-                  ))}
+                  {msg.attachments.map((att, i) =>
+                    att.type === "image" && att.preview ? (
+                      <img key={i} src={att.preview} alt="attachment" className="rounded-lg max-h-32 max-w-full object-cover" />
+                    ) : (
+                      <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F1ECE4] text-[10px] text-[#6F6A64]">
+                        <FileText className="h-3 w-3 text-[#7FAEE6]" />
+                        {att.filename}
+                      </div>
+                    )
+                  )}
                 </div>
               )}
 
@@ -535,14 +525,21 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       {/* Input area */}
       <div className="px-4 py-3">
         <div className="rounded-xl border border-[#DDD3C7] bg-[#FFFDF9] focus-within:ring-2 focus-within:ring-[#7FAEE6]/30 focus-within:border-[#7FAEE6]/50 transition-all">
-          {/* Pending images preview */}
-          {pendingImages.length > 0 && (
+          {/* Pending attachments preview */}
+          {pendingAttachments.length > 0 && (
             <div className="px-3 pt-3 flex gap-2 flex-wrap">
-              {pendingImages.map((img, i) => (
+              {pendingAttachments.map((att, i) => (
                 <div key={i} className="relative group">
-                  <img src={img.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
+                  {att.type === "image" && att.preview ? (
+                    <img src={att.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
+                  ) : (
+                    <div className="h-16 px-3 rounded-lg border border-[#E7DED2] bg-[#F6F3EE] flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-[#7FAEE6] shrink-0" />
+                      <span className="text-[10px] text-[#6F6A64] max-w-[100px] truncate">{att.filename}</span>
+                    </div>
+                  )}
                   <button
-                    onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
+                    onClick={() => setPendingAttachments((prev) => prev.filter((_, j) => j !== i))}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#D5847A] text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     x
@@ -575,21 +572,21 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             <button
               onClick={() => fileInputRef.current?.click()}
               className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7FAEE6] hover:bg-[#F1ECE4] transition-colors"
-              title="Upload image"
+              title="Attach file"
             >
-              <ImagePlus className="h-4 w-4" />
+              <Paperclip className="h-4 w-4" />
             </button>
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_FILE_TYPES}
               multiple
               onChange={handleFileSelect}
               className="hidden"
             />
             <button
               onClick={handleSend}
-              disabled={(!inputText.trim() && pendingImages.length === 0) || isStreaming}
+              disabled={(!inputText.trim() && pendingAttachments.length === 0) || isStreaming}
               className="px-3 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-xs font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Send

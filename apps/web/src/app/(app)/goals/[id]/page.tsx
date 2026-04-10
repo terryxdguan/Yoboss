@@ -20,19 +20,11 @@ import { WeeklyPlanChatPanel } from "@/components/goals/weekly-plan-chat";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 import { DeliverablesPanel } from "@/components/goals/deliverables-panel";
 import { NotesPanel } from "@/components/goals/notes-panel";
+import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
 
 type RightPanel = "none" | "ai" | "plan-chat" | "deliverables" | "notes";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-function getWeekStart(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split("T")[0];
-}
 
 function getWeekDates(): string[] {
   const weekStart = getWeekStart();
@@ -42,11 +34,6 @@ function getWeekDates(): string[] {
     d.setDate(monday.getDate() + i);
     return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
   });
-}
-
-function getTodayDayOfWeek(): number {
-  const day = new Date().getDay();
-  return day === 0 ? 6 : day - 1;
 }
 
 export default function GoalDetailPage() {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 import { generateSessionSummary } from "@/lib/ai/session-memory";
+import { withRateLimit } from "@/lib/ai/rate-limit";
 
 // POST /api/ai/summarize — generate rolling session summary
 export async function POST(request: NextRequest) {
@@ -12,6 +13,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateCheck = await withRateLimit(user.id, "summarize");
+  if (!rateCheck.allowed) return rateCheck.response;
 
   const { oldSummary, messages } = await request.json();
 

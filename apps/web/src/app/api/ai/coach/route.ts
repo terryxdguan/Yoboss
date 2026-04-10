@@ -4,6 +4,7 @@ import {
   generateCoachingMessage,
   getFallbackCoachingMessage,
 } from "@/lib/ai/coach";
+import { withRateLimit } from "@/lib/ai/rate-limit";
 
 // POST /api/ai/coach
 // Generates a daily coaching message (streaming)
@@ -16,6 +17,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateCheck = await withRateLimit(user.id, "coach");
+  if (!rateCheck.allowed) return rateCheck.response;
 
   try {
     const { context } = await request.json();

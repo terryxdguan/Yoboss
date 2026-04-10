@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
+import { withRateLimit } from "@/lib/ai/rate-limit";
 import { chatWithCoach } from "@/lib/ai/decompose";
 import { chatWithGoalCoach } from "@/lib/ai/goal-chat-prompt";
 import { generateWeeklyPlan } from "@/lib/ai/weekly-plan";
@@ -20,6 +21,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateCheck = await withRateLimit(user.id, "plan");
+  if (!rateCheck.allowed) return rateCheck.response;
 
   const body = await request.json();
   const { action } = body;

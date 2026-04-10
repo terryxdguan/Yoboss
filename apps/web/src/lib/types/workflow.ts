@@ -17,6 +17,10 @@ export interface Workflow {
   last_run_status: "success" | "failed" | null;
   created_at: string;
   updated_at: string;
+  schedule_enabled: boolean;
+  schedule_cron: string | null;
+  schedule_timezone: string | null;
+  schedule_next_run_at: string | null;
 }
 
 export interface GeneratedFile {
@@ -33,6 +37,13 @@ export interface WorkflowStepResult {
   files?: GeneratedFile[];
 }
 
+export interface FollowUpMessage {
+  type: "user" | "assistant";
+  content: string;
+  toolActivity?: { type: string; label: string }[];
+  generatedFiles?: GeneratedFile[];
+}
+
 export interface WorkflowRun {
   id: string;
   workflow_id: string;
@@ -41,6 +52,8 @@ export interface WorkflowRun {
   current_step: number;
   total_steps: number;
   step_results: WorkflowStepResult[];
+  follow_up_messages?: FollowUpMessage[] | null;
+  triggered_by: "manual" | "scheduled";
   started_at: string;
   completed_at: string | null;
 }

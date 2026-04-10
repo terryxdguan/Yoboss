@@ -6,7 +6,8 @@ import {
   ArrowLeft,
   Plus,
   Send,
-  ImagePlus,
+  Paperclip,
+  FileText,
   Trash2,
   MessageSquare,
   Globe,
@@ -30,13 +31,27 @@ import {
 } from "@/lib/db/actions";
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
 import type { ChatSession, ChatMessage as DBChatMessage } from "@/lib/types/database";
+import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
 import Image from "next/image";
+
+interface GeneratedFile {
+  fileId: string;
+  filename: string;
+  isDataUri?: boolean;
+}
+
+interface ToolActivity {
+  type: "web_search" | "web_fetch" | "code_execution";
+  label: string;
+}
 
 interface UIMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
-  images?: { base64: string; mimeType: string; preview: string }[];
+  attachments?: FileAttachment[];
+  toolActivity?: ToolActivity[];
+  generatedFiles?: GeneratedFile[];
 }
 
 let counter = 0;
@@ -44,17 +59,6 @@ function genId() {
   return `acm_${Date.now()}_${++counter}`;
 }
 
-function readFileAsBase64(file: File): Promise<{ base64: string; mimeType: string; preview: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      resolve({ base64: dataUrl.split(",")[1], mimeType: file.type, preview: dataUrl });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function AgentChatPage() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -66,7 +70,7 @@ export default function AgentChatPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [inputText, setInputText] = useState("");
-  const [pendingImages, setPendingImages] = useState<{ base64: string; mimeType: string; preview: string }[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -108,6 +112,8 @@ export default function AgentChatPage() {
         id: m.id,
         role: m.role as "user" | "assistant",
         content: m.content,
+        generatedFiles: m.metadata?.generatedFiles as GeneratedFile[] | undefined,
+        toolActivity: m.metadata?.toolActivity as ToolActivity[] | undefined,
       }));
       setMessages(uiMsgs);
       setSessionSummary(session?.summary || null);
@@ -149,6 +155,8 @@ export default function AgentChatPage() {
 
       const decoder = new TextDecoder();
       let text = "";
+      const tools: ToolActivity[] = [];
+      const files: GeneratedFile[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -162,19 +170,75 @@ export default function AgentChatPage() {
           let event;
           try { event = JSON.parse(jsonStr); } catch { continue; }
 
+          // Error from API
+          if (event.type === "error") {
+            throw new Error(event.error?.message || "AI service error");
+          }
+
+          // Text content
           if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
             text += event.delta.text;
             setMessages((prev) =>
-              prev.map((m) => (m.id === assistantId ? { ...m, content: text } : m))
+              prev.map((m) => (m.id === assistantId ? { ...m, content: text, toolActivity: tools.length > 0 ? [...tools] : undefined, generatedFiles: files.length > 0 ? [...files] : undefined } : m))
             );
+          }
+
+          // Server-side tool use started
+          if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
+            const toolName = event.content_block.name as string;
+            const labels: Record<string, string> = {
+              web_search: "Searching the web...",
+              web_fetch: "Fetching webpage...",
+              bash_code_execution: "Running code...",
+              text_editor_code_execution: "Editing file...",
+            };
+            const activity: ToolActivity = {
+              type: toolName.includes("web_search") ? "web_search" : toolName.includes("web_fetch") ? "web_fetch" : "code_execution",
+              label: labels[toolName] || `Using ${toolName}...`,
+            };
+            tools.push(activity);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, toolActivity: [...tools] } : m))
+            );
+          }
+
+          // Code execution result — check for generated files
+          if (event.type === "content_block_start" && (event.content_block?.type === "bash_code_execution_tool_result" || event.content_block?.type === "code_execution_tool_result")) {
+            const result = event.content_block.content;
+            if (result?.content && Array.isArray(result.content)) {
+              for (const item of result.content) {
+                if ((item.type === "bash_code_execution_output" || item.type === "code_execution_output") && item.file_id) {
+                  files.push({ fileId: item.file_id, filename: item.filename || "download" });
+                }
+              }
+              if (files.length > 0) {
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantId ? { ...m, generatedFiles: [...files] } : m))
+                );
+              }
+            }
           }
         }
       }
 
+      // Final update with all accumulated data
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantId ? {
+          ...m,
+          content: text,
+          toolActivity: tools.length > 0 ? tools : undefined,
+          generatedFiles: files.length > 0 ? files : undefined,
+        } : m))
+      );
+
       historyRef.current.push({ role: "assistant", content: text });
 
-      // Save to DB
-      await saveMessage(activeSessionId, "assistant", text);
+      // Save to DB with metadata
+      const metadata = (files.length > 0 || tools.length > 0) ? {
+        generatedFiles: files.length > 0 ? files : undefined,
+        toolActivity: tools.length > 0 ? tools : undefined,
+      } : undefined;
+      await saveMessage(activeSessionId, "assistant", text, metadata);
 
       // Auto-title: if this is the first exchange, use the user's first message as title
       if (messages.length <= 1) {
@@ -223,21 +287,13 @@ export default function AgentChatPage() {
 
   const handleSend = async () => {
     const text = inputText.trim();
-    if ((!text && pendingImages.length === 0) || isStreaming || !activeSessionId) return;
+    if ((!text && pendingAttachments.length === 0) || isStreaming || !activeSessionId) return;
 
-    const userMsg: UIMessage = { id: genId(), role: "user", content: text, images: pendingImages.length > 0 ? [...pendingImages] : undefined };
+    const userMsg: UIMessage = { id: genId(), role: "user", content: text, attachments: pendingAttachments.length > 0 ? [...pendingAttachments] : undefined };
     setMessages((prev) => [...prev, userMsg]);
 
     // Build API content
-    let apiContent: string | object[] = text;
-    if (pendingImages.length > 0) {
-      const blocks: object[] = [];
-      for (const img of pendingImages) {
-        blocks.push({ type: "image", source: { type: "base64", media_type: img.mimeType, data: img.base64 } });
-      }
-      if (text) blocks.push({ type: "text", text });
-      apiContent = blocks;
-    }
+    const apiContent = buildContentBlocks(text, pendingAttachments.length > 0 ? pendingAttachments : undefined);
 
     historyRef.current.push({ role: "user", content: apiContent });
 
@@ -245,7 +301,7 @@ export default function AgentChatPage() {
     await saveMessage(activeSessionId, "user", text);
 
     setInputText("");
-    setPendingImages([]);
+    setPendingAttachments([]);
     textareaRef.current?.focus();
 
     sendToApi([...historyRef.current]);
@@ -285,8 +341,8 @@ export default function AgentChatPage() {
         e.preventDefault();
         const file = items[i].getAsFile();
         if (file) {
-          const img = await readFileAsBase64(file);
-          setPendingImages((prev) => [...prev, img]);
+          const att = await processFile(file);
+          setPendingAttachments((prev) => [...prev, att]);
         }
         return;
       }
@@ -297,10 +353,8 @@ export default function AgentChatPage() {
     const files = e.target.files;
     if (!files) return;
     for (let i = 0; i < files.length; i++) {
-      if (files[i].type.startsWith("image/")) {
-        const img = await readFileAsBase64(files[i]);
-        setPendingImages((prev) => [...prev, img]);
-      }
+      const att = await processFile(files[i]);
+      setPendingAttachments((prev) => [...prev, att]);
     }
     e.target.value = "";
   };
@@ -427,11 +481,43 @@ export default function AgentChatPage() {
                   ? "bg-[#7FAEE6] text-white"
                   : "bg-[#F6F3EE] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
-                {msg.images && msg.images.length > 0 && (
+                {/* Tool activity badges */}
+                {msg.toolActivity && msg.toolActivity.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {msg.toolActivity.map((tool, i) => {
+                      const isLatest = isStreaming && msg === messages[messages.length - 1] && i === msg.toolActivity!.length - 1;
+                      return (
+                        <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7FAEE6]/10 text-[#7FAEE6]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
+                          {isLatest && (
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                            </span>
+                          )}
+                          {tool.type === "web_search" || tool.type === "web_fetch" ? (
+                            <Globe className="h-3 w-3" />
+                          ) : (
+                            <Code className="h-3 w-3" />
+                          )}
+                          {tool.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {msg.attachments && msg.attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {msg.images.map((img, i) => (
-                      <img key={i} src={img.preview} alt="" className="rounded-lg max-h-32 object-cover" />
-                    ))}
+                    {msg.attachments.map((att, i) =>
+                      att.type === "image" && att.preview ? (
+                        <img key={i} src={att.preview} alt="attachment" className="rounded-lg max-h-32 max-w-full object-cover" />
+                      ) : (
+                        <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F1ECE4] text-[10px] text-[#6F6A64]">
+                          <FileText className="h-3 w-3 text-[#7FAEE6]" />
+                          {att.filename}
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
                 {msg.role === "assistant" ? (
@@ -443,6 +529,23 @@ export default function AgentChatPage() {
                   </div>
                 ) : (
                   <span className="whitespace-pre-wrap">{msg.content}</span>
+                )}
+
+                {/* Generated files */}
+                {msg.generatedFiles && msg.generatedFiles.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1.5">
+                    {msg.generatedFiles.map((f, i) => (
+                      <a
+                        key={i}
+                        href={f.isDataUri ? f.fileId : `/api/ai/files/${f.fileId}`}
+                        download={f.filename}
+                        className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {f.filename}
+                      </a>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -496,14 +599,21 @@ export default function AgentChatPage() {
             className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] focus-within:ring-2 focus-within:ring-[#7FAEE6]/30 focus-within:border-[#7FAEE6]/50 transition-all flex flex-col"
             style={{ height: inputHeight }}
           >
-            {/* Pending images */}
-            {pendingImages.length > 0 && (
-              <div className="px-3 pt-3 flex gap-2 flex-wrap shrink-0">
-                {pendingImages.map((img, i) => (
+            {/* Pending attachments */}
+            {pendingAttachments.length > 0 && (
+              <div className="px-3 pt-3 flex gap-2 flex-wrap">
+                {pendingAttachments.map((att, i) => (
                   <div key={i} className="relative group">
-                    <img src={img.preview} alt="" className="h-14 rounded-lg border border-[#E7DED2] object-cover" />
+                    {att.type === "image" && att.preview ? (
+                      <img src={att.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
+                    ) : (
+                      <div className="h-16 px-3 rounded-lg border border-[#E7DED2] bg-[#F6F3EE] flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-[#7FAEE6] shrink-0" />
+                        <span className="text-[10px] text-[#6F6A64] max-w-[100px] truncate">{att.filename}</span>
+                      </div>
+                    )}
                     <button
-                      onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
+                      onClick={() => setPendingAttachments((prev) => prev.filter((_, j) => j !== i))}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#D5847A] text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       x
@@ -532,13 +642,14 @@ export default function AgentChatPage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7FAEE6] hover:bg-[#E7DED2] transition-colors"
+                title="Attach file"
               >
-                <ImagePlus className="h-4 w-4" />
+                <Paperclip className="h-4 w-4" />
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+              <input ref={fileInputRef} type="file" accept={ACCEPTED_FILE_TYPES} multiple onChange={handleFileSelect} className="hidden" />
               <button
                 onClick={handleSend}
-                disabled={(!inputText.trim() && pendingImages.length === 0) || isStreaming}
+                disabled={(!inputText.trim() && pendingAttachments.length === 0) || isStreaming}
                 className="px-4 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-xs font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40"
               >
                 Send

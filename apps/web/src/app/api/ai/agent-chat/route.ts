@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 import { getAnthropicClient, MODELS } from "@/lib/ai/client";
+import { withRateLimit } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -37,6 +38,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const rateCheck = await withRateLimit(user.id, "agent-chat");
+  if (!rateCheck.allowed) return rateCheck.response;
+
   const body = await request.json();
   const { promptFile, messages, extraContext, useOpus } = body as {
     promptFile: string;
@@ -47,7 +51,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const basePrompt = await loadPromptFile(promptFile);
-    const yobossPrefix = `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.\n\n`;
+    const yobossPrefix = `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
+
+FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using code execution, you MUST copy the output file to $OUTPUT_DIR so the user can download it. Example: after creating a file, run: cp /tmp/myfile.html $OUTPUT_DIR/myfile.html. The $OUTPUT_DIR environment variable is pre-set. Only files in $OUTPUT_DIR are downloadable.
+
+`;
     const fullPrompt = yobossPrefix + basePrompt;
     const systemPrompt = extraContext
       ? `${fullPrompt}\n\n---\nADDITIONAL CONTEXT:\n${extraContext}`

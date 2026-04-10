@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Square, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { X, Square, Send, Clock, Download, Globe, Code } from "lucide-react";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
@@ -17,12 +18,43 @@ import type {
   WorkflowStepResult,
   GeneratedFile,
 } from "@/lib/types/workflow";
+import {
+  DeliverablesButton,
+  type DeliverableItem,
+} from "./deliverables-panel";
 
 interface WorkflowRunViewProps {
   workflow: Workflow;
   onClose: () => void;
   onComplete: () => void;
+  /** If provided, skip execution and load from history */
+  existingRun?: WorkflowRun;
 }
+
+// --- Types ---
+
+interface ToolActivity {
+  type: "web_search" | "web_fetch" | "code_execution";
+  label: string;
+}
+
+interface ChatMessage {
+  id: string;
+  type: "step" | "system" | "user" | "assistant";
+  // step fields
+  stepIndex?: number;
+  agentId?: string;
+  agentLabel?: string;
+  agentAvatar?: string;
+  durationMs?: number;
+  toolActivity?: ToolActivity[];
+  generatedFiles?: GeneratedFile[];
+  // common
+  content: string;
+  isStreaming?: boolean;
+}
+
+// --- Helpers ---
 
 const allAgents = [...DEFAULT_AGENTS, ...ALL_AGENTS];
 
@@ -39,25 +71,188 @@ function formatDuration(ms: number): string {
   return `${mins}m ${remSecs}s`;
 }
 
+let counter = 0;
+function genId() {
+  return `wfm_${Date.now()}_${++counter}`;
+}
+
+async function resolveFilenames(
+  files: GeneratedFile[]
+): Promise<GeneratedFile[]> {
+  const unknowns = files.filter(
+    (f) => !f.filename || f.filename === "download"
+  );
+  if (unknowns.length === 0) return files;
+
+  try {
+    const res = await fetch("/api/ai/files/metadata", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileIds: unknowns.map((f) => f.fileId) }),
+    });
+    if (!res.ok) return files;
+    const { files: nameMap } = (await res.json()) as {
+      files: Record<string, string>;
+    };
+    return files.map((f) => ({
+      ...f,
+      filename: nameMap[f.fileId] || f.filename,
+    }));
+  } catch {
+    return files;
+  }
+}
+
+// --- Component ---
+
 export function WorkflowRunView({
   workflow,
   onClose,
   onComplete,
+  existingRun,
 }: WorkflowRunViewProps) {
-  const [runId, setRunId] = useState<string | null>(null);
+  const isHistoryMode = !!existingRun;
+
+  // Build initial messages from existing run
+  const buildHistoryMessages = useCallback((): ChatMessage[] => {
+    if (!existingRun) return [];
+    const msgs: ChatMessage[] = [];
+    for (let i = 0; i < existingRun.step_results.length; i++) {
+      const result = existingRun.step_results[i];
+      const step = workflow.steps[i];
+      const agent = step ? findAgent(step.agentId) : null;
+      msgs.push({
+        id: genId(),
+        type: "step",
+        stepIndex: i,
+        agentId: step?.agentId,
+        agentLabel: agent?.label || "Agent",
+        agentAvatar: agent?.avatar,
+        durationMs: result.durationMs,
+        generatedFiles: result.files as GeneratedFile[] | undefined,
+        content: result.output || result.error || "",
+      });
+    }
+    if (existingRun.status === "success") {
+      msgs.push({ id: genId(), type: "system", content: `All ${existingRun.total_steps} steps completed successfully.` });
+    } else if (existingRun.status === "failed") {
+      const failedStep = existingRun.step_results.find((r) => r.status === "failed");
+      msgs.push({ id: genId(), type: "system", content: failedStep?.error ? `Workflow failed: ${failedStep.error}` : "Workflow failed." });
+    }
+
+    // Restore follow-up chat messages
+    if (existingRun.follow_up_messages) {
+      for (const fm of existingRun.follow_up_messages) {
+        if (fm.type === "user") {
+          msgs.push({ id: genId(), type: "user", content: fm.content });
+        } else {
+          msgs.push({
+            id: genId(),
+            type: "assistant",
+            agentLabel: "General Assistant",
+            agentAvatar: "/pink.png",
+            content: fm.content,
+            toolActivity: fm.toolActivity as ToolActivity[] | undefined,
+            generatedFiles: fm.generatedFiles as GeneratedFile[] | undefined,
+          });
+        }
+      }
+    }
+
+    return msgs;
+  }, [existingRun, workflow.steps]);
+
+  const [stepResults, setStepResults] = useState<WorkflowStepResult[]>(() =>
+    existingRun ? existingRun.step_results : []
+  );
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    buildHistoryMessages()
+  );
   const [currentStep, setCurrentStep] = useState(0);
-  const [stepResults, setStepResults] = useState<WorkflowStepResult[]>([]);
-  const [currentOutput, setCurrentOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(!isHistoryMode);
+  const [overallStatus, setOverallStatus] = useState<"running" | "success" | "failed">(
+    isHistoryMode ? (existingRun!.status as "success" | "failed") : "running"
+  );
   const [toolStatus, setToolStatus] = useState<string | null>(null);
-  const [isRunning, setIsRunning] = useState(true);
-  const [overallStatus, setOverallStatus] = useState<
-    "running" | "success" | "failed"
-  >("running");
-  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+
+  // Post-completion chat state
+  const [inputText, setInputText] = useState("");
+  const [isChatStreaming, setIsChatStreaming] = useState(false);
+  const [workflowSummary, setWorkflowSummary] = useState<string | null>(null);
+  const chatHistoryRef = useRef<{ role: "user" | "assistant"; content: string }[]>(
+    existingRun?.follow_up_messages?.map((fm) => ({ role: fm.type, content: fm.content })) || []
+  );
 
   const abortRef = useRef<AbortController | null>(null);
-  const outputRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasStarted = useRef(false);
+  const streamingMsgId = useRef<string | null>(null);
+  const runIdRef = useRef<string | null>(existingRun?.id || null);
+
+  // Persist follow-up messages to DB
+  const saveFollowUpMessages = useCallback(async (msgs: ChatMessage[]) => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    // Extract only user/assistant messages (skip step & system)
+    const followUp = msgs
+      .filter((m) => m.type === "user" || m.type === "assistant")
+      .map((m) => ({
+        type: m.type as "user" | "assistant",
+        content: m.content,
+        toolActivity: m.toolActivity,
+        generatedFiles: m.generatedFiles,
+      }));
+    if (followUp.length === 0) return;
+    try {
+      await updateWorkflowRun(rid, { follow_up_messages: followUp });
+    } catch {
+      // Non-blocking
+    }
+  }, []);
+
+  // Resolve "download" filenames on mount (for history view)
+  useEffect(() => {
+    if (!isHistoryMode) return;
+    const unresolvedIds: string[] = [];
+    for (const msg of chatMessages) {
+      if (msg.generatedFiles) {
+        for (const f of msg.generatedFiles) {
+          if (!f.filename || f.filename === "download") {
+            unresolvedIds.push(f.fileId);
+          }
+        }
+      }
+    }
+    if (unresolvedIds.length === 0) return;
+
+    fetch("/api/ai/files/metadata", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileIds: unresolvedIds }),
+    })
+      .then((res) => res.json())
+      .then(({ files: nameMap }: { files: Record<string, string> }) => {
+        setChatMessages((prev) =>
+          prev.map((m) => {
+            if (!m.generatedFiles) return m;
+            const updated = m.generatedFiles.map((f) =>
+              nameMap[f.fileId] ? { ...f, filename: nameMap[f.fileId] } : f
+            );
+            return { ...m, generatedFiles: updated };
+          })
+        );
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHistoryMode]);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, toolStatus]);
 
   // Initialize step results
   const initStepResults = useCallback((): WorkflowStepResult[] => {
@@ -67,7 +262,7 @@ export function WorkflowRunView({
     }));
   }, [workflow.steps]);
 
-  // Stream a single step
+  // Stream a single step — appends/updates a chat message in real time
   const runStep = useCallback(
     async (
       stepIndex: number,
@@ -92,12 +287,31 @@ export function WorkflowRunView({
           step.prompt;
       }
 
+      // Add step message (streaming)
+      const msgId = genId();
+      streamingMsgId.current = msgId;
+      const stepMsg: ChatMessage = {
+        id: msgId,
+        type: "step",
+        stepIndex,
+        agentId: step.agentId,
+        agentLabel: agent.label,
+        agentAvatar: agent.avatar,
+        content: "",
+        isStreaming: true,
+        toolActivity: [],
+        generatedFiles: [],
+      };
+      setChatMessages((prev) => [...prev, stepMsg]);
+
       const res = await fetch("/api/ai/agent-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           promptFile: agent.promptFile,
           messages: [{ role: "user", content: enrichedPrompt }],
+          extraContext:
+            "When generating ANY file (HTML, PDF, PPT, etc.), you MUST copy the output file to $OUTPUT_DIR so the user can download it. Example: create the file, then run: cp /tmp/myfile.html $OUTPUT_DIR/myfile.html. The $OUTPUT_DIR env var is pre-set. Only files in $OUTPUT_DIR are downloadable by the user.",
           useOpus: true,
         }),
         signal,
@@ -114,6 +328,7 @@ export function WorkflowRunView({
       const decoder = new TextDecoder();
       let text = "";
       const files: GeneratedFile[] = [];
+      const tools: ToolActivity[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -135,6 +350,12 @@ export function WorkflowRunView({
           } catch {
             continue;
           }
+
+          // Error
+          if (event.type === "error") {
+            throw new Error(event.error?.message || "AI service error");
+          }
+
           // Text content
           if (
             event.type === "content_block_delta" &&
@@ -142,69 +363,135 @@ export function WorkflowRunView({
             event.delta.text
           ) {
             text += event.delta.text;
-            setCurrentOutput(text);
-            setToolStatus(null); // Clear tool status when text starts flowing
+            setToolStatus(null);
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId
+                  ? { ...m, content: text, toolActivity: [...tools], generatedFiles: [...files] }
+                  : m
+              )
+            );
           }
-          // Server-side tool activity (web_search, web_fetch, code_execution)
-          if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
+
+          // Server-side tool use
+          if (
+            event.type === "content_block_start" &&
+            event.content_block?.type === "server_tool_use"
+          ) {
             const toolName = event.content_block.name as string;
             const labels: Record<string, string> = {
-              web_search: "🔍 Searching the web...",
-              web_fetch: "🌐 Fetching webpage...",
-              bash_code_execution: "💻 Running code...",
-              text_editor_code_execution: "📝 Editing file...",
+              web_search: "Searching the web...",
+              web_fetch: "Fetching webpage...",
+              bash_code_execution: "Running code...",
+              text_editor_code_execution: "Editing file...",
             };
-            setToolStatus(labels[toolName] || `⚙️ Using ${toolName}...`);
+            const activity: ToolActivity = {
+              type: toolName.includes("web_search")
+                ? "web_search"
+                : toolName.includes("web_fetch")
+                  ? "web_fetch"
+                  : "code_execution",
+              label: labels[toolName] || `Using ${toolName}...`,
+            };
+            tools.push(activity);
+            setToolStatus(labels[toolName] || `Using ${toolName}...`);
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId ? { ...m, toolActivity: [...tools] } : m
+              )
+            );
           }
-          if (event.type === "content_block_stop") {
-            // Tool finished, will either get more tools or text
-          }
-          // Generated files from code_execution — check multiple event structures
-          // Log all code execution related events for debugging
-          if (event.type === "content_block_start" && event.content_block?.type?.includes("code_execution")) {
-            console.log("[workflow] code_execution event:", JSON.stringify(event.content_block).slice(0, 500));
-            const block = event.content_block;
-            // Check for file outputs in the content block
-            if (block.content) {
-              const contentItems = Array.isArray(block.content) ? block.content : [block.content];
-              for (const item of contentItems) {
-                if (item.file_id) {
-                  files.push({ fileId: item.file_id, filename: item.filename || "output" });
-                }
-                // Nested content array
-                if (Array.isArray(item.content)) {
-                  for (const sub of item.content) {
-                    if (sub.file_id) {
-                      files.push({ fileId: sub.file_id, filename: sub.filename || "output" });
-                    }
-                  }
+
+          // Generated files
+          if (
+            event.type === "content_block_start" &&
+            (event.content_block?.type === "bash_code_execution_tool_result" ||
+              event.content_block?.type === "code_execution_tool_result")
+          ) {
+            const result = event.content_block.content;
+            if (result?.content && Array.isArray(result.content)) {
+              for (const item of result.content) {
+                if (
+                  (item.type === "bash_code_execution_output" ||
+                    item.type === "code_execution_output") &&
+                  item.file_id
+                ) {
+                  files.push({
+                    fileId: item.file_id,
+                    filename: item.filename || "download",
+                  });
                 }
               }
+              if (files.length > 0) {
+                setChatMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === msgId ? { ...m, generatedFiles: [...files] } : m
+                  )
+                );
+              }
             }
-          }
-          // Also check content_block_delta for file references
-          if (event.type === "content_block_delta" && event.delta?.type?.includes("code_execution")) {
-            console.log("[workflow] code_execution delta:", JSON.stringify(event.delta).slice(0, 500));
-          }
-          // Check content_block_stop for result blocks with files
-          if (event.type === "content_block_stop" && event.content_block?.type?.includes("code_execution")) {
-            console.log("[workflow] code_execution stop:", JSON.stringify(event.content_block).slice(0, 500));
           }
         }
       }
 
+      // Resolve real filenames from Anthropic Files API
+      const resolvedFiles =
+        files.length > 0 ? await resolveFilenames(files) : files;
+
+      // Finalize message — no longer streaming
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? {
+              ...m,
+              content: text,
+              isStreaming: false,
+              toolActivity: tools.length > 0 ? tools : undefined,
+              generatedFiles: resolvedFiles.length > 0 ? resolvedFiles : undefined,
+            }
+            : m
+        )
+      );
+      streamingMsgId.current = null;
+      setToolStatus(null);
       setAgentStatus(step.agentId, "idle");
-      return { text, files };
+      return { text, files: resolvedFiles };
     },
     [workflow.steps]
   );
+
+  // Generate summary of workflow outputs using Haiku
+  const generateWorkflowSummary = useCallback(async (outputs: string[]) => {
+    try {
+      const combined = outputs
+        .map((o, i) => `Step ${i + 1}:\n${o}`)
+        .join("\n\n---\n\n");
+
+      const res = await fetch("/api/ai/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldSummary: null,
+          messages: [{ role: "assistant", content: combined }],
+        }),
+      });
+      const data = await res.json();
+      if (data.summary) {
+        setWorkflowSummary(data.summary);
+      }
+    } catch (err) {
+      console.error("Failed to generate workflow summary:", err);
+      // Fallback: use truncated outputs
+      const fallback = outputs.map((o, i) => `Step ${i + 1}: ${o.slice(0, 200)}...`).join("\n");
+      setWorkflowSummary(fallback);
+    }
+  }, []);
 
   // Execute workflow
   const executeWorkflow = useCallback(async () => {
     const initialResults = initStepResults();
     setStepResults(initialResults);
 
-    // Create run record
     let run: WorkflowRun;
     try {
       run = await createWorkflowRun({
@@ -212,11 +499,15 @@ export function WorkflowRunView({
         totalSteps: workflow.steps.length,
         stepResults: initialResults,
       });
-      setRunId(run.id);
-      // Mark workflow as running
+      runIdRef.current = run.id;
       await updateWorkflow(workflow.id, { status: "running" });
     } catch (err) {
       console.error("Failed to create run:", err);
+      setChatMessages([{
+        id: genId(),
+        type: "system",
+        content: "Failed to start workflow. Please try again.",
+      }]);
       setOverallStatus("failed");
       setIsRunning(false);
       return;
@@ -224,17 +515,15 @@ export function WorkflowRunView({
 
     const abort = new AbortController();
     abortRef.current = abort;
-
     const outputs: string[] = [];
 
     for (let i = 0; i < workflow.steps.length; i++) {
       if (abort.signal.aborted) break;
 
       setCurrentStep(i);
-      setCurrentOutput("");
       setToolStatus(null);
 
-      // Mark current step as running
+      // Update step results
       const updatedResults = [...initialResults];
       for (let j = 0; j < i; j++) {
         updatedResults[j] = { ...updatedResults[j], status: "success" };
@@ -248,7 +537,7 @@ export function WorkflowRunView({
           step_results: updatedResults,
         });
       } catch {
-        // Non-blocking DB update
+        // Non-blocking
       }
 
       const startTime = Date.now();
@@ -257,6 +546,15 @@ export function WorkflowRunView({
         const result = await runStep(i, outputs, abort.signal);
         const duration = Date.now() - startTime;
         outputs.push(result.text);
+
+        // Update duration on the message
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.type === "step" && m.stepIndex === i
+              ? { ...m, durationMs: duration }
+              : m
+          )
+        );
 
         updatedResults[i] = {
           ...updatedResults[i],
@@ -267,7 +565,6 @@ export function WorkflowRunView({
         };
         setStepResults([...updatedResults]);
 
-        // Persist step result
         try {
           await updateWorkflowRun(run.id, {
             current_step: i + 1,
@@ -280,8 +577,18 @@ export function WorkflowRunView({
         if (abort.signal.aborted) break;
 
         const duration = Date.now() - startTime;
-        const errorMsg =
-          err instanceof Error ? err.message : "Unknown error";
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
+
+        // Update the streaming message to show error
+        if (streamingMsgId.current) {
+          setChatMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingMsgId.current
+                ? { ...m, content: `Error: ${errorMsg}`, isStreaming: false, durationMs: duration }
+                : m
+            )
+          );
+        }
 
         updatedResults[i] = {
           ...updatedResults[i],
@@ -290,12 +597,19 @@ export function WorkflowRunView({
           durationMs: duration,
         };
         setStepResults([...updatedResults]);
-
-        // Mark run as failed
         setOverallStatus("failed");
         setIsRunning(false);
-
         setAgentStatus(workflow.steps[i].agentId, "idle");
+
+        // Add system error message
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: genId(),
+            type: "system",
+            content: `Step ${i + 1} failed: ${errorMsg}`,
+          },
+        ]);
 
         try {
           await updateWorkflowRun(run.id, {
@@ -311,29 +625,31 @@ export function WorkflowRunView({
         } catch {
           // Non-blocking
         }
-
         return;
       }
     }
 
     if (!abort.signal.aborted) {
-      // All steps completed
       setOverallStatus("success");
       setIsRunning(false);
 
-      const finalResults = stepResults.length
-        ? stepResults
-        : initialResults.map((r, i) => ({
-            ...r,
-            status: "success" as const,
-            output: outputs[i] || "",
-          }));
+      // Add completion system message
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: genId(),
+          type: "system",
+          content: `All ${workflow.steps.length} steps completed successfully.`,
+        },
+      ]);
+
+      // Generate summary for follow-up chat
+      generateWorkflowSummary(outputs);
 
       try {
         await updateWorkflowRun(run.id, {
           status: "success",
           current_step: workflow.steps.length,
-          step_results: finalResults,
           completed_at: new Date().toISOString(),
         });
         await updateWorkflow(workflow.id, {
@@ -347,60 +663,254 @@ export function WorkflowRunView({
 
       onComplete();
     }
-  }, [
-    workflow,
-    initStepResults,
-    runStep,
-    stepResults,
-    onComplete,
-  ]);
+  }, [workflow, initStepResults, runStep, generateWorkflowSummary, onComplete]);
 
-  // Start on mount
+  // Start on mount (skip in history mode)
   useEffect(() => {
     if (hasStarted.current) return;
     hasStarted.current = true;
+
+    if (isHistoryMode) {
+      // Generate summary from existing outputs for follow-up chat
+      const outputs = existingRun!.step_results
+        .filter((r) => r.output)
+        .map((r) => r.output!);
+      if (outputs.length > 0) generateWorkflowSummary(outputs);
+      return;
+    }
+
     executeWorkflow();
 
     return () => {
       abortRef.current?.abort();
-      // Reset any running agent statuses
       workflow.steps.forEach((s) => setAgentStatus(s.agentId, "idle"));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll output
-  useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
-  }, [currentOutput]);
-
   const handleStop = () => {
     abortRef.current?.abort();
     setIsRunning(false);
     setOverallStatus("failed");
+    setToolStatus(null);
     workflow.steps.forEach((s) => setAgentStatus(s.agentId, "idle"));
+    setChatMessages((prev) => [
+      ...prev,
+      { id: genId(), type: "system", content: "Workflow stopped by user." },
+    ]);
   };
 
-  const toggleExpanded = (idx: number) => {
-    setExpandedSteps((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
+  // --- Post-completion chat ---
+  const handleSend = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || isChatStreaming) return;
 
-  const currentAgent = findAgent(workflow.steps[currentStep]?.agentId);
+    // Add user message
+    const userMsgId = genId();
+    setChatMessages((prev) => [
+      ...prev,
+      { id: userMsgId, type: "user", content: text },
+    ]);
+    setInputText("");
+    setIsChatStreaming(true);
+    setAgentStatus("general_assistant", "working");
+
+    // Add streaming assistant message
+    const assistantMsgId = genId();
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMsgId,
+        type: "assistant",
+        agentLabel: "General Assistant",
+        agentAvatar: "/pink.png",
+        content: "",
+        isStreaming: true,
+      },
+    ]);
+
+    chatHistoryRef.current.push({ role: "user", content: text });
+
+    try {
+      // Build messages with workflow summary as context
+      const systemContext = workflowSummary
+        ? `The user just ran a workflow called "${workflow.name}". Here is a summary of the workflow outputs:\n\n${workflowSummary}\n\nNow the user wants to discuss or refine the results.`
+        : `The user just ran a workflow called "${workflow.name}". Help them with any follow-up questions.`;
+
+      const res = await fetch("/api/ai/agent-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          promptFile: "general_assistant.txt",
+          messages: chatHistoryRef.current,
+          extraContext: systemContext,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let responseText = "";
+      const chatFiles: GeneratedFile[] = [];
+      const chatTools: ToolActivity[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((l) => l.trim());
+
+        for (const line of lines) {
+          if (line.startsWith("event:")) continue;
+          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
+          let event;
+          try {
+            event = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
+
+          if (event.type === "error") {
+            throw new Error(event.error?.message || "AI service error");
+          }
+
+          // Text content
+          if (
+            event.type === "content_block_delta" &&
+            event.delta?.type === "text_delta" &&
+            event.delta.text
+          ) {
+            responseText += event.delta.text;
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, content: responseText, toolActivity: chatTools.length > 0 ? [...chatTools] : undefined, generatedFiles: chatFiles.length > 0 ? [...chatFiles] : undefined }
+                  : m
+              )
+            );
+          }
+
+          // Server-side tool use
+          if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
+            const toolName = event.content_block.name as string;
+            const labels: Record<string, string> = {
+              web_search: "Searching the web...",
+              web_fetch: "Fetching webpage...",
+              bash_code_execution: "Running code...",
+              text_editor_code_execution: "Editing file...",
+            };
+            chatTools.push({
+              type: toolName.includes("web_search") ? "web_search" : toolName.includes("web_fetch") ? "web_fetch" : "code_execution",
+              label: labels[toolName] || `Using ${toolName}...`,
+            });
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId ? { ...m, toolActivity: [...chatTools] } : m
+              )
+            );
+          }
+
+          // Generated files from code_execution
+          if (event.type === "content_block_start" && (event.content_block?.type === "bash_code_execution_tool_result" || event.content_block?.type === "code_execution_tool_result")) {
+            const result = event.content_block.content;
+            if (result?.content && Array.isArray(result.content)) {
+              for (const item of result.content) {
+                if ((item.type === "bash_code_execution_output" || item.type === "code_execution_output") && item.file_id) {
+                  chatFiles.push({ fileId: item.file_id, filename: item.filename || "download" });
+                }
+              }
+              if (chatFiles.length > 0) {
+                setChatMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId ? { ...m, generatedFiles: [...chatFiles] } : m
+                  )
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Finalize
+      // Resolve real filenames from Anthropic Files API
+      if (chatFiles.length > 0) {
+        const resolved = await resolveFilenames(chatFiles);
+        chatFiles.splice(0, chatFiles.length, ...resolved);
+      }
+
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? {
+              ...m,
+              content: responseText,
+              isStreaming: false,
+              toolActivity: chatTools.length > 0 ? chatTools : undefined,
+              generatedFiles: chatFiles.length > 0 ? chatFiles : undefined,
+            }
+            : m
+        )
+      );
+      chatHistoryRef.current.push({ role: "assistant", content: responseText });
+
+      // Persist follow-up messages to DB
+      // Use functional setChatMessages to get latest snapshot, then save
+      let latestMsgs: ChatMessage[] = [];
+      setChatMessages((prev) => { latestMsgs = prev; return prev; });
+      // latestMsgs is set synchronously by React's setState callback
+      if (latestMsgs.length > 0) {
+        saveFollowUpMessages(latestMsgs);
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Something went wrong";
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? { ...m, content: `Error: ${errMsg}`, isStreaming: false }
+            : m
+        )
+      );
+    } finally {
+      setIsChatStreaming(false);
+      setAgentStatus("general_assistant", "idle");
+    }
+  }, [inputText, isChatStreaming, workflowSummary, workflow.name, saveFollowUpMessages]);
+
+  // --- Deliverables ---
+  const deliverableItems = useMemo<DeliverableItem[]>(() => {
+    const items: DeliverableItem[] = [];
+    const now = new Date();
+    for (const msg of chatMessages) {
+      if (msg.generatedFiles && msg.generatedFiles.length > 0) {
+        const source =
+          msg.type === "step" && msg.stepIndex !== undefined
+            ? `Step ${msg.stepIndex + 1}`
+            : "Follow-up chat";
+        for (const f of msg.generatedFiles) {
+          items.push({
+            fileId: f.fileId,
+            filename: f.filename,
+            source,
+            createdAt: existingRun ? new Date(existingRun.started_at) : now,
+          });
+        }
+      }
+    }
+    return items;
+  }, [chatMessages, existingRun]);
+
+  // --- Render ---
+  const canChat = overallStatus === "success" || overallStatus === "failed";
 
   return (
     <div className="fixed inset-0 z-40 ml-20 mt-16 flex flex-col bg-[#F6F3EE] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-[#FFFDF9] border-b border-[#E7DED2]">
+      <div className="flex items-center justify-between px-6 py-3 bg-[#FFFDF9] border-b border-[#E7DED2]">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-[#2B2B2B]">
-            Running: {workflow.name}
+            {workflow.name}
           </h1>
           {overallStatus === "success" && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7FB38A]/10 text-[#7FB38A]">
@@ -412,6 +922,7 @@ export function WorkflowRunView({
               Failed
             </span>
           )}
+          <DeliverablesButton items={deliverableItems} />
         </div>
         <div className="flex items-center gap-2">
           {isRunning && (
@@ -433,12 +944,12 @@ export function WorkflowRunView({
       </div>
 
       {/* Progress bar */}
-      <div className="px-6 py-5 bg-[#FFFDF9] border-b border-[#E7DED2]">
+      <div className="px-6 py-4 bg-[#FFFDF9] border-b border-[#E7DED2]">
         <div className="flex items-center justify-center gap-0">
           {workflow.steps.map((step, idx) => {
             const result = stepResults[idx];
             const status = result?.status || "pending";
-            let dotColor = "#DDD3C7"; // pending
+            let dotColor = "#DDD3C7";
             if (status === "success") dotColor = "#7FB38A";
             else if (status === "running") dotColor = "#7FAEE6";
             else if (status === "failed") dotColor = "#D5847A";
@@ -448,13 +959,8 @@ export function WorkflowRunView({
               <div key={step.id} className="flex items-center">
                 <div className="flex flex-col items-center">
                   <div
-                    className={`w-4 h-4 rounded-full border-2 ${
-                      status === "running" ? "animate-pulse" : ""
-                    }`}
-                    style={{
-                      backgroundColor: dotColor,
-                      borderColor: dotColor,
-                    }}
+                    className={`w-4 h-4 rounded-full border-2 ${status === "running" ? "animate-pulse" : ""}`}
+                    style={{ backgroundColor: dotColor, borderColor: dotColor }}
                   />
                   <span className="text-[10px] text-[#9B948B] mt-1 max-w-[80px] truncate text-center">
                     {agent?.label || "Agent"}
@@ -465,9 +971,7 @@ export function WorkflowRunView({
                     className="w-12 h-0.5 mx-1 mt-[-12px]"
                     style={{
                       backgroundColor:
-                        (stepResults[idx]?.status === "success")
-                          ? "#7FB38A"
-                          : "#E7DED2",
+                        stepResults[idx]?.status === "success" ? "#7FB38A" : "#E7DED2",
                     }}
                   />
                 )}
@@ -477,134 +981,185 @@ export function WorkflowRunView({
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {/* Previous completed steps */}
-        {stepResults.map((result, i) => {
-          if (i >= currentStep || result.status !== "success") return null;
-            const step = workflow.steps[i];
-            if (!step) return null;
-            const agent = findAgent(step.agentId);
-            const isExpanded = expandedSteps.has(i);
-
+      {/* Chat messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        {chatMessages.map((msg) => {
+          // System message — centered
+          if (msg.type === "system") {
+            const isError = msg.content.toLowerCase().includes("fail") || msg.content.toLowerCase().includes("error") || msg.content.toLowerCase().includes("stopped");
             return (
-              <div
-                key={step.id}
-                className="bg-[#FFFDF9] rounded-xl border border-[#E7DED2] overflow-hidden"
-              >
-                <button
-                  onClick={() => toggleExpanded(i)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F6F3EE] transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#7FB38A]" />
-                    <span className="text-sm font-medium text-[#2B2B2B]">
-                      Step {i + 1}: {agent?.label || "Agent"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {result.durationMs && (
-                      <span className="flex items-center gap-1 text-xs text-[#9B948B]">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(result.durationMs)}
-                      </span>
-                    )}
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-[#9B948B]" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-[#9B948B]" />
-                    )}
-                  </div>
-                </button>
-                {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-[#E7DED2]">
-                    {result.output && (
-                      <div className="mt-3 prose-chat text-sm text-[#2B2B2B] max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {result.output}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                    {result.files && result.files.length > 0 && (
-                      <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1">
-                        <p className="text-[10px] font-medium text-[#9B948B] uppercase">Generated Files</p>
-                        {result.files.map((f, fi) => (
-                          <a
-                            key={fi}
-                            href={`/api/ai/files/${f.fileId}`}
-                            download={f.filename}
-                            className="flex items-center gap-1.5 text-xs text-[#7FAEE6] hover:underline"
-                          >
-                            <span>📄</span>
-                            {f.filename}
-                          </a>
-                        ))}
-                        <p className="text-[9px] text-[#9B948B]">Files available for 30 days</p>
-                      </div>
-                    )}
+              <div key={msg.id} className="flex justify-center">
+                <div className={`text-xs font-medium px-4 py-2 rounded-full ${isError ? "bg-[#D5847A]/10 text-[#D5847A]" : "bg-[#7FB38A]/10 text-[#7FB38A]"}`}>
+                  {isError ? "⚠️" : "✅"} {msg.content}
+                </div>
+              </div>
+            );
+          }
+
+          // User message — right aligned
+          if (msg.type === "user") {
+            return (
+              <div key={msg.id} className="flex justify-end">
+                <div className="max-w-[75%] rounded-xl px-4 py-3 text-sm bg-[#7FAEE6] text-white">
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                </div>
+              </div>
+            );
+          }
+
+          // Step output or assistant reply — left aligned with avatar
+          return (
+            <div key={msg.id} className="flex justify-start gap-3">
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
+                {msg.agentAvatar ? (
+                  <Image
+                    src={msg.agentAvatar}
+                    alt={msg.agentLabel || "Agent"}
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-[#7FAEE6]">
+                    {(msg.agentLabel || "A").charAt(0)}
                   </div>
                 )}
               </div>
-            );
-          })}
 
-        {/* Current step */}
-        {isRunning && workflow.steps[currentStep] && (
-          <div className="bg-[#FFFDF9] rounded-xl border border-[#7FAEE6] shadow-[0_4px_16px_rgba(43,43,43,0.04)]">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#E7DED2]">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#7FAEE6] animate-pulse" />
-              <span className="text-sm font-medium text-[#2B2B2B]">
-                Step {currentStep + 1}/{workflow.steps.length}:{" "}
-                {currentAgent?.label}
-              </span>
-            </div>
-            <div
-              ref={outputRef}
-              className="p-4 max-h-[400px] overflow-y-auto"
-            >
-              {currentOutput ? (
-                <div className="prose-chat text-sm text-[#2B2B2B] max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {currentOutput}
-                  </ReactMarkdown>
+              {/* Message bubble */}
+              <div className="max-w-[80%] min-w-0">
+                {/* Agent name + step badge + duration */}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold text-[#2B2B2B]">
+                    {msg.agentLabel || "General Assistant"}
+                  </span>
+                  {msg.type === "step" && msg.stepIndex !== undefined && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F1ECE4] text-[#9B948B] font-medium">
+                      Step {msg.stepIndex + 1}
+                    </span>
+                  )}
+                  {msg.durationMs && (
+                    <span className="flex items-center gap-0.5 text-[10px] text-[#9B948B]">
+                      <Clock className="h-2.5 w-2.5" />
+                      {formatDuration(msg.durationMs)}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {toolStatus && (
-                    <div className="flex items-center gap-2 text-sm text-[#7FAEE6] font-medium">
-                      <div className="w-2 h-2 rounded-full bg-[#7FAEE6] animate-ping" />
-                      {toolStatus}
+
+                <div className="rounded-xl bg-[#FFFDF9] border border-[#E7DED2] px-4 py-3 text-sm text-[#2B2B2B]">
+                  {/* Tool activity badges */}
+                  {msg.toolActivity && msg.toolActivity.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {msg.toolActivity.map((tool, i) => {
+                        const isLatest = msg.isStreaming && i === msg.toolActivity!.length - 1;
+                        return (
+                          <span
+                            key={i}
+                            className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7FAEE6]/10 text-[#7FAEE6]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}
+                          >
+                            {isLatest && (
+                              <span className="relative flex h-2 w-2 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                              </span>
+                            )}
+                            {tool.type === "web_search" ? (
+                              <Globe className="h-3 w-3" />
+                            ) : tool.type === "web_fetch" ? (
+                              <Globe className="h-3 w-3" />
+                            ) : (
+                              <Code className="h-3 w-3" />
+                            )}
+                            {tool.label}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-sm text-[#9B948B]">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-pulse" />
-                    {toolStatus ? "Processing..." : "Waiting for response..."}
-                  </div>
+
+                  {/* Content */}
+                  {msg.content ? (
+                    <div className="prose-chat max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                      {msg.isStreaming && (
+                        <span className="inline-block ml-0.5 animate-pulse">|</span>
+                      )}
+                    </div>
+                  ) : msg.isStreaming ? (
+                    <div className="flex items-center gap-2 text-sm text-[#9B948B]">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-pulse" />
+                      {toolStatus || "Thinking..."}
+                    </div>
+                  ) : null}
+
+                  {/* Generated files */}
+                  {msg.generatedFiles && msg.generatedFiles.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1.5">
+                      {msg.generatedFiles.map((f, i) => (
+                        <a
+                          key={i}
+                          href={`/api/ai/files/${f.fileId}`}
+                          download={f.filename}
+                          className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          {f.filename}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
+          );
+        })}
+
+        {/* Streaming tool status when no text yet */}
+        {isRunning && toolStatus && chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.content === "" && (
+          <div className="ml-11 text-xs text-[#7FAEE6] font-medium flex items-center gap-2">
+            <div className="relative w-2 h-2 shrink-0">
+              <span className="absolute inset-0 rounded-full bg-[#7FAEE6] animate-ping opacity-75" />
+              <span className="relative block w-2 h-2 rounded-full bg-[#7FAEE6]" />
+            </div>
+            {toolStatus}
           </div>
         )}
+      </div>
 
-        {/* Failed step error */}
-        {overallStatus === "failed" &&
-          stepResults.find((r) => r.status === "failed") && (
-            <div className="bg-[#FFFDF9] rounded-xl border border-[#D5847A] p-4">
-              <p className="text-sm font-medium text-[#D5847A]">
-                Step failed:{" "}
-                {stepResults.find((r) => r.status === "failed")?.error ||
-                  "Unknown error"}
-              </p>
-            </div>
-          )}
-
-        {/* Success summary */}
-        {overallStatus === "success" && (
-          <div className="bg-[#7FB38A]/5 rounded-xl border border-[#7FB38A]/30 p-4 text-center">
-            <p className="text-sm font-medium text-[#7FB38A]">
-              Workflow completed successfully! All {workflow.steps.length} steps
-              finished.
-            </p>
+      {/* Input area */}
+      <div className="px-6 py-3 border-t border-[#E7DED2] bg-[#FFFDF9]">
+        {canChat ? (
+          <div className="flex gap-3 items-end">
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Ask about the results, request changes..."
+              disabled={isChatStreaming}
+              rows={2}
+              className="flex-1 px-4 py-3 text-sm bg-[#F6F3EE] border border-[#DDD3C7] rounded-xl outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6]/50 transition-all"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!inputText.trim() || isChatStreaming}
+              className="px-4 py-3 rounded-xl bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 py-2 text-sm text-[#9B948B]">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-pulse" />
+            Workflow is running... Chat will be available after completion.
           </div>
         )}
       </div>

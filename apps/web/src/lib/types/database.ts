@@ -127,6 +127,10 @@ export interface ChatMessage {
   session_id: string;
   role: string;
   content: string;
+  metadata?: {
+    generatedFiles?: { fileId: string; filename: string }[];
+    toolActivity?: { type: string; label: string }[];
+  } | null;
   created_at: string;
 }
 
@@ -154,6 +158,29 @@ export interface TodoTag {
   created_at: string;
 }
 
+export interface UserQuota {
+  user_id: string;
+  tier: string;
+  daily_request_limit: number;
+  daily_cost_limit_cents: number;
+  monthly_cost_limit_cents: number;
+  requests_today: number;
+  cost_today_cents: number;
+  cost_this_month_cents: number;
+  last_reset_date: string;
+  last_month_reset: string;
+}
+
+export interface AiUsageRecord {
+  id: string;
+  route: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  estimated_cost_cents: number;
+  created_at: string;
+}
+
 // Composite types
 export interface GoalWithPhases extends Goal {
   phases: Phase[];
@@ -161,4 +188,45 @@ export interface GoalWithPhases extends Goal {
 
 export interface WeeklyPlanWithTasks extends WeeklyPlan {
   daily_tasks: DailyTask[];
+}
+
+// Dashboard types
+export interface DashboardStats {
+  taskCompletionRate: number;
+  activeGoals: number;
+  totalGoals: number;
+  goalProgressPercent: number;
+  pendingTodos: number;
+  completedTodayTodos: number;
+  totalWorkflows: number;
+  todayRunCount: number;
+  todayRuns: DashboardWorkflowRun[];
+}
+
+export interface DashboardWorkflowRun {
+  id: string;
+  workflowName: string;
+  status: "running" | "success" | "failed";
+  triggeredBy: "manual" | "scheduled";
+  startedAt: string;
+  completedAt: string | null;
+}
+
+export interface DashboardTodayItem {
+  id: string;
+  title: string;
+  description: string | null;
+  completed: boolean;
+  timeSlot: "morning" | "afternoon" | "evening";
+  source: "goal" | "personal";
+  sourceLabel: string;
+  sourceType: "daily_task" | "todo";
+}
+
+export interface WorkflowSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  lastRunStatus: "success" | "failed" | null;
+  lastRunAt: string | null;
 }

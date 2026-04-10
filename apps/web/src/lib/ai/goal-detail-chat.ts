@@ -28,8 +28,8 @@ function buildSystemPrompt(context: GoalDetailChatContext): string {
 
   const tasksText = context.weeklyTasks.length > 0
     ? context.weeklyTasks
-        .map((t) => `  ${dayNames[t.dayOfWeek]}: ${t.completed ? "[done]" : "[todo]"} ${t.title}${t.timeSlot ? ` (${t.timeSlot})` : ""}`)
-        .join("\n")
+      .map((t) => `  ${dayNames[t.dayOfWeek]}: ${t.completed ? "[done]" : "[todo]"} ${t.title}${t.timeSlot ? ` (${t.timeSlot})` : ""}`)
+      .join("\n")
     : "  No tasks scheduled yet.";
 
   return `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
@@ -57,8 +57,11 @@ YOUR ROLE:
 CAPABILITIES:
 - You can search the web for real-time information (flights, hotels, restaurants, events, prices, etc.)
 - You can fetch specific web pages to get detailed content
-- You can execute Python code to generate files (PPT, Excel, PDF, charts, etc.)
-- When generating files, always create well-formatted outputs with clear structure
+- You can execute code to generate files (PPT, Excel, PDF, charts, HTML, etc.)
+- When generating ANY file, you MUST copy it to the $OUTPUT_DIR directory so the user can download it.
+  Example: first create the file, then run: cp /tmp/myfile.html $OUTPUT_DIR/myfile.html
+  The $OUTPUT_DIR environment variable is pre-set in the execution environment — just reference it directly.
+- DO NOT just print file content to stdout or return it as a markdown code block. Only files copied to $OUTPUT_DIR will be downloadable.
 - For presentations, use python-pptx; for spreadsheets, use openpyxl; for PDFs, use matplotlib or reportlab
 - After generating a file, tell the user what you created and that they can download it`;
 }

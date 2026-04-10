@@ -14,6 +14,8 @@ import { WorkflowRunView } from "@/components/workflow/workflow-run-view";
 import { WorkflowHistory } from "@/components/workflow/workflow-history";
 import { WorkflowCard } from "@/components/workflow/workflow-card";
 import { TopicInputModal } from "@/components/workflow/topic-input-modal";
+import { ScheduleModal } from "@/components/workflow/schedule-modal";
+import { getUserTimezone, upsertUserTimezone } from "@/lib/db/actions";
 import type { Workflow, WorkflowStep } from "@/lib/types/workflow";
 
 const FAVORITES_KEY = "yoboss_favorite_workflows";
@@ -39,6 +41,9 @@ export default function WorkflowsPage() {
   // Topic input for "Use Template"
   const [topicTemplate, setTopicTemplate] = useState<Workflow | null>(null);
 
+  const [scheduleWorkflow, setScheduleWorkflow] = useState<Workflow | null>(null);
+  const [userTimezone, setUserTimezone] = useState("UTC");
+
   useEffect(() => { setFavoriteIds(loadFavorites()); setMounted(true); }, []);
 
   const loadWorkflows = useCallback(async () => {
@@ -46,6 +51,18 @@ export default function WorkflowsPage() {
   }, []);
 
   useEffect(() => { loadWorkflows(); }, [loadWorkflows]);
+
+  useEffect(() => {
+    getUserTimezone().then((tz) => {
+      if (tz === "UTC") {
+        // Auto-detect from browser
+        const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        upsertUserTimezone(browserTz).then(() => setUserTimezone(browserTz));
+      } else {
+        setUserTimezone(tz);
+      }
+    });
+  }, []);
 
   // Auto-create template workflows on first load (run once)
   const templatesInitedRef = useRef(false);
@@ -142,13 +159,14 @@ export default function WorkflowsPage() {
               <Heart className="h-4 w-4 text-[#D5847A]" />
               <h2 className="text-base font-semibold text-[#2B2B2B]">Favorite Workflows</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {favoriteWorkflows.map(wf => (
                 <WorkflowCard key={`fav-${wf.id}`} workflow={wf}
                   onRun={() => setRunningWorkflow(wf)}
                   onEdit={() => { setEditingWorkflow(wf); setShowEditor(true); }}
                   onDelete={() => handleDelete(wf)}
                   onHistory={() => setHistoryWorkflow(wf)}
+                  onSchedule={() => setScheduleWorkflow(wf)}
                   onFavorite={() => handleToggleFavorite(wf)}
                   isFavorite={true}
                 />
@@ -166,7 +184,7 @@ export default function WorkflowsPage() {
           {templates.length === 0 && !loading && (
             <p className="text-sm text-[#9B948B]">Loading templates...</p>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {templates.map(wf => (
               <WorkflowCard key={wf.id} workflow={wf}
                 onRun={() => {}} // Not used for templates
@@ -190,13 +208,14 @@ export default function WorkflowsPage() {
               <p className="text-sm text-[#9B948B]">No workflows yet — use a template or create one</p>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {specificWorkflows.map(wf => (
               <WorkflowCard key={wf.id} workflow={wf}
                 onRun={() => setRunningWorkflow(wf)}
                 onEdit={() => { setEditingWorkflow(wf); setShowEditor(true); }}
                 onDelete={() => handleDelete(wf)}
                 onHistory={() => setHistoryWorkflow(wf)}
+                onSchedule={() => setScheduleWorkflow(wf)}
                 onFavorite={() => handleToggleFavorite(wf)}
                 isFavorite={favoriteIds.includes(wf.id)}
               />
@@ -210,6 +229,14 @@ export default function WorkflowsPage() {
       {runningWorkflow && <WorkflowRunView workflow={runningWorkflow} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
       {historyWorkflow && <WorkflowHistory workflow={historyWorkflow} onClose={() => setHistoryWorkflow(null)} />}
       {topicTemplate && <TopicInputModal templateName={topicTemplate.name} placeholder={WORKFLOW_TEMPLATES.find(t => t.name === topicTemplate.name)?.topicPlaceholder} onSubmit={handleUseTemplate} onClose={() => setTopicTemplate(null)} />}
+      {scheduleWorkflow && (
+        <ScheduleModal
+          workflow={scheduleWorkflow}
+          userTimezone={userTimezone}
+          onClose={() => setScheduleWorkflow(null)}
+          onSave={() => { setScheduleWorkflow(null); loadWorkflows(); }}
+        />
+      )}
     </div>
   );
 }

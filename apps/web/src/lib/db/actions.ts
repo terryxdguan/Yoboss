@@ -14,11 +14,19 @@ import type {
   ChatMessage,
   TodoItem,
   TodoTag,
+  UserQuota,
+  AiUsageRecord,
+  DashboardStats,
+  DashboardTodayItem,
+  DashboardWorkflowRun,
+  WorkflowSummary,
 } from "../types/database";
+import { getWeekStart, getTodayDayOfWeek, classifyTimeSlot } from "../utils/date";
 import type {
   Workflow,
   WorkflowRun,
 } from "../types/workflow";
+import type { Notification } from "@/lib/types/notification";
 
 // ============================================================
 // Goals
@@ -584,13 +592,17 @@ export async function getSessionMessageCount(sessionId: string): Promise<number>
 export async function saveMessage(
   sessionId: string,
   role: string,
-  content: string
+  content: string,
+  metadata?: ChatMessage["metadata"]
 ): Promise<ChatMessage> {
   const supabase = await createClient();
 
+  const row: Record<string, unknown> = { session_id: sessionId, role, content };
+  if (metadata) row.metadata = metadata;
+
   const { data, error } = await supabase
     .from("chat_messages")
-    .insert({ session_id: sessionId, role, content })
+    .insert(row)
     .select()
     .single();
 
@@ -805,7 +817,7 @@ export async function createWorkflow(input: {
 
 export async function updateWorkflow(
   id: string,
-  patch: Partial<Pick<Workflow, "name" | "description" | "steps" | "status" | "last_run_at" | "last_run_status" | "is_template">>
+  patch: Partial<Pick<Workflow, "name" | "description" | "steps" | "status" | "last_run_at" | "last_run_status" | "is_template" | "schedule_enabled" | "schedule_cron" | "schedule_timezone" | "schedule_next_run_at">>
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
@@ -864,7 +876,7 @@ export async function createWorkflowRun(input: {
 
 export async function updateWorkflowRun(
   id: string,
-  patch: Partial<Pick<WorkflowRun, "status" | "current_step" | "step_results" | "completed_at">>
+  patch: Partial<Pick<WorkflowRun, "status" | "current_step" | "step_results" | "completed_at" | "follow_up_messages">>
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
@@ -878,4 +890,341 @@ export async function deleteWorkflowRun(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("workflow_runs").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ============================================================
+// Notifications
+// ============================================================
+
+export async function getUnreadNotifications(): Promise<Notification[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("read", false)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("read", false);
+  if (error) throw error;
+}
+
+// ============================================================
+// User Profile
+// ============================================================
+
+export async function getUserTimezone(): Promise<string> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return "UTC";
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("timezone")
+    .eq("id", user.id)
+    .single();
+  return data?.timezone || "UTC";
+}
+
+export async function upsertUserTimezone(timezone: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  const { error } = await supabase
+    .from("user_profiles")
+    .upsert({ id: user.id, timezone, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+// ============================================================
+// AI Usage & Quotas
+// ============================================================
+
+export async function getUserQuota(): Promise<UserQuota | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("user_quotas")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+  return data as UserQuota | null;
+}
+
+export async function getMonthlyUsageSummary(): Promise<{ totalRequests: number; totalCostCents: number }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { totalRequests: 0, totalCostCents: 0 };
+
+  const firstOfMonth = new Date();
+  firstOfMonth.setDate(1);
+  firstOfMonth.setHours(0, 0, 0, 0);
+
+  const { data } = await supabase
+    .from("ai_usage")
+    .select("estimated_cost_cents")
+    .eq("user_id", user.id)
+    .gte("created_at", firstOfMonth.toISOString());
+
+  if (!data || data.length === 0) return { totalRequests: 0, totalCostCents: 0 };
+
+  const totalCostCents = data.reduce((sum, r) => sum + (r.estimated_cost_cents || 0), 0);
+  return { totalRequests: data.length, totalCostCents };
+}
+
+export async function getRecentAiUsage(limit = 30, offset = 0): Promise<AiUsageRecord[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("ai_usage")
+    .select("id, route, model, input_tokens, output_tokens, estimated_cost_cents, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+  return (data as AiUsageRecord[]) || [];
+}
+
+// ============================================================
+// Dashboard
+// ============================================================
+
+export async function getDashboardData(): Promise<{
+  stats: DashboardStats;
+  todayItems: DashboardTodayItem[];
+  workflows: WorkflowSummary[];
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      stats: {
+        taskCompletionRate: 0, activeGoals: 0, totalGoals: 0, goalProgressPercent: 0,
+        pendingTodos: 0, completedTodayTodos: 0, totalWorkflows: 0, todayRunCount: 0, todayRuns: [],
+      },
+      todayItems: [],
+      workflows: [],
+    };
+  }
+
+  const weekStart = getWeekStart();
+  const todayDow = getTodayDayOfWeek();
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const [
+    goalsRes,
+    plansRes,
+    todosRes,
+    workflowsRes,
+    runsRes,
+  ] = await Promise.all([
+    // Q1: Goals
+    supabase.from("goals").select("id, status").eq("user_id", user.id),
+    // Q2+Q5: Weekly plans with phase→goal info (for task completion + today items)
+    supabase
+      .from("weekly_plans")
+      .select("id, week_start, phases(id, goal_id, status, goals(id, title))")
+      .eq("user_id", user.id),
+    // Q3+Q6: All todos
+    supabase
+      .from("todos")
+      .select("id, text, tag, completed, priority, deadline, completed_at, sort_order")
+      .eq("user_id", user.id),
+    // Q4a: Workflows
+    supabase
+      .from("workflows")
+      .select("id, name, description, is_template, last_run_status, last_run_at")
+      .eq("user_id", user.id)
+      .eq("is_template", false),
+    // Q4b: Today's workflow runs
+    supabase
+      .from("workflow_runs")
+      .select("id, workflow_id, status, triggered_by, started_at, completed_at, workflows(name)")
+      .eq("user_id", user.id)
+      .gte("started_at", `${todayStr}T00:00:00`)
+      .order("started_at", { ascending: false }),
+  ]);
+
+  const goals = (goalsRes.data || []) as { id: string; status: string }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const plans = (plansRes.data || []) as any[];
+  const todos = (todosRes.data || []) as TodoItem[];
+  const workflows = (workflowsRes.data || []) as Array<{
+    id: string; name: string; description: string | null; is_template: boolean;
+    last_run_status: string | null; last_run_at: string | null;
+  }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const runs = (runsRes.data || []) as any[];
+
+  // --- Stats ---
+
+  // Goals
+  const activeGoals = goals.filter(g => g.status === "active").length;
+  const totalGoals = goals.length;
+
+  // Goal progress: % of completed phases across active goals
+  // Supabase returns nested joins: phases may be object or array depending on FK direction
+  const activeGoalIds = new Set(goals.filter(g => g.status === "active").map(g => g.id));
+  const activePhases: { status: string; goal_id: string }[] = [];
+  for (const p of plans) {
+    const ph = p.phases;
+    if (!ph) continue;
+    // phases is a single object (many-to-one from weekly_plans)
+    const phase = Array.isArray(ph) ? ph[0] : ph;
+    if (phase && activeGoalIds.has(phase.goal_id)) {
+      activePhases.push(phase);
+    }
+  }
+  const completedPhases = activePhases.filter(p => p.status === "completed").length;
+  const goalProgressPercent = activePhases.length > 0
+    ? Math.round((completedPhases / activePhases.length) * 100) : 0;
+
+  // Task completion rate: daily tasks + todos
+  // Get all daily tasks for current week plans
+  const currentWeekPlanIds = plans.filter(p => p.week_start === weekStart).map(p => p.id);
+  let allTasksTotal = 0;
+  let allTasksCompleted = 0;
+
+  if (currentWeekPlanIds.length > 0) {
+    const { data: allTasks } = await supabase
+      .from("daily_tasks")
+      .select("id, completed")
+      .in("weekly_plan_id", currentWeekPlanIds);
+    if (allTasks) {
+      allTasksTotal += allTasks.length;
+      allTasksCompleted += allTasks.filter(t => t.completed).length;
+    }
+  }
+
+  // Add todos to completion rate
+  allTasksTotal += todos.length;
+  allTasksCompleted += todos.filter(t => t.completed).length;
+
+  const taskCompletionRate = allTasksTotal > 0
+    ? Math.round((allTasksCompleted / allTasksTotal) * 100 * 10) / 10 : 0;
+
+  // Todos stats
+  const pendingTodos = todos.filter(t => !t.completed).length;
+  const completedTodayTodos = todos.filter(t =>
+    t.completed && t.completed_at && t.completed_at.startsWith(todayStr)
+  ).length;
+
+  // Workflows stats
+  const totalWorkflows = workflows.length;
+  const todayRuns: DashboardWorkflowRun[] = runs.map((r: Record<string, unknown>) => {
+    const wf = Array.isArray(r.workflows) ? r.workflows[0] : r.workflows;
+    return {
+      id: r.id as string,
+      workflowName: (wf as { name?: string })?.name || "Unknown",
+      status: r.status as "running" | "success" | "failed",
+      triggeredBy: r.triggered_by as "manual" | "scheduled",
+      startedAt: r.started_at as string,
+      completedAt: r.completed_at as string | null,
+    };
+  });
+
+  const stats: DashboardStats = {
+    taskCompletionRate,
+    activeGoals,
+    totalGoals,
+    goalProgressPercent,
+    pendingTodos,
+    completedTodayTodos,
+    totalWorkflows,
+    todayRunCount: todayRuns.length,
+    todayRuns,
+  };
+
+  // --- Today Items ---
+
+  // Build planId → goalTitle map
+  const planGoalMap = new Map<string, string>();
+  for (const p of plans) {
+    const ph = Array.isArray(p.phases) ? p.phases[0] : p.phases;
+    if (!ph) continue;
+    const goal = Array.isArray(ph.goals) ? ph.goals[0] : ph.goals;
+    if (goal?.title) {
+      planGoalMap.set(p.id, goal.title);
+    }
+  }
+
+  const todayItems: DashboardTodayItem[] = [];
+
+  // Goal daily tasks for today
+  if (currentWeekPlanIds.length > 0) {
+    const { data: todayTasks } = await supabase
+      .from("daily_tasks")
+      .select("id, title, description, completed, time_slot, day_of_week, weekly_plan_id")
+      .in("weekly_plan_id", currentWeekPlanIds)
+      .eq("day_of_week", todayDow)
+      .order("sort_order");
+
+    if (todayTasks) {
+      for (const t of todayTasks) {
+        todayItems.push({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          completed: t.completed,
+          timeSlot: classifyTimeSlot(t.time_slot),
+          source: "goal",
+          sourceLabel: planGoalMap.get(t.weekly_plan_id) || "Goal",
+          sourceType: "daily_task",
+        });
+      }
+    }
+  }
+
+  // Personal todos with deadline today (or completed today)
+  for (const t of todos) {
+    const isDeadlineToday = t.deadline && t.deadline.startsWith(todayStr);
+    const isCompletedToday = t.completed && t.completed_at && t.completed_at.startsWith(todayStr);
+    if (isDeadlineToday || isCompletedToday) {
+      let timeSlot: "morning" | "afternoon" | "evening" = "afternoon";
+      if (t.deadline) {
+        const d = new Date(t.deadline);
+        const hour = d.getHours();
+        if (hour > 0 && hour < 12) timeSlot = "morning";
+        else if (hour >= 17) timeSlot = "evening";
+      }
+      todayItems.push({
+        id: t.id,
+        title: t.text,
+        description: null,
+        completed: t.completed,
+        timeSlot,
+        source: "personal",
+        sourceLabel: t.tag || "Personal",
+        sourceType: "todo",
+      });
+    }
+  }
+
+  // --- Workflows for favorites picker ---
+  const workflowSummaries: WorkflowSummary[] = workflows.map(w => ({
+    id: w.id,
+    name: w.name,
+    description: w.description,
+    lastRunStatus: w.last_run_status as "success" | "failed" | null,
+    lastRunAt: w.last_run_at,
+  }));
+
+  return { stats, todayItems, workflows: workflowSummaries };
 }

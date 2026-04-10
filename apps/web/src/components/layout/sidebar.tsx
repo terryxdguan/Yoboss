@@ -41,7 +41,7 @@ export function Sidebar() {
     pathname === "/team" || pathname?.startsWith("/team/");
 
   return (
-    <aside className="fixed left-0 top-16 z-30 h-[calc(100vh-64px)] w-20 hover:w-64 overflow-hidden overflow-y-auto border-r border-[#E7DED2] bg-[#F6F3EE]/96 backdrop-blur-xl transition-all duration-300 group">
+    <aside className="fixed left-0 top-16 z-[45] h-[calc(100vh-64px)] w-20 hover:w-64 overflow-hidden overflow-y-auto border-r border-[#E7DED2] bg-[#F6F3EE]/96 backdrop-blur-xl transition-all duration-300 group">
       <div className="flex h-full flex-col px-4 py-4">
         {/* Nav items */}
         <div className="space-y-1">

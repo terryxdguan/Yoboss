@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/db/server";
 import { redirect } from "next/navigation";
+import { getDashboardData } from "@/lib/db/actions";
 import { DashboardStats } from "@/components/dashboard/stats";
-import { DashboardTodos } from "@/components/dashboard/todos";
-import { DashboardTeam } from "@/components/dashboard/team";
+import { DashboardTodayItems } from "@/components/dashboard/today-items";
+import { DashboardFavoriteWorkflows } from "@/components/dashboard/favorite-workflows";
+import { DashboardFavoriteMembers } from "@/components/dashboard/favorite-members";
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -11,6 +13,8 @@ export default async function TodayPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/");
+
+  const data = await getDashboardData();
 
   return (
     <div className="space-y-8">
@@ -23,9 +27,10 @@ export default async function TodayPage() {
         </p>
       </div>
 
-      <DashboardStats />
-      <DashboardTodos />
-      <DashboardTeam />
+      <DashboardStats stats={data.stats} />
+      <DashboardTodayItems items={data.todayItems} />
+      <DashboardFavoriteWorkflows workflows={data.workflows} />
+      <DashboardFavoriteMembers />
     </div>
   );
 }
