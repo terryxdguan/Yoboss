@@ -189,6 +189,8 @@ export function WorkflowRunView({
   const hasStarted = useRef(false);
   const streamingMsgId = useRef<string | null>(null);
   const runIdRef = useRef<string | null>(existingRun?.id || null);
+  const sessionIdRef = useRef<string | null>(null);
+  const knownFileIdsRef = useRef<string[]>([]);
 
   // Persist follow-up messages to DB
   const saveFollowUpMessages = useCallback(async (msgs: ChatMessage[]) => {
@@ -262,11 +264,10 @@ export function WorkflowRunView({
     }));
   }, [workflow.steps]);
 
-  // Stream a single step — appends/updates a chat message in real time
+  // Run a single step via Managed Agent session — polls for events and updates UI
   const runStep = useCallback(
     async (
       stepIndex: number,
-      previousOutputs: string[],
       signal: AbortSignal
     ): Promise<{ text: string; files: GeneratedFile[] }> => {
       const step = workflow.steps[stepIndex];
@@ -274,18 +275,6 @@ export function WorkflowRunView({
       if (!agent) throw new Error(`Agent ${step.agentId} not found`);
 
       setAgentStatus(step.agentId, "working");
-
-      // Build enriched prompt
-      let enrichedPrompt = step.prompt;
-      if (previousOutputs.length > 0) {
-        enrichedPrompt =
-          "Previous step outputs:\n\n" +
-          previousOutputs
-            .map((o, i) => `Step ${i + 1}:\n${o}`)
-            .join("\n\n---\n\n") +
-          "\n\nYour task:\n" +
-          step.prompt;
-      }
 
       // Add step message (streaming)
       const msgId = genId();
@@ -304,15 +293,16 @@ export function WorkflowRunView({
       };
       setChatMessages((prev) => [...prev, stepMsg]);
 
-      const res = await fetch("/api/ai/agent-chat", {
+      // Call Managed Agent via SSE route
+      // Role prompt is loaded server-side; session context replaces previousOutputs
+      const res = await fetch("/api/ai/agent-run-step", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          promptFile: agent.promptFile,
-          messages: [{ role: "user", content: enrichedPrompt }],
-          extraContext:
-            "When generating ANY file (HTML, PDF, PPT, etc.), you MUST copy the output file to $OUTPUT_DIR so the user can download it. Example: create the file, then run: cp /tmp/myfile.html $OUTPUT_DIR/myfile.html. The $OUTPUT_DIR env var is pre-set. Only files in $OUTPUT_DIR are downloadable by the user.",
-          useOpus: true,
+          sessionId: sessionIdRef.current || undefined,
+          message: step.prompt,
+          rolePromptFile: agent.promptFile,
+          knownFileIds: knownFileIdsRef.current,
         }),
         signal,
       });
@@ -327,8 +317,8 @@ export function WorkflowRunView({
 
       const decoder = new TextDecoder();
       let text = "";
-      const files: GeneratedFile[] = [];
       const tools: ToolActivity[] = [];
+      const files: GeneratedFile[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -344,46 +334,28 @@ export function WorkflowRunView({
         for (const line of lines) {
           if (line.startsWith("event:")) continue;
           const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
-          let event;
+          let event: Record<string, unknown>;
           try {
             event = JSON.parse(jsonStr);
           } catch {
             continue;
           }
 
-          // Error
           if (event.type === "error") {
-            throw new Error(event.error?.message || "AI service error");
+            throw new Error((event.message as string) || "AI service error");
           }
 
-          // Text content
-          if (
-            event.type === "content_block_delta" &&
-            event.delta?.type === "text_delta" &&
-            event.delta.text
-          ) {
-            text += event.delta.text;
-            setToolStatus(null);
-            setChatMessages((prev) =>
-              prev.map((m) =>
-                m.id === msgId
-                  ? { ...m, content: text, toolActivity: [...tools], generatedFiles: [...files] }
-                  : m
-              )
-            );
+          if (event.type === "session_created") {
+            sessionIdRef.current = event.sessionId as string;
           }
 
-          // Server-side tool use
-          if (
-            event.type === "content_block_start" &&
-            event.content_block?.type === "server_tool_use"
-          ) {
-            const toolName = event.content_block.name as string;
+          if (event.type === "tool_use") {
+            const toolName = (event.name as string) || "unknown";
             const labels: Record<string, string> = {
               web_search: "Searching the web...",
               web_fetch: "Fetching webpage...",
-              bash_code_execution: "Running code...",
-              text_editor_code_execution: "Editing file...",
+              code_execution: "Running code...",
+              computer: "Using computer...",
             };
             const activity: ToolActivity = {
               type: toolName.includes("web_search")
@@ -402,41 +374,37 @@ export function WorkflowRunView({
             );
           }
 
-          // Generated files
-          if (
-            event.type === "content_block_start" &&
-            (event.content_block?.type === "bash_code_execution_tool_result" ||
-              event.content_block?.type === "code_execution_tool_result")
-          ) {
-            const result = event.content_block.content;
-            if (result?.content && Array.isArray(result.content)) {
-              for (const item of result.content) {
-                if (
-                  (item.type === "bash_code_execution_output" ||
-                    item.type === "code_execution_output") &&
-                  item.file_id
-                ) {
-                  files.push({
-                    fileId: item.file_id,
-                    filename: item.filename || "download",
-                  });
-                }
-              }
-              if (files.length > 0) {
-                setChatMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === msgId ? { ...m, generatedFiles: [...files] } : m
-                  )
-                );
-              }
-            }
+          if (event.type === "content") {
+            text = event.text as string;
+            setToolStatus(null);
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId
+                  ? { ...m, content: text, toolActivity: [...tools] }
+                  : m
+              )
+            );
+          }
+
+          if (event.type === "file") {
+            const newFile: GeneratedFile = {
+              fileId: event.fileId as string,
+              filename: event.filename as string,
+            };
+            files.push(newFile);
+            knownFileIdsRef.current.push(newFile.fileId);
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId ? { ...m, generatedFiles: [...files] } : m
+              )
+            );
+          }
+
+          if (event.type === "done") {
+            text = (event.text as string) || text;
           }
         }
       }
-
-      // Resolve real filenames from Anthropic Files API
-      const resolvedFiles =
-        files.length > 0 ? await resolveFilenames(files) : files;
 
       // Finalize message — no longer streaming
       setChatMessages((prev) =>
@@ -447,7 +415,7 @@ export function WorkflowRunView({
               content: text,
               isStreaming: false,
               toolActivity: tools.length > 0 ? tools : undefined,
-              generatedFiles: resolvedFiles.length > 0 ? resolvedFiles : undefined,
+              generatedFiles: files.length > 0 ? files : undefined,
             }
             : m
         )
@@ -455,7 +423,7 @@ export function WorkflowRunView({
       streamingMsgId.current = null;
       setToolStatus(null);
       setAgentStatus(step.agentId, "idle");
-      return { text, files: resolvedFiles };
+      return { text, files };
     },
     [workflow.steps]
   );
@@ -543,7 +511,7 @@ export function WorkflowRunView({
       const startTime = Date.now();
 
       try {
-        const result = await runStep(i, outputs, abort.signal);
+        const result = await runStep(i, abort.signal);
         const duration = Date.now() - startTime;
         outputs.push(result.text);
 
@@ -732,112 +700,173 @@ export function WorkflowRunView({
     chatHistoryRef.current.push({ role: "user", content: text });
 
     try {
-      // Build messages with workflow summary as context
-      const systemContext = workflowSummary
-        ? `The user just ran a workflow called "${workflow.name}". Here is a summary of the workflow outputs:\n\n${workflowSummary}\n\nNow the user wants to discuss or refine the results.`
-        : `The user just ran a workflow called "${workflow.name}". Help them with any follow-up questions.`;
-
-      const res = await fetch("/api/ai/agent-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          promptFile: "general_assistant.txt",
-          messages: chatHistoryRef.current,
-          extraContext: systemContext,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
       let responseText = "";
-      const chatFiles: GeneratedFile[] = [];
       const chatTools: ToolActivity[] = [];
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter((l) => l.trim());
+      const chatFiles: GeneratedFile[] = [];
 
-        for (const line of lines) {
-          if (line.startsWith("event:")) continue;
-          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
-          let event;
-          try {
-            event = JSON.parse(jsonStr);
-          } catch {
-            continue;
-          }
+      if (sessionIdRef.current) {
+        // Live mode — continue the Managed Agent session (full context preserved)
+        const res = await fetch("/api/ai/agent-run-step", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: sessionIdRef.current,
+            message: text,
+            knownFileIds: knownFileIdsRef.current,
+          }),
+        });
 
-          if (event.type === "error") {
-            throw new Error(event.error?.message || "AI service error");
-          }
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No response body");
 
-          // Text content
-          if (
-            event.type === "content_block_delta" &&
-            event.delta?.type === "text_delta" &&
-            event.delta.text
-          ) {
-            responseText += event.delta.text;
-            setChatMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId
-                  ? { ...m, content: responseText, toolActivity: chatTools.length > 0 ? [...chatTools] : undefined, generatedFiles: chatFiles.length > 0 ? [...chatFiles] : undefined }
-                  : m
-              )
-            );
-          }
+        const decoder = new TextDecoder();
 
-          // Server-side tool use
-          if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
-            const toolName = event.content_block.name as string;
-            const labels: Record<string, string> = {
-              web_search: "Searching the web...",
-              web_fetch: "Fetching webpage...",
-              bash_code_execution: "Running code...",
-              text_editor_code_execution: "Editing file...",
-            };
-            chatTools.push({
-              type: toolName.includes("web_search") ? "web_search" : toolName.includes("web_fetch") ? "web_fetch" : "code_execution",
-              label: labels[toolName] || `Using ${toolName}...`,
-            });
-            setChatMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId ? { ...m, toolActivity: [...chatTools] } : m
-              )
-            );
-          }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n").filter((l) => l.trim());
 
-          // Generated files from code_execution
-          if (event.type === "content_block_start" && (event.content_block?.type === "bash_code_execution_tool_result" || event.content_block?.type === "code_execution_tool_result")) {
-            const result = event.content_block.content;
-            if (result?.content && Array.isArray(result.content)) {
-              for (const item of result.content) {
-                if ((item.type === "bash_code_execution_output" || item.type === "code_execution_output") && item.file_id) {
-                  chatFiles.push({ fileId: item.file_id, filename: item.filename || "download" });
-                }
-              }
-              if (chatFiles.length > 0) {
-                setChatMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsgId ? { ...m, generatedFiles: [...chatFiles] } : m
-                  )
-                );
-              }
+          for (const line of lines) {
+            if (line.startsWith("event:")) continue;
+            const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
+            let event: Record<string, unknown>;
+            try {
+              event = JSON.parse(jsonStr);
+            } catch {
+              continue;
+            }
+
+            if (event.type === "error") {
+              throw new Error((event.message as string) || "AI service error");
+            }
+
+            if (event.type === "tool_use") {
+              const toolName = (event.name as string) || "unknown";
+              const labels: Record<string, string> = {
+                web_search: "Searching the web...",
+                web_fetch: "Fetching webpage...",
+                code_execution: "Running code...",
+              };
+              chatTools.push({
+                type: toolName.includes("web_search") ? "web_search" : toolName.includes("web_fetch") ? "web_fetch" : "code_execution",
+                label: labels[toolName] || `Using ${toolName}...`,
+              });
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId ? { ...m, toolActivity: [...chatTools] } : m
+                )
+              );
+            }
+
+            if (event.type === "content") {
+              responseText = event.text as string;
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: responseText, toolActivity: chatTools.length > 0 ? [...chatTools] : undefined }
+                    : m
+                )
+              );
+            }
+
+            if (event.type === "file") {
+              const newFile: GeneratedFile = {
+                fileId: event.fileId as string,
+                filename: event.filename as string,
+              };
+              chatFiles.push(newFile);
+              knownFileIdsRef.current.push(newFile.fileId);
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId ? { ...m, generatedFiles: [...chatFiles] } : m
+                )
+              );
+            }
+
+            if (event.type === "done") {
+              responseText = (event.text as string) || responseText;
             }
           }
         }
-      }
+      } else {
+        // History mode — use agent-chat with summary context (no session available)
+        const systemContext = workflowSummary
+          ? `The user just ran a workflow called "${workflow.name}". Here is a summary of the workflow outputs:\n\n${workflowSummary}\n\nNow the user wants to discuss or refine the results.`
+          : `The user just ran a workflow called "${workflow.name}". Help them with any follow-up questions.`;
 
-      // Finalize
-      // Resolve real filenames from Anthropic Files API
-      if (chatFiles.length > 0) {
-        const resolved = await resolveFilenames(chatFiles);
-        chatFiles.splice(0, chatFiles.length, ...resolved);
+        const res = await fetch("/api/ai/agent-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            promptFile: "general_assistant.txt",
+            messages: chatHistoryRef.current,
+            extraContext: systemContext,
+          }),
+        });
+
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No response body");
+
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n").filter((l) => l.trim());
+
+          for (const line of lines) {
+            if (line.startsWith("event:")) continue;
+            const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
+            let event;
+            try {
+              event = JSON.parse(jsonStr);
+            } catch {
+              continue;
+            }
+
+            if (event.type === "error") {
+              throw new Error(event.error?.message || "AI service error");
+            }
+
+            if (
+              event.type === "content_block_delta" &&
+              event.delta?.type === "text_delta" &&
+              event.delta.text
+            ) {
+              responseText += event.delta.text;
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: responseText }
+                    : m
+                )
+              );
+            }
+
+            if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
+              const toolName = event.content_block.name as string;
+              const labels: Record<string, string> = {
+                web_search: "Searching the web...",
+                web_fetch: "Fetching webpage...",
+                bash_code_execution: "Running code...",
+              };
+              chatTools.push({
+                type: toolName.includes("web_search") ? "web_search" : toolName.includes("web_fetch") ? "web_fetch" : "code_execution",
+                label: labels[toolName] || `Using ${toolName}...`,
+              });
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId ? { ...m, toolActivity: [...chatTools] } : m
+                )
+              );
+            }
+          }
+        }
       }
 
       setChatMessages((prev) =>

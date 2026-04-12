@@ -7,7 +7,7 @@ import Image from "next/image";
 import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
 import type { AgentConfig } from "@/lib/types/agent";
 import { CATEGORY_LABELS } from "@/lib/types/agent";
-import { HireModal } from "@/components/team/hire-modal";
+// HireModal replaced by /team/market page
 
 const STORAGE_KEY = "yoboss_hired_agents";
 
@@ -164,7 +164,6 @@ function AgentRow({
 export default function TeamPage() {
   const router = useRouter();
   const [hiredIds, setHiredIds] = useState<string[]>([]);
-  const [showHire, setShowHire] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -179,13 +178,7 @@ export default function TeamPage() {
     .filter(Boolean) as AgentConfig[];
   const team = [...DEFAULT_AGENTS, ...hiredAgents];
 
-  const handleHire = (agentId: string) => {
-    if (hiredIds.includes(agentId) || defaultIds.includes(agentId)) return;
-    const next = [...hiredIds, agentId];
-    setHiredIds(next);
-    saveHiredIds(next);
-    setShowHire(false);
-  };
+
 
   const handleFire = (agentId: string) => {
     if (defaultIds.includes(agentId)) return;
@@ -213,7 +206,7 @@ export default function TeamPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowHire(true)}
+          onClick={() => router.push("/team/market")}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] active:scale-[0.98] transition-all"
         >
           <Plus className="h-4 w-4" />
@@ -234,14 +227,6 @@ export default function TeamPage() {
         ))}
       </div>
 
-      {/* Hire Modal */}
-      {showHire && (
-        <HireModal
-          hiredIds={[...defaultIds, ...hiredIds]}
-          onHire={handleHire}
-          onClose={() => setShowHire(false)}
-        />
-      )}
     </div>
   );
 }
