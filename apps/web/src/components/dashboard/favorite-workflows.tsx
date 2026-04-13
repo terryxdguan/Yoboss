@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, RefreshCw } from "lucide-react";
-import Link from "next/link";
 import { WorkflowPickerModal } from "./workflow-picker-modal";
+import { WorkflowCard } from "@/components/workflow/workflow-card";
+import { WorkflowRunView } from "@/components/workflow/workflow-run-view";
+import { WorkflowHistory } from "@/components/workflow/workflow-history";
+import { TopicInputModal } from "@/components/workflow/topic-input-modal";
+import { ScheduleModal } from "@/components/workflow/schedule-modal";
+import { deleteWorkflow, getUserTimezone, upsertUserTimezone } from "@/lib/db/actions";
 import type { WorkflowSummary } from "@/lib/types/database";
+import type { Workflow } from "@/lib/types/workflow";
 
 const FAVORITES_KEY = "yoboss_favorite_workflows";
+
+/** Placeholder topics for known workflow names */
+const TOPIC_PLACEHOLDERS: Record<string, string> = {
+  "Viral Social Post": "AI breakthroughs this week — which new model, tool, or research paper has the biggest real-world impact and why people should care",
+  "Deep Research Report": "Big Tech AI Wars 2026: How Google, Microsoft, Amazon, and Apple are betting billions on AI — competitive positioning, key moves, and which giant is best positioned for the next decade",
+  "Competitor Analysis": "OpenAI vs Anthropic: The race to build the most capable and safest AI — comparing models, pricing, enterprise adoption, developer experience, and long-term strategy",
+};
 
 function loadFavorites(): string[] {
   if (typeof window === "undefined") return [];
@@ -16,33 +30,38 @@ function saveFavorites(ids: string[]) {
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
 }
 
-function relativeTime(iso: string | null): string {
-  if (!iso) return "Never run";
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 interface Props {
   workflows: WorkflowSummary[];
+  allWorkflows: Workflow[];
 }
 
-export function DashboardFavoriteWorkflows({ workflows }: Props) {
+export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
+  const router = useRouter();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
+  // Workflow action state
+  const [runningWorkflow, setRunningWorkflow] = useState<Workflow | null>(null);
+  const [historyWorkflow, setHistoryWorkflow] = useState<Workflow | null>(null);
+  const [topicWorkflow, setTopicWorkflow] = useState<Workflow | null>(null);
+  const [scheduleWorkflow, setScheduleWorkflow] = useState<Workflow | null>(null);
+  const [userTimezone, setUserTimezone] = useState("UTC");
+
   useEffect(() => {
     setFavoriteIds(loadFavorites());
     setMounted(true);
+    getUserTimezone().then((tz) => {
+      if (tz === "UTC") {
+        const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        upsertUserTimezone(browserTz).then(() => setUserTimezone(browserTz));
+      } else {
+        setUserTimezone(tz);
+      }
+    });
   }, []);
 
-  const favorites = workflows.filter(w => favoriteIds.includes(w.id));
+  const favorites = allWorkflows.filter(w => favoriteIds.includes(w.id));
 
   const handleSave = (ids: string[]) => {
     setFavoriteIds(ids);
@@ -50,14 +69,50 @@ export function DashboardFavoriteWorkflows({ workflows }: Props) {
     setShowPicker(false);
   };
 
+  const handleToggleFavorite = (wf: Workflow) => {
+    const next = favoriteIds.includes(wf.id)
+      ? favoriteIds.filter(id => id !== wf.id)
+      : [...favoriteIds, wf.id];
+    setFavoriteIds(next);
+    saveFavorites(next);
+  };
+
+  const handleRun = (wf: Workflow) => {
+    if (wf.topic) {
+      setRunningWorkflow(wf);
+    } else {
+      setTopicWorkflow(wf);
+    }
+  };
+
+  const handleTopicRun = (topic: string) => {
+    if (!topicWorkflow) return;
+    const modifiedWf: Workflow = {
+      ...topicWorkflow,
+      steps: topicWorkflow.steps.map((s) => ({
+        ...s,
+        prompt: `Topic/Task: ${topic}\n\n${s.prompt}`,
+      })),
+    };
+    setTopicWorkflow(null);
+    setRunningWorkflow(modifiedWf);
+  };
+
+  const handleDelete = useCallback(async (wf: Workflow) => {
+    if (!confirm(`Delete "${wf.name}"?`)) return;
+    setFavoriteIds(prev => { const next = prev.filter(id => id !== wf.id); saveFavorites(next); return next; });
+    await deleteWorkflow(wf.id);
+    router.refresh();
+  }, [router]);
+
   if (!mounted) return null;
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <div>
+        <div className="flex items-baseline gap-3">
           <h2 className="text-xl font-semibold text-[#2B2B2B]">Favorite Workflows</h2>
-          <p className="mt-1 text-sm text-[#6F6A64]">Quick access to your most-used automations.</p>
+          <p className="text-sm text-[#9B948B]">Quick access to your most-used automations.</p>
         </div>
         <button
           onClick={() => setShowPicker(true)}
@@ -68,7 +123,7 @@ export function DashboardFavoriteWorkflows({ workflows }: Props) {
       </div>
 
       {favorites.length === 0 ? (
-        <div className="rounded-[18px] border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-8 text-center">
+        <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-8 text-center">
           <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F1ECE4] flex items-center justify-center">
             <RefreshCw className="h-5 w-5 text-[#9B948B]" />
           </div>
@@ -82,34 +137,33 @@ export function DashboardFavoriteWorkflows({ workflows }: Props) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {favorites.map(wf => (
-            <Link
+            <WorkflowCard
               key={wf.id}
-              href="/workflows"
-              className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_4px_16px_rgba(43,43,43,0.04)] hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7] transition-all"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className={`h-2 w-2 rounded-full shrink-0 ${
-                    wf.lastRunStatus === "success" ? "bg-[#7FB38A]" :
-                    wf.lastRunStatus === "failed" ? "bg-[#D5847A]" :
-                    "bg-[#9B948B]"
-                  }`}
-                />
-                <p className="text-sm font-semibold text-[#2B2B2B] truncate">{wf.name}</p>
-              </div>
-              {wf.description && (
-                <p className="text-[11px] text-[#6F6A64] truncate mb-2">{wf.description}</p>
-              )}
-              <p className="text-[10px] text-[#9B948B]">{relativeTime(wf.lastRunAt)}</p>
-            </Link>
+              workflow={wf}
+              compact
+              onRun={() => handleRun(wf)}
+              onEdit={() => router.push(`/workflows/edit/${wf.id}`)}
+              onDelete={() => handleDelete(wf)}
+              onHistory={() => setHistoryWorkflow(wf)}
+              onSchedule={() => {
+                if (!wf.topic) {
+                  alert("Please set a Topic in the workflow editor before scheduling.");
+                  router.push(`/workflows/edit/${wf.id}`);
+                  return;
+                }
+                setScheduleWorkflow(wf);
+              }}
+              onFavorite={() => handleToggleFavorite(wf)}
+              isFavorite={true}
+            />
           ))}
 
           {/* Add more button */}
           <button
             onClick={() => setShowPicker(true)}
-            className="rounded-[18px] border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-5 flex flex-col items-center justify-center gap-2 hover:bg-[#F6F3EE] transition-colors min-h-[100px]"
+            className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-5 flex flex-col items-center justify-center gap-2 hover:bg-[#F6F3EE] transition-colors min-h-[120px]"
           >
             <Plus className="h-5 w-5 text-[#9B948B]" />
             <span className="text-xs text-[#9B948B]">Add more</span>
@@ -117,12 +171,39 @@ export function DashboardFavoriteWorkflows({ workflows }: Props) {
         </div>
       )}
 
+      {/* Modals */}
       {showPicker && (
         <WorkflowPickerModal
           workflows={workflows}
           selectedIds={favoriteIds}
           onSave={handleSave}
           onClose={() => setShowPicker(false)}
+        />
+      )}
+      {runningWorkflow && (
+        <WorkflowRunView
+          workflow={runningWorkflow}
+          onClose={() => { setRunningWorkflow(null); router.refresh(); }}
+          onComplete={() => router.refresh()}
+        />
+      )}
+      {historyWorkflow && (
+        <WorkflowHistory workflow={historyWorkflow} onClose={() => setHistoryWorkflow(null)} />
+      )}
+      {topicWorkflow && (
+        <TopicInputModal
+          templateName={topicWorkflow.name}
+          placeholder={TOPIC_PLACEHOLDERS[topicWorkflow.name] || topicWorkflow.description || undefined}
+          onSubmit={handleTopicRun}
+          onClose={() => setTopicWorkflow(null)}
+        />
+      )}
+      {scheduleWorkflow && (
+        <ScheduleModal
+          workflow={scheduleWorkflow}
+          userTimezone={userTimezone}
+          onClose={() => setScheduleWorkflow(null)}
+          onSave={() => { setScheduleWorkflow(null); router.refresh(); }}
         />
       )}
     </div>

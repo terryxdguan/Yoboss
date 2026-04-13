@@ -189,7 +189,7 @@ export function WorkflowRunView({
   const hasStarted = useRef(false);
   const streamingMsgId = useRef<string | null>(null);
   const runIdRef = useRef<string | null>(existingRun?.id || null);
-  const sessionIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(existingRun?.session_id || null);
   const knownFileIdsRef = useRef<string[]>([]);
 
   // Persist follow-up messages to DB
@@ -347,6 +347,16 @@ export function WorkflowRunView({
 
           if (event.type === "session_created") {
             sessionIdRef.current = event.sessionId as string;
+            // Persist session_id to DB for history continuity
+            if (runIdRef.current) {
+              try {
+                await updateWorkflowRun(runIdRef.current, {
+                  session_id: event.sessionId as string,
+                });
+              } catch {
+                // Non-blocking
+              }
+            }
           }
 
           if (event.type === "tool_use") {
@@ -615,9 +625,14 @@ export function WorkflowRunView({
       generateWorkflowSummary(outputs);
 
       try {
+        // Get the latest step_results from state
+        let finalResults: typeof initialResults = [];
+        setStepResults((prev) => { finalResults = prev; return prev; });
+
         await updateWorkflowRun(run.id, {
           status: "success",
           current_step: workflow.steps.length,
+          step_results: finalResults,
           completed_at: new Date().toISOString(),
         });
         await updateWorkflow(workflow.id, {

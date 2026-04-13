@@ -146,6 +146,7 @@ export interface TodoItem {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  goal_id: string | null;
 }
 
 export interface TodoTag {
@@ -192,15 +193,15 @@ export interface WeeklyPlanWithTasks extends WeeklyPlan {
 
 // Dashboard types
 export interface DashboardStats {
-  taskCompletionRate: number;
   activeGoals: number;
   totalGoals: number;
   goalProgressPercent: number;
-  pendingTodos: number;
-  completedTodayTodos: number;
+  pendingGoalTodos: number;
+  pendingPersonalTodos: number;
   totalWorkflows: number;
   todayRunCount: number;
   todayRuns: DashboardWorkflowRun[];
+  totalTeamMembers: number;
 }
 
 export interface DashboardWorkflowRun {
@@ -221,6 +222,9 @@ export interface DashboardTodayItem {
   source: "goal" | "personal";
   sourceLabel: string;
   sourceType: "daily_task" | "todo";
+  deadline: string | null;
+  priority: "high" | "medium" | "low";
+  tag: string;
 }
 
 export interface WorkflowSummary {

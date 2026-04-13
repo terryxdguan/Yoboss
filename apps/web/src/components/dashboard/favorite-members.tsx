@@ -66,9 +66,9 @@ export function DashboardFavoriteMembers() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <div>
+        <div className="flex items-baseline gap-3">
           <h2 className="text-xl font-semibold text-[#2B2B2B]">Favorite Members</h2>
-          <p className="mt-1 text-sm text-[#6F6A64]">Your go-to AI team members.</p>
+          <p className="text-sm text-[#9B948B]">Your go-to AI team members.</p>
         </div>
         <button
           onClick={() => setShowPicker(true)}

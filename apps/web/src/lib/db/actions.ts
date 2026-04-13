@@ -20,6 +20,7 @@ import type {
   DashboardTodayItem,
   DashboardWorkflowRun,
   WorkflowSummary,
+  GoalWithPhases,
 } from "../types/database";
 import { getWeekStart, getTodayDayOfWeek, classifyTimeSlot } from "../utils/date";
 import type {
@@ -655,13 +656,14 @@ export async function getTodos(): Promise<TodoItem[]> {
     .from("todos")
     .select("*")
     .eq("user_id", user.id)
+    .is("goal_id", null)
     .order("sort_order");
 
   if (error) throw error;
   return data || [];
 }
 
-export async function addTodo(text: string, tag?: string, priority?: string, deadline?: string | null): Promise<TodoItem> {
+export async function addTodo(text: string, tag?: string, priority?: string, deadline?: string | null, goalId?: string): Promise<TodoItem> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -674,12 +676,24 @@ export async function addTodo(text: string, tag?: string, priority?: string, dea
       tag: tag || "Work",
       priority: priority || "medium",
       deadline: deadline || null,
+      goal_id: goalId || null,
     })
     .select()
     .single();
 
   if (error) throw error;
   return data;
+}
+
+export async function getGoalTodos(goalId: string): Promise<TodoItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("todos")
+    .select("*")
+    .eq("goal_id", goalId)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
 export async function updateTodo(id: string, patch: Partial<Pick<TodoItem, "text" | "tag" | "completed" | "priority" | "deadline" | "sort_order">>): Promise<void> {
@@ -791,6 +805,7 @@ export async function getWorkflows(): Promise<Workflow[]> {
 export async function createWorkflow(input: {
   name: string;
   description?: string;
+  topic?: string;
   steps: Workflow["steps"];
   isTemplate?: boolean;
 }): Promise<Workflow> {
@@ -804,6 +819,7 @@ export async function createWorkflow(input: {
       user_id: user.id,
       name: input.name,
       description: input.description || null,
+      topic: input.topic || null,
       steps: input.steps,
       is_template: input.isTemplate || false,
       status: "ready",
@@ -817,7 +833,7 @@ export async function createWorkflow(input: {
 
 export async function updateWorkflow(
   id: string,
-  patch: Partial<Pick<Workflow, "name" | "description" | "steps" | "status" | "last_run_at" | "last_run_status" | "is_template" | "schedule_enabled" | "schedule_cron" | "schedule_timezone" | "schedule_next_run_at">>
+  patch: Partial<Pick<Workflow, "name" | "description" | "topic" | "steps" | "status" | "last_run_at" | "last_run_status" | "is_template" | "schedule_enabled" | "schedule_cron" | "schedule_timezone" | "schedule_next_run_at">>
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
@@ -876,7 +892,7 @@ export async function createWorkflowRun(input: {
 
 export async function updateWorkflowRun(
   id: string,
-  patch: Partial<Pick<WorkflowRun, "status" | "current_step" | "step_results" | "completed_at" | "follow_up_messages">>
+  patch: Partial<Pick<WorkflowRun, "status" | "current_step" | "step_results" | "completed_at" | "follow_up_messages" | "session_id">>
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
@@ -1009,18 +1025,22 @@ export async function getRecentAiUsage(limit = 30, offset = 0): Promise<AiUsageR
 export async function getDashboardData(): Promise<{
   stats: DashboardStats;
   todayItems: DashboardTodayItem[];
+  highPriorityItems: DashboardTodayItem[];
   workflows: WorkflowSummary[];
+  goalsWithPhases: GoalWithPhases[];
 }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return {
       stats: {
-        taskCompletionRate: 0, activeGoals: 0, totalGoals: 0, goalProgressPercent: 0,
-        pendingTodos: 0, completedTodayTodos: 0, totalWorkflows: 0, todayRunCount: 0, todayRuns: [],
+        activeGoals: 0, totalGoals: 0, goalProgressPercent: 0,
+        pendingGoalTodos: 0, pendingPersonalTodos: 0, totalWorkflows: 0, todayRunCount: 0, todayRuns: [], totalTeamMembers: 0,
       },
       todayItems: [],
+      highPriorityItems: [],
       workflows: [],
+      goalsWithPhases: [],
     };
   }
 
@@ -1034,9 +1054,10 @@ export async function getDashboardData(): Promise<{
     todosRes,
     workflowsRes,
     runsRes,
+    goalsWithPhasesRes,
   ] = await Promise.all([
     // Q1: Goals
-    supabase.from("goals").select("id, status").eq("user_id", user.id),
+    supabase.from("goals").select("id, title, status").eq("user_id", user.id),
     // Q2+Q5: Weekly plans with phase→goal info (for task completion + today items)
     supabase
       .from("weekly_plans")
@@ -1047,12 +1068,11 @@ export async function getDashboardData(): Promise<{
       .from("todos")
       .select("id, text, tag, completed, priority, deadline, completed_at, sort_order")
       .eq("user_id", user.id),
-    // Q4a: Workflows
+    // Q4a: Workflows (all — template/specific merged)
     supabase
       .from("workflows")
-      .select("id, name, description, is_template, last_run_status, last_run_at")
-      .eq("user_id", user.id)
-      .eq("is_template", false),
+      .select("id, name, description, last_run_status, last_run_at")
+      .eq("user_id", user.id),
     // Q4b: Today's workflow runs
     supabase
       .from("workflow_runs")
@@ -1060,14 +1080,20 @@ export async function getDashboardData(): Promise<{
       .eq("user_id", user.id)
       .gte("started_at", `${todayStr}T00:00:00`)
       .order("started_at", { ascending: false }),
+    // Q5: Goals with phases (for Important Goals section)
+    supabase
+      .from("goals")
+      .select("*, phases(*)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
 
-  const goals = (goalsRes.data || []) as { id: string; status: string }[];
+  const goals = (goalsRes.data || []) as { id: string; title: string; status: string }[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const plans = (plansRes.data || []) as any[];
   const todos = (todosRes.data || []) as TodoItem[];
   const workflows = (workflowsRes.data || []) as Array<{
-    id: string; name: string; description: string | null; is_template: boolean;
+    id: string; name: string; description: string | null;
     last_run_status: string | null; last_run_at: string | null;
   }>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1096,35 +1122,23 @@ export async function getDashboardData(): Promise<{
   const goalProgressPercent = activePhases.length > 0
     ? Math.round((completedPhases / activePhases.length) * 100) : 0;
 
-  // Task completion rate: daily tasks + todos
-  // Get all daily tasks for current week plans
+  // Pending goal todos: uncompleted daily tasks for today
   const currentWeekPlanIds = plans.filter(p => p.week_start === weekStart).map(p => p.id);
-  let allTasksTotal = 0;
-  let allTasksCompleted = 0;
+  let pendingGoalTodos = 0;
 
   if (currentWeekPlanIds.length > 0) {
-    const { data: allTasks } = await supabase
+    const { data: todayTasks } = await supabase
       .from("daily_tasks")
-      .select("id, completed")
-      .in("weekly_plan_id", currentWeekPlanIds);
-    if (allTasks) {
-      allTasksTotal += allTasks.length;
-      allTasksCompleted += allTasks.filter(t => t.completed).length;
+      .select("id, completed, day_of_week")
+      .in("weekly_plan_id", currentWeekPlanIds)
+      .eq("day_of_week", todayDow);
+    if (todayTasks) {
+      pendingGoalTodos = todayTasks.filter(t => !t.completed).length;
     }
   }
 
-  // Add todos to completion rate
-  allTasksTotal += todos.length;
-  allTasksCompleted += todos.filter(t => t.completed).length;
-
-  const taskCompletionRate = allTasksTotal > 0
-    ? Math.round((allTasksCompleted / allTasksTotal) * 100 * 10) / 10 : 0;
-
-  // Todos stats
-  const pendingTodos = todos.filter(t => !t.completed).length;
-  const completedTodayTodos = todos.filter(t =>
-    t.completed && t.completed_at && t.completed_at.startsWith(todayStr)
-  ).length;
+  // Pending personal todos: uncompleted items from To-Do List
+  const pendingPersonalTodos = todos.filter(t => !t.completed).length;
 
   // Workflows stats
   const totalWorkflows = workflows.length;
@@ -1141,15 +1155,15 @@ export async function getDashboardData(): Promise<{
   });
 
   const stats: DashboardStats = {
-    taskCompletionRate,
     activeGoals,
     totalGoals,
     goalProgressPercent,
-    pendingTodos,
-    completedTodayTodos,
+    pendingGoalTodos,
+    pendingPersonalTodos,
     totalWorkflows,
     todayRunCount: todayRuns.length,
     todayRuns,
+    totalTeamMembers: 0, // Computed client-side from localStorage
   };
 
   // --- Today Items ---
@@ -1187,12 +1201,19 @@ export async function getDashboardData(): Promise<{
           source: "goal",
           sourceLabel: planGoalMap.get(t.weekly_plan_id) || "Goal",
           sourceType: "daily_task",
+          deadline: t.time_slot || null,
+          priority: "medium" as const,
+          tag: "Goal",
         });
       }
     }
   }
 
-  // Personal todos with deadline today (or completed today)
+  // Build goal_id → title map from goals query
+  const goalTitleMap = new Map<string, string>();
+  for (const g of goals) goalTitleMap.set(g.id, g.title);
+
+  // Personal & goal todos with deadline today (or completed today)
   for (const t of todos) {
     const isDeadlineToday = t.deadline && t.deadline.startsWith(todayStr);
     const isCompletedToday = t.completed && t.completed_at && t.completed_at.startsWith(todayStr);
@@ -1204,15 +1225,19 @@ export async function getDashboardData(): Promise<{
         if (hour > 0 && hour < 12) timeSlot = "morning";
         else if (hour >= 17) timeSlot = "evening";
       }
+      const isGoalTodo = !!(t.goal_id && goalTitleMap.has(t.goal_id));
       todayItems.push({
         id: t.id,
         title: t.text,
         description: null,
         completed: t.completed,
         timeSlot,
-        source: "personal",
-        sourceLabel: t.tag || "Personal",
+        source: isGoalTodo ? "goal" : "personal",
+        sourceLabel: isGoalTodo ? goalTitleMap.get(t.goal_id!)! : (t.tag || "Personal"),
         sourceType: "todo",
+        deadline: t.deadline,
+        priority: t.priority,
+        tag: t.tag || "Personal",
       });
     }
   }
@@ -1226,5 +1251,25 @@ export async function getDashboardData(): Promise<{
     lastRunAt: w.last_run_at,
   }));
 
-  return { stats, todayItems, workflows: workflowSummaries };
+  // Goals with phases for Important Goals section
+  const goalsWithPhases = (goalsWithPhasesRes.data || []) as GoalWithPhases[];
+
+  // High priority pending todos (across all todos, not just today)
+  const highPriorityItems: DashboardTodayItem[] = todos
+    .filter(t => t.priority === "high" && !t.completed && !t.goal_id)
+    .map(t => ({
+      id: t.id,
+      title: t.text,
+      description: null,
+      completed: false,
+      timeSlot: "afternoon" as const,
+      source: "personal" as const,
+      sourceLabel: t.tag || "Personal",
+      sourceType: "todo" as const,
+      deadline: t.deadline,
+      priority: t.priority,
+      tag: t.tag || "Personal",
+    }));
+
+  return { stats, todayItems, highPriorityItems, workflows: workflowSummaries, goalsWithPhases };
 }

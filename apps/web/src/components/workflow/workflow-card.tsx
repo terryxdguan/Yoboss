@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Clock, Pencil, Trash2, Heart, Wand2, CalendarClock } from "lucide-react";
+import { Play, Clock, Pencil, Trash2, Heart, CalendarClock } from "lucide-react";
 import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
 import { formatScheduleLabel } from "@/lib/utils/schedule";
 import type { Workflow } from "@/lib/types/workflow";
@@ -15,7 +15,7 @@ interface WorkflowCardProps {
   onSchedule?: () => void;
   onFavorite?: () => void;
   isFavorite?: boolean;
-  onUseTemplate?: () => void;
+  compact?: boolean;
 }
 
 const allAgents = [...DEFAULT_AGENTS, ...ALL_AGENTS];
@@ -49,11 +49,10 @@ export function WorkflowCard({
   onSchedule,
   onFavorite,
   isFavorite,
-  onUseTemplate,
+  compact,
 }: WorkflowCardProps) {
   const [showAllAgents, setShowAllAgents] = useState(false);
 
-  // Deduplicate agent labels for display
   const agentLabels = workflow.steps.map((step) => {
     const agent = findAgent(step.agentId);
     return agent?.label || step.agentId;
@@ -77,8 +76,8 @@ export function WorkflowCard({
         </div>
       </div>
 
-      {/* Step badges — show up to 3, then "+N" with hover expand */}
-      <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+      {/* Step badges — hidden in compact mode */}
+      {!compact && <div className="flex items-center gap-1.5 mt-3 flex-wrap">
         <span className="text-[10px] font-medium text-[#9B948B] bg-[#F1ECE4] px-2 py-0.5 rounded-md">
           {workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}
         </span>
@@ -108,7 +107,16 @@ export function WorkflowCard({
             )}
           </span>
         )}
-      </div>
+      </div>}
+
+      {/* Topic badge */}
+      {workflow.topic && (
+        <div className="mt-2">
+          <span className="text-[10px] text-[#7FB38A] bg-[#7FB38A]/10 px-2 py-0.5 rounded-md">
+            Topic: {workflow.topic.length > 40 ? workflow.topic.slice(0, 40) + "..." : workflow.topic}
+          </span>
+        </div>
+      )}
 
       {/* Status */}
       {workflow.status === "running" ? (
@@ -146,89 +154,59 @@ export function WorkflowCard({
         </div>
       )}
 
-      {/* Actions — different for templates vs specific workflows */}
+      {/* Actions — unified for all workflows */}
       <div className="flex items-center gap-1 mt-4 pt-3 border-t border-[#E7DED2]">
-        {workflow.is_template ? (
-          /* Template actions: Use, Edit, Delete */
-          <>
-            <button
-              onClick={onUseTemplate || onRun}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors shadow-[0_2px_6px_rgba(127,174,230,0.25)]"
-            >
-              <Wand2 className="h-3 w-3" />
-              Use
-            </button>
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
-            >
-              <Pencil className="h-3 w-3" />
-              Edit
-            </button>
-            <button
-              onClick={onDelete}
-              className="ml-auto p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
-              title="Delete template"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </>
-        ) : (
-          /* Specific workflow actions: icon-only with hover tooltip */
-          <>
-            <button
-              onClick={onRun}
-              disabled={workflow.status === "running"}
-              className="p-1.5 rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors shadow-[0_2px_6px_rgba(127,174,230,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
-              title={workflow.status === "running" ? "Running..." : "Run"}
-            >
-              <Play className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={onHistory}
-              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-              title="History"
-            >
-              <Clock className="h-3.5 w-3.5" />
-            </button>
-            {onSchedule && (
-              <button
-                onClick={onSchedule}
-                className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-                title="Schedule"
-              >
-                <CalendarClock className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <button
-              onClick={onEdit}
-              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-              title="Edit"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            {onFavorite && (
-              <button
-                onClick={onFavorite}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isFavorite
-                    ? "text-[#D5847A] hover:bg-[#D5847A]/10"
-                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
-                }`}
-                title={isFavorite ? "Unfavorite" : "Favorite"}
-              >
-                <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-[#D5847A]" : ""}`} />
-              </button>
-            )}
-            <button
-              onClick={onDelete}
-              className="ml-auto p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
-              title="Delete"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </>
+        <button
+          onClick={onRun}
+          disabled={workflow.status === "running"}
+          className="p-1.5 rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors shadow-[0_2px_6px_rgba(127,174,230,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+          title={workflow.status === "running" ? "Running..." : workflow.topic ? "Run" : "Run (will ask for topic)"}
+        >
+          <Play className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={onHistory}
+          className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          title="History"
+        >
+          <Clock className="h-3.5 w-3.5" />
+        </button>
+        {onSchedule && (
+          <button
+            onClick={onSchedule}
+            className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            title="Schedule"
+          >
+            <CalendarClock className="h-3.5 w-3.5" />
+          </button>
         )}
+        <button
+          onClick={onEdit}
+          className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          title="Edit"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        {onFavorite && (
+          <button
+            onClick={onFavorite}
+            className={`p-1.5 rounded-lg transition-colors ${
+              isFavorite
+                ? "text-[#D5847A] hover:bg-[#D5847A]/10"
+                : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
+            }`}
+            title={isFavorite ? "Unfavorite" : "Favorite"}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-[#D5847A]" : ""}`} />
+          </button>
+        )}
+        <button
+          onClick={onDelete}
+          className="ml-auto p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );

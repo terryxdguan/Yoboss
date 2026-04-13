@@ -12,6 +12,7 @@ export interface Workflow {
   description: string | null;
   steps: WorkflowStep[];
   is_template: boolean;
+  topic: string | null;
   status: "draft" | "ready" | "running";
   last_run_at: string | null;
   last_run_status: "success" | "failed" | null;
@@ -53,6 +54,7 @@ export interface WorkflowRun {
   total_steps: number;
   step_results: WorkflowStepResult[];
   follow_up_messages?: FollowUpMessage[] | null;
+  session_id?: string | null;
   triggered_by: "manual" | "scheduled";
   started_at: string;
   completed_at: string | null;

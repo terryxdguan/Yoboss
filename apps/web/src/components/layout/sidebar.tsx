@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -15,13 +15,30 @@ import {
   LogOut,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
-import { DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
+import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
 import { subscribe, getSnapshot, getAgentStatus } from "@/lib/stores/agent-status";
+
+const FAVORITE_MEMBERS_KEY = "yoboss_favorite_members";
+const allAgentsList = [...DEFAULT_AGENTS, ...ALL_AGENTS];
+
+function getSidebarAgents() {
+  if (typeof window === "undefined") return DEFAULT_AGENTS;
+  try {
+    const raw = localStorage.getItem(FAVORITE_MEMBERS_KEY);
+    const ids: string[] = raw ? JSON.parse(raw) : ["general_assistant"];
+    if (ids.length === 0) return DEFAULT_AGENTS.slice(0, 1); // At least General Assistant
+    return ids
+      .map((id) => allAgentsList.find((a) => a.id === id))
+      .filter(Boolean) as typeof DEFAULT_AGENTS;
+  } catch {
+    return DEFAULT_AGENTS;
+  }
+}
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
   { href: "/goals", icon: Flag, label: "Goal" },
-  { href: "/todos", icon: ListChecks, label: "To-Do List" },
+  { href: "/todos", icon: ListChecks, label: "Personal To-Dos" },
   { href: "/workflows", icon: GitBranch, label: "Workflows" },
   { href: "/team", icon: Users, label: "Team" },
 ];
@@ -30,6 +47,33 @@ export function Sidebar() {
   const pathname = usePathname();
   // Subscribe to agent status changes
   useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  // Sidebar agents synced with Dashboard Favorite Members
+  // Initialize with DEFAULT_AGENTS to match server render, then sync from localStorage
+  const [sidebarAgents, setSidebarAgents] = useState(DEFAULT_AGENTS);
+
+  const refreshAgents = useCallback(() => {
+    setSidebarAgents(getSidebarAgents());
+  }, []);
+
+  useEffect(() => {
+    // Hydrate from localStorage on mount
+    refreshAgents();
+
+    // Listen for storage changes (from Dashboard Favorite Members)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === FAVORITE_MEMBERS_KEY) refreshAgents();
+    };
+    window.addEventListener("storage", onStorage);
+
+    // Also poll periodically for same-tab changes (localStorage doesn't fire events in same tab)
+    const interval = setInterval(refreshAgents, 2000);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(interval);
+    };
+  }, [refreshAgents]);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -72,7 +116,7 @@ export function Sidebar() {
                 {/* Agent sub-items under Team */}
                 {item.href === "/team" && (
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-4 mt-1 space-y-0.5">
-                    {DEFAULT_AGENTS.map((agent) => {
+                    {sidebarAgents.map((agent) => {
                       const agentPath = `/team/chat/${agent.id}`;
                       const isAgentActive = pathname === agentPath;
                       const displayName = agent.label;

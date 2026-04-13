@@ -90,6 +90,11 @@ export function WorkflowPickerModal({ workflows, selectedIds, onSave, onClose }:
                           wf.lastRunStatus === "failed" ? "bg-[#D5847A]" :
                           "bg-[#9B948B]"
                         }`}
+                        title={
+                          wf.lastRunStatus === "success" ? "Last run: Success" :
+                          wf.lastRunStatus === "failed" ? "Last run: Failed" :
+                          "Never run"
+                        }
                       />
                     </button>
                   );

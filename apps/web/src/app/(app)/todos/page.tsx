@@ -401,7 +401,7 @@ export default function TodosPage() {
       <div className={`${showChat ? "flex-1 min-w-0 px-6 md:px-8 pb-12" : "w-full"}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-[#2B2B2B]">TODO List</h1>
+        <h1 className="text-2xl font-semibold text-[#2B2B2B]">Personal To-Dos</h1>
       </div>
 
       {/* Task bar */}

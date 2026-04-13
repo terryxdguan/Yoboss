@@ -13,14 +13,18 @@ import {
   MessageSquare,
   Paperclip,
   FileText,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
-import type { Goal, Phase, WeeklyPlan, DailyTask } from "@/lib/types/database";
+import type { Goal, Phase, WeeklyPlan, DailyTask, TodoItem } from "@/lib/types/database";
+import { getGoalTodos, addTodo, updateTodo, deleteTodo } from "@/lib/db/actions";
 import { WeeklyPlanChatPanel } from "@/components/goals/weekly-plan-chat";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 import { DeliverablesPanel } from "@/components/goals/deliverables-panel";
 import { NotesPanel } from "@/components/goals/notes-panel";
 import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
+import { DateTimePicker } from "@/components/todo/date-time-picker";
 
 type RightPanel = "none" | "ai" | "plan-chat" | "deliverables" | "notes";
 
@@ -46,6 +50,11 @@ export default function GoalDetailPage() {
   const [rightPanel, setRightPanel] = useState<RightPanel>("none");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [pendingAITask, setPendingAITask] = useState<DailyTask | null>(null);
+  const [goalTodos, setGoalTodos] = useState<TodoItem[]>([]);
+  const [showAddTodo, setShowAddTodo] = useState(false);
+  const [newTodoText, setNewTodoText] = useState("");
+  const [newTodoDeadline, setNewTodoDeadline] = useState("");
+  const [newTodoPriority, setNewTodoPriority] = useState<"high" | "medium" | "low">("medium");
 
   const togglePanel = (panel: RightPanel) => {
     setRightPanel((prev) => (prev === panel ? "none" : panel));
@@ -88,12 +97,71 @@ export default function GoalDetailPage() {
       : undefined;
 
     setWeeklyPlan(matchingPlan || null);
+
+    // Load goal-specific todos
+    try {
+      const todos = await getGoalTodos(id);
+      setGoalTodos(todos);
+    } catch {
+      // Non-blocking
+    }
+
     setLoading(false);
   }, [id]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Goal todo handlers
+  const handleAddGoalTodo = async () => {
+    if (!newTodoText.trim()) return;
+    try {
+      const todo = await addTodo(
+        newTodoText.trim(),
+        "Goal",
+        newTodoPriority,
+        newTodoDeadline || null,
+        id
+      );
+      setGoalTodos(prev => [...prev, todo]);
+      setNewTodoText("");
+      setNewTodoDeadline("");
+      setNewTodoPriority("medium");
+      setShowAddTodo(false);
+    } catch (err) {
+      console.error("Failed to add goal todo:", err);
+    }
+  };
+
+  const handleUpdateGoalTodo = async (todoId: string, patch: Partial<Pick<TodoItem, "text" | "deadline" | "priority">>) => {
+    try {
+      await updateTodo(todoId, patch);
+      setGoalTodos(prev => prev.map(t => t.id === todoId ? { ...t, ...patch } : t));
+    } catch (err) {
+      console.error("Failed to update goal todo:", err);
+    }
+  };
+
+  const handleToggleGoalTodo = async (todoId: string, completed: boolean) => {
+    try {
+      await updateTodo(todoId, { completed: !completed });
+      setGoalTodos(prev =>
+        prev.map(t => t.id === todoId ? { ...t, completed: !completed } : t)
+      );
+    } catch (err) {
+      console.error("Failed to toggle goal todo:", err);
+    }
+  };
+
+  const handleDeleteGoalTodo = async (todoId: string) => {
+    try {
+      await deleteTodo(todoId);
+      setGoalTodos(prev => prev.filter(t => t.id !== todoId));
+    } catch (err) {
+      console.error("Failed to delete goal todo:", err);
+    }
+  };
 
   const handleToggleTask = async (taskId: string, completed: boolean) => {
     const supabase = createClient();
@@ -185,7 +253,7 @@ export default function GoalDetailPage() {
     <div className="flex -mx-6 md:-mx-8 -mb-12">
       {/* Main content */}
       <div className="flex-1 min-w-0 px-6 md:px-8 pb-12">
-        <div className="max-w-6xl mx-auto">
+        <div>
       {/* Header */}
       <button
         onClick={() => router.push("/goals")}
@@ -200,7 +268,7 @@ export default function GoalDetailPage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#2B2B2B]">{goal.title}</h1>
             {goal.description && (
-              <p className="text-sm text-[#6F6A64] mt-1 max-w-2xl">{goal.description}</p>
+              <p className="text-sm text-[#6F6A64] mt-1">{goal.description}</p>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -390,7 +458,7 @@ export default function GoalDetailPage() {
                 onAskAI={handleAskAI}
               />
             ))}
-            {/* Row 2: Fri-Sun */}
+            {/* Row 2: Fri-Sun + Goal Todos */}
             {[4, 5, 6].map((dayIdx) => (
               <DayCard
                 key={dayIdx}
@@ -403,6 +471,23 @@ export default function GoalDetailPage() {
                 onAskAI={handleAskAI}
               />
             ))}
+
+            {/* Goal To-Do List — 8th slot */}
+            <GoalTodoCard
+              todos={goalTodos}
+              onToggle={handleToggleGoalTodo}
+              onDelete={handleDeleteGoalTodo}
+              onUpdate={handleUpdateGoalTodo}
+              showAddForm={showAddTodo}
+              onShowAddForm={setShowAddTodo}
+              newText={newTodoText}
+              onNewTextChange={setNewTodoText}
+              newDeadline={newTodoDeadline}
+              onNewDeadlineChange={setNewTodoDeadline}
+              newPriority={newTodoPriority}
+              onNewPriorityChange={setNewTodoPriority}
+              onAdd={handleAddGoalTodo}
+            />
           </div>
         )}
       </div>
@@ -466,6 +551,235 @@ export default function GoalDetailPage() {
           onClose={() => setRightPanel("none")}
         />
       )}
+    </div>
+  );
+}
+
+const PRIORITY_DOT: Record<string, string> = {
+  high: "bg-[#D5847A]",
+  medium: "bg-[#D4B06A]",
+  low: "bg-[#7FB38A]",
+};
+
+function formatDeadlineShort(d: string): string {
+  const date = new Date(d);
+  const month = date.toLocaleString("en", { month: "short" });
+  const day = date.getDate();
+  const h = date.getHours();
+  const mins = date.getMinutes();
+  if (h === 0 && mins === 0) return `${month} ${day}`;
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const ap = h >= 12 ? "PM" : "AM";
+  return `${month} ${day} ${h12}:${String(mins).padStart(2, "0")}${ap}`;
+}
+
+function GoalTodoCard({
+  todos, onToggle, onDelete, onUpdate,
+  showAddForm, onShowAddForm,
+  newText, onNewTextChange,
+  newDeadline, onNewDeadlineChange,
+  newPriority, onNewPriorityChange,
+  onAdd,
+}: {
+  todos: TodoItem[];
+  onToggle: (id: string, completed: boolean) => void;
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<Pick<TodoItem, "text" | "deadline" | "priority">>) => void;
+  showAddForm: boolean;
+  onShowAddForm: (v: boolean) => void;
+  newText: string;
+  onNewTextChange: (v: string) => void;
+  newDeadline: string;
+  onNewDeadlineChange: (v: string) => void;
+  newPriority: "high" | "medium" | "low";
+  onNewPriorityChange: (v: "high" | "medium" | "low") => void;
+  onAdd: () => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editingDeadlineId, setEditingDeadlineId] = useState<string | null>(null);
+  const [showNewDeadlinePicker, setShowNewDeadlinePicker] = useState(false);
+
+  return (
+    <div className="rounded-xl border border-[#B8D4F0] bg-[#EAF3FD] p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-[#3B7DD8]">
+          Goal To-Dos
+        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-[#7FAEE6]">
+            {todos.filter(t => t.completed).length}/{todos.length} done
+          </span>
+          <button
+            onClick={() => onShowAddForm(true)}
+            className="p-1 rounded-md bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors"
+            title="Add to-do"
+          >
+            <Plus className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Add form modal */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => onShowAddForm(false)} />
+          <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-md">
+            <div className="px-6 pt-6 pb-4 border-b border-[#E7DED2]">
+              <h2 className="text-lg font-semibold text-[#2B2B2B]">Add Goal To-Do</h2>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#2B2B2B] mb-1.5">Task</label>
+                <input
+                  autoFocus
+                  value={newText}
+                  onChange={(e) => onNewTextChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newText.trim()) onAdd(); if (e.key === "Escape") onShowAddForm(false); }}
+                  placeholder="What needs to be done?"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#2B2B2B] mb-1.5">Deadline <span className="text-[#9B948B] font-normal">(optional)</span></label>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNewDeadlinePicker(!showNewDeadlinePicker)}
+                    className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-left text-[#6F6A64] hover:border-[#7FAEE6] transition-colors"
+                  >
+                    {newDeadline ? formatDeadlineShort(newDeadline) : "Click to set deadline..."}
+                  </button>
+                  {showNewDeadlinePicker && (
+                    <DateTimePicker
+                      value={newDeadline || null}
+                      onChange={(iso) => { onNewDeadlineChange(iso); setShowNewDeadlinePicker(false); }}
+                      onClose={() => setShowNewDeadlinePicker(false)}
+                    />
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#2B2B2B] mb-1.5">Priority</label>
+                <select
+                  value={newPriority}
+                  onChange={(e) => onNewPriorityChange(e.target.value as "high" | "medium" | "low")}
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6]"
+                >
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E7DED2]">
+              <button
+                onClick={() => onShowAddForm(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onAdd}
+                disabled={!newText.trim()}
+                className="px-5 py-2 rounded-xl text-sm font-medium bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] disabled:opacity-40 transition-colors shadow-[0_2px_8px_rgba(127,174,230,0.3)]"
+              >
+                Add To-Do
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Todo list */}
+      <div className="space-y-1 max-h-[240px] overflow-y-auto">
+        {todos.length === 0 && !showAddForm && (
+          <p className="text-xs text-[#7FAEE6] py-3 text-center">No items yet</p>
+        )}
+        {todos.map(todo => (
+          <div key={todo.id} className="rounded-lg bg-white/60 px-2.5 py-2 group/item">
+            {/* Row 1: checkbox + text + delete */}
+            <div className="flex items-start gap-2">
+              <button
+                onClick={() => onToggle(todo.id, todo.completed)}
+                className="mt-0.5 shrink-0"
+              >
+                {todo.completed ? (
+                  <CheckCircle2 className="h-4 w-4 text-[#7FB38A]" />
+                ) : (
+                  <Circle className="h-4 w-4 text-[#B8D4F0]" />
+                )}
+              </button>
+              {editingId === todo.id ? (
+                <input
+                  autoFocus
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onBlur={() => { if (editText.trim()) onUpdate(todo.id, { text: editText.trim() }); setEditingId(null); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { if (editText.trim()) onUpdate(todo.id, { text: editText.trim() }); setEditingId(null); }
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="text-xs flex-1 bg-[#F6F3EE] border border-[#7FAEE6] rounded px-1.5 py-0.5 outline-none text-[#2B2B2B]"
+                />
+              ) : (
+                <span
+                  onDoubleClick={() => { setEditText(todo.text); setEditingId(todo.id); }}
+                  className={`text-xs flex-1 cursor-text ${todo.completed ? "line-through text-[#9B948B]" : "text-[#2B2B2B]"}`}
+                >
+                  {todo.text}
+                </span>
+              )}
+              <button
+                onClick={() => onDelete(todo.id)}
+                className="opacity-0 group-hover/item:opacity-100 p-0.5 text-[#9B948B] hover:text-[#D5847A] transition-all shrink-0"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+            {/* Row 2: deadline + priority */}
+            <div className="mt-1 ml-6 flex items-center gap-2 text-[10px]">
+              {editingDeadlineId === todo.id ? (
+                <span className="relative inline-block">
+                  <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#7FAEE6] text-[#6F6A64] inline-block">
+                    {todo.deadline ? formatDeadlineShort(todo.deadline) : "Pick date"}
+                  </span>
+                  <DateTimePicker
+                    value={todo.deadline ?? null}
+                    onChange={(iso) => { onUpdate(todo.id, { deadline: iso }); setEditingDeadlineId(null); }}
+                    onClose={() => setEditingDeadlineId(null)}
+                  />
+                </span>
+              ) : todo.deadline ? (
+                <button
+                  onClick={() => setEditingDeadlineId(todo.id)}
+                  className="text-[#9B948B] hover:opacity-80"
+                >
+                  📅 {formatDeadlineShort(todo.deadline)}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setEditingDeadlineId(todo.id)}
+                  className="text-[#B8D4F0] hover:text-[#7FAEE6] transition-colors"
+                >
+                  + deadline
+                </button>
+              )}
+              <span className="ml-auto" />
+              <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[todo.priority]}`} />
+              <select
+                value={todo.priority}
+                onChange={(e) => onUpdate(todo.id, { priority: e.target.value as TodoItem["priority"] })}
+                className="text-[10px] px-0.5 rounded bg-transparent border-none text-[#9B948B] outline-none cursor-pointer"
+              >
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

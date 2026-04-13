@@ -19,6 +19,38 @@ function parseISOish(v: string | null): Date {
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** Long-press repeat: fires callback on mousedown, then accelerates on hold */
+function useLongPress(callback: () => void) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const start = useCallback(() => {
+    callback();
+    timerRef.current = setTimeout(() => {
+      let speed = 150;
+      intervalRef.current = setInterval(() => {
+        callback();
+        // Accelerate after a few ticks
+        if (speed > 50) {
+          speed -= 20;
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          intervalRef.current = setInterval(callback, speed);
+        }
+      }, speed);
+    }, 400); // Initial delay before repeat starts
+  }, [callback]);
+
+  const stop = useCallback(() => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => stop, [stop]);
+
+  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart: start, onTouchEnd: stop };
+}
+
 interface Props {
   value: string | null;
   onChange: (iso: string) => void;
@@ -137,13 +169,42 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
       </div>
 
       {/* Time */}
+      <TimeControls
+        hour12={hour12}
+        setHour12={setHour12}
+        minute={minute}
+        setMinute={setMinute}
+        ampm={ampm}
+        setAmpm={setAmpm}
+        pad={pad}
+        onConfirm={confirm}
+      />
+    </div>
+  );
+}
+
+/** Separated time controls so hooks can be called unconditionally */
+function TimeControls({
+  hour12, setHour12, minute, setMinute, ampm, setAmpm, pad: padFn, onConfirm,
+}: {
+  hour12: number; setHour12: React.Dispatch<React.SetStateAction<number>>;
+  minute: number; setMinute: React.Dispatch<React.SetStateAction<number>>;
+  ampm: "AM" | "PM"; setAmpm: React.Dispatch<React.SetStateAction<"AM" | "PM">>;
+  pad: (n: number) => string; onConfirm: () => void;
+}) {
+  const hourUp = useLongPress(useCallback(() => setHour12((h) => (h === 12 ? 1 : h + 1)), [setHour12]));
+  const hourDown = useLongPress(useCallback(() => setHour12((h) => (h === 1 ? 12 : h - 1)), [setHour12]));
+  const minUp = useLongPress(useCallback(() => setMinute((m) => (m + 1) % 60), [setMinute]));
+  const minDown = useLongPress(useCallback(() => setMinute((m) => (m - 1 + 60) % 60), [setMinute]));
+
+  return (
       <div className="flex items-center gap-2 border-t border-[#E7DED2] pt-2 mt-1">
         <div className="flex flex-col items-center gap-0.5">
-          <button onClick={() => setHour12((h) => (h === 12 ? 1 : h + 1))} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▲</button>
+          <button {...hourUp} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▲</button>
           <input
             type="text"
             inputMode="numeric"
-            value={pad(hour12)}
+            value={padFn(hour12)}
             onClick={(e) => (e.target as HTMLInputElement).select()}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
@@ -152,15 +213,15 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
             }}
             className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7FAEE6]"
           />
-          <button onClick={() => setHour12((h) => (h === 1 ? 12 : h - 1))} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▼</button>
+          <button {...hourDown} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▼</button>
         </div>
         <span className="text-[#9B948B] font-bold text-sm">:</span>
         <div className="flex flex-col items-center gap-0.5">
-          <button onClick={() => setMinute((m) => (m + 1) % 60)} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▲</button>
+          <button {...minUp} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▲</button>
           <input
             type="text"
             inputMode="numeric"
-            value={pad(minute)}
+            value={padFn(minute)}
             onClick={(e) => (e.target as HTMLInputElement).select()}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
@@ -169,7 +230,7 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
             }}
             className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7FAEE6]"
           />
-          <button onClick={() => setMinute((m) => (m - 1 + 60) % 60)} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px]">▼</button>
+          <button {...minDown} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▼</button>
         </div>
         <button
           onClick={() => setAmpm((p) => (p === "AM" ? "PM" : "AM"))}
@@ -179,12 +240,11 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
         </button>
         <div className="flex-1" />
         <button
-          onClick={confirm}
+          onClick={onConfirm}
           className="px-3 py-1.5 rounded-lg bg-[#7FAEE6] hover:bg-[#6A9DDA] text-white text-xs font-semibold transition-colors"
         >
           Confirm ✓
         </button>
       </div>
-    </div>
   );
 }
