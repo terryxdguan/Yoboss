@@ -108,7 +108,7 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
   if (!mounted) return null;
 
   return (
-    <div>
+    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-6 shadow-[0_4px_16px_rgba(30,34,39,0.04)]">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-baseline gap-3">
           <h2 className="text-xl font-semibold text-[#2B2B2B]">Favorite Workflows</h2>
@@ -121,6 +121,8 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
           <Plus className="h-4 w-4" />
         </button>
       </div>
+
+      <div className="border-b border-dashed border-[#E7DED2] mb-4" />
 
       {favorites.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-8 text-center">

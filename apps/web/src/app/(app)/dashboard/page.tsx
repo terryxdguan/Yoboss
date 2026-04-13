@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/db/server";
 import { redirect } from "next/navigation";
-import { getDashboardData, getWorkflows } from "@/lib/db/actions";
+import { getDashboardData, getWorkflows, getTodoTags } from "@/lib/db/actions";
 import { DashboardStats } from "@/components/dashboard/stats";
 import { DashboardTodayItems } from "@/components/dashboard/today-items";
 import { DashboardImportantGoals } from "@/components/dashboard/important-goals";
@@ -15,9 +15,10 @@ export default async function TodayPage() {
 
   if (!user) redirect("/");
 
-  const [data, allWorkflows] = await Promise.all([
+  const [data, allWorkflows, todoTags] = await Promise.all([
     getDashboardData(),
     getWorkflows(),
+    getTodoTags(),
   ]);
 
   return (
@@ -32,7 +33,12 @@ export default async function TodayPage() {
       </div>
 
       <DashboardStats stats={data.stats} />
-      <DashboardTodayItems items={data.todayItems} highPriorityItems={data.highPriorityItems} />
+      <DashboardTodayItems
+        items={data.todayItems}
+        highPriorityItems={data.highPriorityItems}
+        todoTags={todoTags.map(t => t.name)}
+        goals={data.goalsWithPhases}
+      />
       <DashboardImportantGoals goals={data.goalsWithPhases} />
       <DashboardFavoriteWorkflows workflows={data.workflows} allWorkflows={allWorkflows} />
       <DashboardFavoriteMembers />
