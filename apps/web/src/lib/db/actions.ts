@@ -1362,3 +1362,46 @@ export async function getDashboardData(): Promise<{
 
   return { stats, todayItems, highPriorityItems, workflows: workflowSummaries, goalsWithPhases };
 }
+
+// ============================================================
+// Billing — subscription state + credit transactions
+// ============================================================
+
+export async function getBillingState() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: quota } = await supabase
+    .from("user_quotas")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!quota) {
+    // Auto-create default row
+    const { data: created } = await supabase
+      .from("user_quotas")
+      .insert({ user_id: user.id })
+      .select()
+      .single();
+    return created;
+  }
+
+  return quota;
+}
+
+export async function getRecentCreditTransactions(limit = 20) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data } = await supabase
+    .from("credit_transactions")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return data || [];
+}
