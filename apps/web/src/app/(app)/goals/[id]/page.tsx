@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
 import type { Goal, Phase, WeeklyPlan, DailyTask, TodoItem } from "@/lib/types/database";
-import { getGoalTodos, addTodo, updateTodo, deleteTodo } from "@/lib/db/actions";
+import { getGoalTodos, addTodo, updateTodo, deleteTodo, updateGoal, updatePhase } from "@/lib/db/actions";
+import { EditableText } from "@/components/ui/editable-text";
 import { WeeklyPlanChatPanel } from "@/components/goals/weekly-plan-chat";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 import { DeliverablesPanel } from "@/components/goals/deliverables-panel";
@@ -163,6 +164,36 @@ export default function GoalDetailPage() {
     }
   };
 
+  // Inline-edit save handlers. Optimistic local update first so the UI
+  // reflects the change instantly, then persist. On failure we log and
+  // leave the stale value; a page refresh will re-sync from the DB.
+  const handleSaveGoalField = async (field: "title" | "description", next: string) => {
+    if (!goal) return;
+    const nextValue = field === "description" && !next ? null : next;
+    setGoal({ ...goal, [field]: nextValue } as Goal);
+    try {
+      await updateGoal(goal.id, { [field]: nextValue });
+    } catch (err) {
+      console.error(`Failed to update goal ${field}:`, err);
+    }
+  };
+
+  const handleSavePhaseField = async (
+    phaseId: string,
+    field: "title" | "description",
+    next: string
+  ) => {
+    const nextValue = field === "description" && !next ? null : next;
+    setPhases(prev =>
+      prev.map(p => (p.id === phaseId ? { ...p, [field]: nextValue } as Phase : p))
+    );
+    try {
+      await updatePhase(phaseId, { [field]: nextValue });
+    } catch (err) {
+      console.error(`Failed to update phase ${field}:`, err);
+    }
+  };
+
   const handleToggleTask = async (taskId: string, completed: boolean) => {
     const supabase = createClient();
     await supabase
@@ -265,11 +296,25 @@ export default function GoalDetailPage() {
 
       <div className="mb-6">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-[#2B2B2B]">{goal.title}</h1>
-            {goal.description && (
-              <p className="text-sm text-[#6F6A64] mt-1">{goal.description}</p>
-            )}
+          <div className="min-w-0 flex-1 mr-4">
+            <h1 className="text-2xl font-semibold text-[#2B2B2B]">
+              <EditableText
+                value={goal.title}
+                onSave={(next) => handleSaveGoalField("title", next)}
+                placeholder="Goal title"
+                className="text-2xl font-semibold text-[#2B2B2B]"
+              />
+            </h1>
+            <p className="text-sm text-[#6F6A64] mt-1">
+              <EditableText
+                value={goal.description || ""}
+                onSave={(next) => handleSaveGoalField("description", next)}
+                multiline
+                placeholder="Describe this goal…"
+                emptyHint="Double-click to add a description…"
+                className="text-sm text-[#6F6A64]"
+              />
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1 border border-[#E7DED2] rounded-lg p-1">
@@ -390,12 +435,26 @@ export default function GoalDetailPage() {
         {/* Selected phase info */}
         {selectedPhase && (
           <div className="mt-4 pt-4 border-t border-[#E7DED2]">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-[#2B2B2B]">{selectedPhase.title}</h3>
-                {selectedPhase.description && (
-                  <p className="text-sm text-[#6F6A64] mt-1">{selectedPhase.description}</p>
-                )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-[#2B2B2B]">
+                  <EditableText
+                    value={selectedPhase.title}
+                    onSave={(next) => handleSavePhaseField(selectedPhase.id, "title", next)}
+                    placeholder="Phase title"
+                    className="text-base font-semibold text-[#2B2B2B]"
+                  />
+                </h3>
+                <p className="text-sm text-[#6F6A64] mt-1">
+                  <EditableText
+                    value={selectedPhase.description || ""}
+                    onSave={(next) => handleSavePhaseField(selectedPhase.id, "description", next)}
+                    multiline
+                    placeholder="Describe this phase…"
+                    emptyHint="Double-click to add a description…"
+                    className="text-sm text-[#6F6A64]"
+                  />
+                </p>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-[#9B948B] shrink-0">
                 <Clock className="h-3.5 w-3.5" />

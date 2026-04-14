@@ -102,6 +102,20 @@ export async function updateGoalStatus(
   if (error) throw error;
 }
 
+// Generic goal field update (title / description). Keeps updated_at in sync.
+// Used by the inline double-click-to-edit UI on the goal detail page.
+export async function updateGoal(
+  goalId: string,
+  patch: { title?: string; description?: string | null }
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("goals")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", goalId);
+  if (error) throw error;
+}
+
 // ============================================================
 // Phases (no denormalized user_id in v3, RLS via goals join)
 // ============================================================
@@ -144,6 +158,21 @@ export async function updatePhaseStatus(
     .update(updates)
     .eq("id", phaseId);
 
+  if (error) throw error;
+}
+
+// Generic phase field update (title / description). Used by inline editing
+// on the goal detail page. Kept separate from updatePhaseStatus so callers
+// don't accidentally overwrite status transitions.
+export async function updatePhase(
+  phaseId: string,
+  patch: { title?: string; description?: string | null }
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("phases")
+    .update(patch)
+    .eq("id", phaseId);
   if (error) throw error;
 }
 
