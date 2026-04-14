@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 import { getAnthropicClient, MANAGED_AGENT, listSessionFiles } from "@/lib/ai/client";
 import { executeCustomTool } from "@/lib/ai/custom-tools";
-import { withRateLimit } from "@/lib/ai/rate-limit";
+import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
@@ -169,6 +169,11 @@ export async function POST(request: NextRequest) {
               }
 
               console.log(`[ManagedAgent] Session idle — response complete (${fullText.length} chars)`);
+
+              // Estimate token usage from text lengths (Managed Agent doesn't return usage)
+              const estInputTokens = Math.ceil(fullMessage.length / 4);
+              const estOutputTokens = Math.ceil(fullText.length / 4);
+              logUsage(user.id, "agent-run-step", "managed-agent", estInputTokens, estOutputTokens).catch(() => {});
 
               // Check for new files in the session
               const knownSet = new Set(knownFileIds || []);

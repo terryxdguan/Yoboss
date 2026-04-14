@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
-import { withRateLimit } from "@/lib/ai/rate-limit";
+import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { chatWithCoach } from "@/lib/ai/decompose";
 import { chatWithGoalCoach } from "@/lib/ai/goal-chat-prompt";
 import { generateWeeklyPlan } from "@/lib/ai/weekly-plan";
@@ -10,8 +10,28 @@ import { generateWeeklyReview } from "@/lib/ai/review";
 import type { ConversationMessage } from "@/lib/ai/decompose";
 import type Anthropic from "@anthropic-ai/sdk";
 
+/** Attach a usage logger to an Anthropic MessageStream, then return the ReadableStream */
+function streamWithUsageLog(
+  stream: ReturnType<Anthropic.Messages["stream"]>,
+  userId: string,
+  route: string,
+  model: string
+): ReadableStream {
+  stream.on("message", (msg) => {
+    if (msg.usage) {
+      logUsage(userId, route, model, msg.usage.input_tokens, msg.usage.output_tokens).catch(() => {});
+    }
+  });
+  return stream.toReadableStream();
+}
+
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+};
+
 // POST /api/ai/plan
-// Handles three actions: chat (goal creation), weekly (plan generation), review
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -30,87 +50,63 @@ export async function POST(request: NextRequest) {
 
   try {
     if (action === "chat") {
-      // Conversational goal creation (streaming)
-      const { messages } = body as {
-        messages: ConversationMessage[];
-      };
-
+      const { messages } = body as { messages: ConversationMessage[] };
       const stream = await chatWithCoach(messages);
-
-      // Return as streaming response
-      return new Response(stream.toReadableStream(), {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+      return new Response(
+        streamWithUsageLog(stream, user.id, "chat", "claude-opus-4-6"),
+        { headers: SSE_HEADERS }
+      );
     }
 
     if (action === "weekly") {
-      // Weekly plan generation (non-streaming, returns JSON)
       const { context } = body;
       const plan = await generateWeeklyPlan(context);
+      // Log usage from attached _usage field
+      const usage = (plan as Record<string, unknown>)._usage as { input_tokens: number; output_tokens: number } | undefined;
+      if (usage) {
+        logUsage(user.id, "weekly", "claude-sonnet-4-6", usage.input_tokens, usage.output_tokens).catch(() => {});
+        delete (plan as Record<string, unknown>)._usage;
+      }
       return NextResponse.json(plan);
     }
 
     if (action === "review") {
-      // Weekly review (streaming)
       const { context } = body;
       const stream = await generateWeeklyReview(context);
-
-      return new Response(stream.toReadableStream(), {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+      return new Response(
+        streamWithUsageLog(stream, user.id, "review", "claude-sonnet-4-6"),
+        { headers: SSE_HEADERS }
+      );
     }
 
     if (action === "weekly-chat") {
-      // Weekly plan generation with chat (streaming + tool_use)
       const { messages } = body as { messages: Anthropic.MessageParam[] };
       const stream = await chatWithWeeklyPlanCoach(messages);
-
-      return new Response(stream.toReadableStream(), {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+      return new Response(
+        streamWithUsageLog(stream, user.id, "weekly-chat", "claude-sonnet-4-6"),
+        { headers: SSE_HEADERS }
+      );
     }
 
     if (action === "goal-detail-chat") {
-      // General goal discussion with server-side tools (web search, code execution)
       const { messages, context } = body as {
         messages: Anthropic.MessageParam[];
         context: GoalDetailChatContext;
       };
-      const readableStream = streamGoalDetailChat(messages, context);
-
-      return new Response(readableStream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
+      const readableStream = streamGoalDetailChat(messages, context, (inputTokens, outputTokens) => {
+        logUsage(user.id, "goal-detail-chat", "claude-sonnet-4-6", inputTokens, outputTokens).catch(() => {});
       });
+
+      return new Response(readableStream, { headers: SSE_HEADERS });
     }
 
     if (action === "goal-chat") {
-      // Goal creation with structured questions (streaming + tool_use)
       const { messages } = body as { messages: Anthropic.MessageParam[] };
       const stream = await chatWithGoalCoach(messages);
-
-      return new Response(stream.toReadableStream(), {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+      return new Response(
+        streamWithUsageLog(stream, user.id, "goal-chat", "claude-opus-4-6"),
+        { headers: SSE_HEADERS }
+      );
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

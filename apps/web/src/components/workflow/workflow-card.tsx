@@ -12,6 +12,7 @@ interface WorkflowCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onHistory: () => void;
+  onViewProgress?: () => void;
   onSchedule?: () => void;
   onFavorite?: () => void;
   isFavorite?: boolean;
@@ -46,6 +47,7 @@ export function WorkflowCard({
   onEdit,
   onDelete,
   onHistory,
+  onViewProgress,
   onSchedule,
   onFavorite,
   isFavorite,
@@ -121,7 +123,7 @@ export function WorkflowCard({
       {/* Status */}
       {workflow.status === "running" ? (
         <button
-          onClick={onHistory}
+          onClick={onViewProgress || onHistory}
           className="flex items-center gap-2 mt-3 w-full text-left group/status"
         >
           <span className="relative w-2 h-2 shrink-0">

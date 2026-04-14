@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { toggleTask, updateTodo, addTodo } from "@/lib/db/actions";
 import { TodoItemCard } from "@/components/todo/todo-item-card";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
+import { useDashboardChat } from "@/components/dashboard/dashboard-shell";
 import type { DashboardTodayItem } from "@/lib/types/database";
 import type { GoalWithPhases } from "@/lib/types/database";
 
@@ -25,10 +26,18 @@ export function DashboardTodayItems({
   const [highPriority, setHighPriority] = useState(initialHighPriority);
   const [, startTransition] = useTransition();
 
-  // Add modal state
+  // AI chat — provided by DashboardShell
+  const sendToAI = useDashboardChat();
+
+  // Add modal state — default deadline is today 11:59 PM so item shows on Dashboard immediately
+  const getTodayEndOfDay = () => {
+    const d = new Date();
+    d.setHours(23, 59, 0, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T23:59`;
+  };
   const [showAdd, setShowAdd] = useState(false);
   const [newText, setNewText] = useState("");
-  const [newDeadline, setNewDeadline] = useState("");
+  const [newDeadline, setNewDeadline] = useState(getTodayEndOfDay);
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("medium");
   const [newCategory, setNewCategory] = useState("personal"); // "personal" tag or "goal:{goalId}"
   const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
@@ -75,7 +84,7 @@ export function DashboardTodayItems({
       await addTodo(newText.trim(), tag, newPriority, newDeadline || null, goalId);
       // Reset form
       setNewText("");
-      setNewDeadline("");
+      setNewDeadline(getTodayEndOfDay());
       setNewPriority("medium");
       setNewCategory("personal");
       setShowAdd(false);
@@ -87,10 +96,20 @@ export function DashboardTodayItems({
   };
 
   const [tab, setTab] = useState<"pending" | "done">("pending");
-  const pendingItems = items.filter(i => !i.completed);
-  const doneItems = items.filter(i => i.completed);
+
+  // Filter high priority: only show if no deadline OR deadline is today
+  const todayStr = new Date().toISOString().split("T")[0];
+  const filteredHighPriority = highPriority.filter(i => {
+    if (!i.deadline) return true;               // no deadline → show
+    return i.deadline.startsWith(todayStr);      // deadline is today → show
+  });
+
+  // Merge all items (today + filtered high priority) into one unified list, deduped
+  const highPriorityIds = new Set(filteredHighPriority.map(i => i.id));
+  const allItems = [...items, ...filteredHighPriority.filter(i => !items.some(t => t.id === i.id))];
+  const pendingItems = allItems.filter(i => !i.completed);
+  const doneItems = allItems.filter(i => i.completed);
   const visibleItems = tab === "pending" ? pendingItems : doneItems;
-  const pendingHigh = highPriority.filter(i => !i.completed);
 
   // Unique tag list for category dropdown
   const defaultTags = ["Work", "Life", "Other"];
@@ -117,10 +136,10 @@ export function DashboardTodayItems({
           <h2 className="text-xl font-semibold text-[#2B2B2B]">To-Do List</h2>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFDF9] text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-            title="Add To-Do"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7FAEE6] text-white text-xs font-semibold hover:bg-[#6A9DDA] transition-colors shadow-[0_2px_8px_rgba(127,174,230,0.25)]"
           >
             <Plus className="h-3.5 w-3.5" />
+            Add
           </button>
         </div>
         <div className="flex items-center gap-1">
@@ -143,77 +162,72 @@ export function DashboardTodayItems({
         </div>
       </div>
 
-      <div className="border-b border-dashed border-[#E7DED2] mb-5" />
+      <div className="border-b border-dashed border-[#E7DED2] mb-4" />
 
-      {/* 1. Today's To-Dos */}
-      <div className="mb-6">
-        <div className="mb-3 flex items-baseline gap-3">
+      {/* Color legend + date header */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-baseline gap-3">
           <h3 className="text-base font-semibold text-[#2B2B2B]">
             {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
           </h3>
-          <p className="text-sm text-[#9B948B]">
-            Tasks from your goals and personal to-dos.
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-[11px] text-[#9B948B]">
+            <span className="w-3 h-3 rounded border-2 border-[#7FAEE6]/50" /> Schedule
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] text-[#9B948B]">
+            <span className="w-3 h-3 rounded border-2 border-[#7FB38A]/50" /> To-Do
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] text-[#9B948B]">
+            <span className="w-3 h-3 rounded border-2 border-[#D5847A]/60" /> High Priority
+          </span>
+        </div>
+      </div>
+
+      {/* Unified item grid */}
+      {visibleItems.length === 0 ? (
+        <div className="py-6 text-center mb-6">
+          <p className="text-sm text-[#6F6A64]">
+            {tab === "pending" ? "No pending tasks. Enjoy your day!" : "No completed tasks yet."}
           </p>
         </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-6">
+          {visibleItems.map(item => {
+            const isSchedule = item.sourceType === "daily_task";
+            const isHigh = item.priority === "high";
+            const variant = isHigh ? "high" as const : isSchedule ? "schedule" as const : "todo" as const;
 
-        {visibleItems.length === 0 ? (
-          <div className="py-6 text-center">
-            <p className="text-sm text-[#6F6A64]">
-              {tab === "pending" ? "No pending tasks. Enjoy your day!" : "No completed tasks yet."}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            {visibleItems.map(item => (
+            return (
               <TodoItemCard
                 key={item.id}
                 item={{
                   id: item.id,
                   text: item.title,
                   completed: item.completed,
-                  deadline: item.deadline,
+                  deadline: isSchedule ? null : item.deadline,
                   priority: item.priority,
                   tag: item.tag,
                 }}
+                variant={variant}
+                timeOnly
+                timeSlot={isSchedule ? (item.description || null) : undefined}
+                sourceLabel={isSchedule ? (item.sourceLabel || "Goal") : (item.tag || null)}
                 onToggle={() => handleToggle(item, "today")}
                 onUpdate={(patch) => handleUpdate(item, "today", patch)}
                 onDelete={() => {}}
+                onSendToAI={() => sendToAI?.(item)}
               />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 2. High Priority */}
-      {pendingHigh.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-baseline gap-3">
-            <h3 className="text-base font-semibold text-[#D5847A] flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4" />
-              High Priority
-            </h3>
-            <p className="text-sm text-[#9B948B]">
-              {pendingHigh.length} items need attention
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {pendingHigh.map(item => (
-              <TodoItemCard
-                key={`high-${item.id}`}
-                item={{
-                  id: item.id,
-                  text: item.title,
-                  completed: item.completed,
-                  deadline: item.deadline,
-                  priority: item.priority,
-                  tag: item.tag,
-                }}
-                onToggle={() => handleToggle(item, "high")}
-                onUpdate={(patch) => handleUpdate(item, "high", patch)}
-                onDelete={() => {}}
-              />
-            ))}
-          </div>
+            );
+          })}
+          {/* Add more card */}
+          <button
+            onClick={() => setShowAdd(true)}
+            className="rounded-lg border border-dashed border-[#DDD3C7] bg-transparent flex flex-col items-center justify-center py-6 text-[#9B948B] hover:border-[#7FAEE6] hover:text-[#7FAEE6] transition-colors cursor-pointer min-h-[80px]"
+          >
+            <Plus className="h-5 w-5 mb-1" />
+            <span className="text-xs">Add more</span>
+          </button>
         </div>
       )}
 

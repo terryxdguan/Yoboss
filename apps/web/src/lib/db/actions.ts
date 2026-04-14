@@ -67,6 +67,16 @@ export async function getGoals(): Promise<Goal[]> {
   return data;
 }
 
+export async function getGoalsWithPhases(): Promise<GoalWithPhases[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("goals")
+    .select("*, phases(*)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as GoalWithPhases[];
+}
+
 export async function getGoalWithPhases(goalId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -536,30 +546,60 @@ export async function getOrCreateGoalSession(goalId: string): Promise<ChatSessio
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Try to find existing
-  const { data: existing } = await supabase
-    .from("chat_sessions")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("goal_id", goalId)
-    .single();
+  // Non-UUID goalIds (e.g. "__dashboard__", "__todo__") use agent_id for lookup instead
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(goalId);
 
-  if (existing) return existing;
+  if (isUUID) {
+    // Goal-based session: lookup by goal_id
+    const { data: existing } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("goal_id", goalId)
+      .single();
 
-  // Create new
-  const { data, error } = await supabase
-    .from("chat_sessions")
-    .insert({
-      user_id: user.id,
-      agent_id: "general_assistant",
-      goal_id: goalId,
-      title: "Goal Chat",
-    })
-    .select()
-    .single();
+    if (existing) return existing;
 
-  if (error) throw error;
-  return data;
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({
+        user_id: user.id,
+        agent_id: "general_assistant",
+        goal_id: goalId,
+        title: "Goal Chat",
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } else {
+    // Virtual session (dashboard, todos): lookup by agent_id
+    const agentId = `task_assistant_${goalId}`;
+    const { data: existing } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("agent_id", agentId)
+      .is("goal_id", null)
+      .single();
+
+    if (existing) return existing;
+
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({
+        user_id: user.id,
+        agent_id: agentId,
+        goal_id: null,
+        title: "Task Assistant",
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 }
 
 export async function getSessionMessages(
@@ -799,7 +839,24 @@ export async function getWorkflows(): Promise<Workflow[]> {
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  const workflows = data || [];
+
+  // Auto-heal stuck "running" workflows: if no active run exists, reset to "ready"
+  const stuckRunning = workflows.filter(w => w.status === "running");
+  for (const wf of stuckRunning) {
+    const { data: runs } = await supabase
+      .from("workflow_runs")
+      .select("id")
+      .eq("workflow_id", wf.id)
+      .eq("status", "running")
+      .limit(1);
+    if (!runs || runs.length === 0) {
+      await supabase.from("workflows").update({ status: "ready" }).eq("id", wf.id);
+      wf.status = "ready";
+    }
+  }
+
+  return workflows;
 }
 
 export async function createWorkflow(input: {
@@ -887,6 +944,18 @@ export async function createWorkflowRun(input: {
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+export async function getWorkflowRunById(runId: string): Promise<WorkflowRun | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workflow_runs")
+    .select("*")
+    .eq("id", runId)
+    .single();
+
+  if (error) return null;
   return data;
 }
 
@@ -1123,14 +1192,33 @@ export async function getDashboardData(): Promise<{
     ? Math.round((completedPhases / activePhases.length) * 100) : 0;
 
   // Pending goal todos: uncompleted daily tasks for today
-  const currentWeekPlanIds = plans.filter(p => p.week_start === weekStart).map(p => p.id);
+  // Use the latest plan per goal (not just current week) — matches goal detail page behavior
+  const goalPhaseMap = new Map<string, string[]>(); // goalId → phaseIds
+  for (const p of plans) {
+    const ph = Array.isArray(p.phases) ? p.phases[0] : p.phases;
+    if (!ph) continue;
+    const existing = goalPhaseMap.get(ph.goal_id) || [];
+    existing.push(ph.id);
+    goalPhaseMap.set(ph.goal_id, existing);
+  }
+  // For each active goal, pick the latest plan (by week_start desc)
+  const latestPlanIds: string[] = [];
+  const seenPhases = new Set<string>();
+  const sortedPlans = [...plans].sort((a, b) => (b.week_start || "").localeCompare(a.week_start || ""));
+  for (const p of sortedPlans) {
+    const ph = Array.isArray(p.phases) ? p.phases[0] : p.phases;
+    if (!ph || !activeGoalIds.has(ph.goal_id)) continue;
+    if (seenPhases.has(ph.id)) continue; // already have a newer plan for this phase
+    seenPhases.add(ph.id);
+    latestPlanIds.push(p.id);
+  }
   let pendingGoalTodos = 0;
 
-  if (currentWeekPlanIds.length > 0) {
+  if (latestPlanIds.length > 0) {
     const { data: todayTasks } = await supabase
       .from("daily_tasks")
       .select("id, completed, day_of_week")
-      .in("weekly_plan_id", currentWeekPlanIds)
+      .in("weekly_plan_id", latestPlanIds)
       .eq("day_of_week", todayDow);
     if (todayTasks) {
       pendingGoalTodos = todayTasks.filter(t => !t.completed).length;
@@ -1146,6 +1234,7 @@ export async function getDashboardData(): Promise<{
     const wf = Array.isArray(r.workflows) ? r.workflows[0] : r.workflows;
     return {
       id: r.id as string,
+      workflowId: r.workflow_id as string,
       workflowName: (wf as { name?: string })?.name || "Unknown",
       status: r.status as "running" | "success" | "failed",
       triggeredBy: r.triggered_by as "manual" | "scheduled",
@@ -1181,12 +1270,12 @@ export async function getDashboardData(): Promise<{
 
   const todayItems: DashboardTodayItem[] = [];
 
-  // Goal daily tasks for today
-  if (currentWeekPlanIds.length > 0) {
+  // Goal daily tasks for today (from latest plan per goal)
+  if (latestPlanIds.length > 0) {
     const { data: todayTasks } = await supabase
       .from("daily_tasks")
       .select("id, title, description, completed, time_slot, day_of_week, weekly_plan_id")
-      .in("weekly_plan_id", currentWeekPlanIds)
+      .in("weekly_plan_id", latestPlanIds)
       .eq("day_of_week", todayDow)
       .order("sort_order");
 
@@ -1195,13 +1284,13 @@ export async function getDashboardData(): Promise<{
         todayItems.push({
           id: t.id,
           title: t.title,
-          description: t.description,
+          description: t.time_slot || t.description,
           completed: t.completed,
           timeSlot: classifyTimeSlot(t.time_slot),
           source: "goal",
           sourceLabel: planGoalMap.get(t.weekly_plan_id) || "Goal",
           sourceType: "daily_task",
-          deadline: t.time_slot || null,
+          deadline: null,
           priority: "medium" as const,
           tag: "Goal",
         });

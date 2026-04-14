@@ -81,7 +81,8 @@ const SERVER_TOOLS: Anthropic.Messages.ToolUnion[] = [
  */
 export function streamGoalDetailChat(
   messages: Anthropic.MessageParam[],
-  context: GoalDetailChatContext
+  context: GoalDetailChatContext,
+  onUsage?: (inputTokens: number, outputTokens: number) => void
 ): ReadableStream<Uint8Array> {
   const client = getAnthropicClient();
   const systemPrompt = buildSystemPrompt(context);
@@ -92,6 +93,8 @@ export function streamGoalDetailChat(
       let currentMessages = [...messages];
       let continuations = 0;
       const MAX_CONTINUATIONS = 5;
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
 
       try {
         while (continuations < MAX_CONTINUATIONS) {
@@ -110,6 +113,12 @@ export function streamGoalDetailChat(
           }
 
           const finalMessage = await stream.finalMessage();
+
+          // Accumulate usage from each continuation
+          if (finalMessage.usage) {
+            totalInputTokens += finalMessage.usage.input_tokens;
+            totalOutputTokens += finalMessage.usage.output_tokens;
+          }
 
           if (finalMessage.stop_reason === "pause_turn") {
             // Server-side tool loop hit limit — continue
@@ -132,6 +141,10 @@ export function streamGoalDetailChat(
         });
         controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
       } finally {
+        // Report accumulated usage
+        if (onUsage && (totalInputTokens > 0 || totalOutputTokens > 0)) {
+          try { onUsage(totalInputTokens, totalOutputTokens); } catch { /* non-blocking */ }
+        }
         controller.close();
       }
     },

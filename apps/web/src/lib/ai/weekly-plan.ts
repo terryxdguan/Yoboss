@@ -142,7 +142,10 @@ Generate this week's plan with daily tasks.`;
 
   const toolUse = response.content.find((block) => block.type === "tool_use");
   if (toolUse && toolUse.type === "tool_use") {
-    return toolUse.input as GeneratedWeeklyPlan;
+    const plan = toolUse.input as GeneratedWeeklyPlan;
+    // Attach usage for the caller to log
+    (plan as GeneratedWeeklyPlan & { _usage?: { input_tokens: number; output_tokens: number } })._usage = response.usage;
+    return plan;
   }
 
   throw new Error("AI did not produce a structured weekly plan");

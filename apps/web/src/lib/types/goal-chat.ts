@@ -16,6 +16,20 @@ export interface GoalPlanData {
     estimated_weeks: number;
     todos: { title: string; priority: "high" | "medium" | "low" }[];
   }[];
+  // For short goals: direct weekly schedule (skips manual "Generate with AI")
+  weekly_schedule?: {
+    ai_summary: string;
+    tasks: {
+      day_of_week: number;
+      title: string;
+      description: string;
+      time_estimate_minutes: number;
+      time_slot: string;
+      sort_order: number;
+    }[];
+  };
+  // Auto-generated goal todos (prep tasks, admin, etc.)
+  goal_todos?: { title: string; priority: "high" | "medium" | "low" }[];
 }
 
 // create_weekly_plan tool output

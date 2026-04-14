@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 import { getAnthropicClient, MODELS } from "@/lib/ai/client";
-import { withRateLimit } from "@/lib/ai/rate-limit";
+import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -64,16 +64,19 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
     const client = getAnthropicClient();
     const encoder = new TextEncoder();
 
+    const modelName = useOpus ? MODELS.opus : MODELS.sonnet;
     const stream = new ReadableStream({
       async start(controller) {
         let currentMessages = [...messages];
         let continuations = 0;
         const MAX_CONTINUATIONS = 5;
+        let totalInput = 0;
+        let totalOutput = 0;
 
         try {
           while (continuations < MAX_CONTINUATIONS) {
             const apiStream = client.messages.stream({
-              model: useOpus ? MODELS.opus : MODELS.sonnet,
+              model: modelName,
               max_tokens: 16000,
               system: systemPrompt,
               tools: SERVER_TOOLS,
@@ -86,6 +89,10 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
             }
 
             const finalMessage = await apiStream.finalMessage();
+            if (finalMessage.usage) {
+              totalInput += finalMessage.usage.input_tokens;
+              totalOutput += finalMessage.usage.output_tokens;
+            }
 
             if (finalMessage.stop_reason === "pause_turn") {
               currentMessages = [
@@ -107,6 +114,9 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
           });
           controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
         } finally {
+          if (totalInput > 0 || totalOutput > 0) {
+            logUsage(user.id, "agent-chat", modelName, totalInput, totalOutput).catch(() => {});
+          }
           controller.close();
         }
       },

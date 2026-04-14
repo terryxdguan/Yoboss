@@ -4,7 +4,7 @@ import {
   generateCoachingMessage,
   getFallbackCoachingMessage,
 } from "@/lib/ai/coach";
-import { withRateLimit } from "@/lib/ai/rate-limit";
+import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 
 // POST /api/ai/coach
 // Generates a daily coaching message (streaming)
@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
   try {
     const { context } = await request.json();
     const stream = await generateCoachingMessage(context);
+
+    stream.on("message", (msg) => {
+      if (msg.usage) {
+        logUsage(user.id, "coach", "claude-sonnet-4-6", msg.usage.input_tokens, msg.usage.output_tokens).catch(() => {});
+      }
+    });
 
     return new Response(stream.toReadableStream(), {
       headers: {

@@ -9,16 +9,16 @@ import { WorkflowRunView } from "@/components/workflow/workflow-run-view";
 import { WorkflowHistory } from "@/components/workflow/workflow-history";
 import { TopicInputModal } from "@/components/workflow/topic-input-modal";
 import { ScheduleModal } from "@/components/workflow/schedule-modal";
-import { deleteWorkflow, getUserTimezone, upsertUserTimezone } from "@/lib/db/actions";
+import { deleteWorkflow, getUserTimezone, upsertUserTimezone, createWorkflowRun, updateWorkflow, getWorkflowRuns } from "@/lib/db/actions";
 import type { WorkflowSummary } from "@/lib/types/database";
-import type { Workflow } from "@/lib/types/workflow";
+import type { Workflow, WorkflowRun } from "@/lib/types/workflow";
 
 const FAVORITES_KEY = "yoboss_favorite_workflows";
 
 /** Placeholder topics for known workflow names */
 const TOPIC_PLACEHOLDERS: Record<string, string> = {
   "Viral Social Post": "AI breakthroughs this week — which new model, tool, or research paper has the biggest real-world impact and why people should care",
-  "Deep Research Report": "Big Tech AI Wars 2026: How Google, Microsoft, Amazon, and Apple are betting billions on AI — competitive positioning, key moves, and which giant is best positioned for the next decade",
+  "Deep Research Report": "The impact of AI on the Gaming Industry in 2026",
   "Competitor Analysis": "OpenAI vs Anthropic: The race to build the most capable and safest AI — comparing models, pricing, enterprise adoption, developer experience, and long-term strategy",
 };
 
@@ -42,7 +42,7 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
   const [showPicker, setShowPicker] = useState(false);
 
   // Workflow action state
-  const [runningWorkflow, setRunningWorkflow] = useState<Workflow | null>(null);
+  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run: WorkflowRun } | null>(null);
   const [historyWorkflow, setHistoryWorkflow] = useState<Workflow | null>(null);
   const [topicWorkflow, setTopicWorkflow] = useState<Workflow | null>(null);
   const [scheduleWorkflow, setScheduleWorkflow] = useState<Workflow | null>(null);
@@ -77,9 +77,19 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
     saveFavorites(next);
   };
 
+  const startWorkflow = useCallback(async (wf: Workflow, topicOverride?: string) => {
+    try {
+      const initialResults = wf.steps.map((s) => ({ stepId: s.id, status: "pending" as const }));
+      const run = await createWorkflowRun({ workflowId: wf.id, totalSteps: wf.steps.length, stepResults: initialResults });
+      await updateWorkflow(wf.id, { status: "running" });
+      fetch("/api/workflows/execute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workflowId: wf.id, runId: run.id, ...(topicOverride ? { topic: topicOverride } : {}) }) }).catch(console.error);
+      setRunningWorkflow({ workflow: wf, run });
+    } catch (err) { console.error("Failed to start workflow:", err); }
+  }, []);
+
   const handleRun = (wf: Workflow) => {
     if (wf.topic) {
-      setRunningWorkflow(wf);
+      startWorkflow(wf);
     } else {
       setTopicWorkflow(wf);
     }
@@ -87,16 +97,24 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
 
   const handleTopicRun = (topic: string) => {
     if (!topicWorkflow) return;
-    const modifiedWf: Workflow = {
-      ...topicWorkflow,
-      steps: topicWorkflow.steps.map((s) => ({
-        ...s,
-        prompt: `Topic/Task: ${topic}\n\n${s.prompt}`,
-      })),
-    };
+    const wf = topicWorkflow;
     setTopicWorkflow(null);
-    setRunningWorkflow(modifiedWf);
+    startWorkflow(wf, topic);
   };
+
+  const handleViewProgress = useCallback(async (wf: Workflow) => {
+    try {
+      const runs = await getWorkflowRuns(wf.id);
+      const latestRunning = runs.find(r => r.status === "running") || runs[0];
+      if (latestRunning) {
+        setRunningWorkflow({ workflow: wf, run: latestRunning });
+      } else {
+        await updateWorkflow(wf.id, { status: "ready" });
+        router.refresh();
+        setHistoryWorkflow(wf);
+      }
+    } catch { setHistoryWorkflow(wf); }
+  }, [router]);
 
   const handleDelete = useCallback(async (wf: Workflow) => {
     if (!confirm(`Delete "${wf.name}"?`)) return;
@@ -149,6 +167,7 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
               onEdit={() => router.push(`/workflows/edit/${wf.id}`)}
               onDelete={() => handleDelete(wf)}
               onHistory={() => setHistoryWorkflow(wf)}
+              onViewProgress={() => handleViewProgress(wf)}
               onSchedule={() => {
                 if (!wf.topic) {
                   alert("Please set a Topic in the workflow editor before scheduling.");
@@ -184,7 +203,8 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
       )}
       {runningWorkflow && (
         <WorkflowRunView
-          workflow={runningWorkflow}
+          workflow={runningWorkflow.workflow}
+          existingRun={runningWorkflow.run}
           onClose={() => { setRunningWorkflow(null); router.refresh(); }}
           onComplete={() => router.refresh()}
         />

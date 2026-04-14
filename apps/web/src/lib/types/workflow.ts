@@ -36,6 +36,7 @@ export interface WorkflowStepResult {
   error?: string;
   durationMs?: number;
   files?: GeneratedFile[];
+  toolActivity?: { type: string; label: string }[];
 }
 
 export interface FollowUpMessage {

@@ -6,6 +6,9 @@ import { Plus, Layers } from "lucide-react";
 import {
   getWorkflows,
   deleteWorkflow,
+  createWorkflowRun,
+  updateWorkflow,
+  getWorkflowRuns,
 } from "@/lib/db/actions";
 import { WorkflowRunView } from "@/components/workflow/workflow-run-view";
 import { WorkflowHistory } from "@/components/workflow/workflow-history";
@@ -13,14 +16,14 @@ import { WorkflowCard } from "@/components/workflow/workflow-card";
 import { TopicInputModal } from "@/components/workflow/topic-input-modal";
 import { ScheduleModal } from "@/components/workflow/schedule-modal";
 import { getUserTimezone, upsertUserTimezone } from "@/lib/db/actions";
-import type { Workflow, WorkflowStep } from "@/lib/types/workflow";
+import type { Workflow, WorkflowStep, WorkflowRun } from "@/lib/types/workflow";
 
 const FAVORITES_KEY = "yoboss_favorite_workflows";
 
 /** Default placeholder topics per workflow name — shown as hint text in the topic input */
 const TOPIC_PLACEHOLDERS: Record<string, string> = {
   "Viral Social Post": "AI breakthroughs this week — which new model, tool, or research paper has the biggest real-world impact and why people should care",
-  "Deep Research Report": "Big Tech AI Wars 2026: How Google, Microsoft, Amazon, and Apple are betting billions on AI — competitive positioning, key moves, and which giant is best positioned for the next decade",
+  "Deep Research Report": "The impact of AI on the Gaming Industry in 2026",
   "Competitor Analysis": "OpenAI vs Anthropic: The race to build the most capable and safest AI — comparing models, pricing, enterprise adoption, developer experience, and long-term strategy",
 };
 
@@ -37,7 +40,7 @@ export default function WorkflowsPage() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
-  const [runningWorkflow, setRunningWorkflow] = useState<Workflow | null>(null);
+  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run: WorkflowRun } | null>(null);
   const [historyWorkflow, setHistoryWorkflow] = useState<Workflow | null>(null);
 
   // Topic input for workflows without a pre-set topic
@@ -78,31 +81,66 @@ export default function WorkflowsPage() {
     saveFavorites(next);
   };
 
+  // Start a workflow: create run record, fire server execution, open run view
+  const startWorkflow = useCallback(async (wf: Workflow, topic?: string) => {
+    try {
+      const initialResults = wf.steps.map((s) => ({ stepId: s.id, status: "pending" as const }));
+      const run = await createWorkflowRun({
+        workflowId: wf.id,
+        totalSteps: wf.steps.length,
+        stepResults: initialResults,
+      });
+      await updateWorkflow(wf.id, { status: "running" });
+
+      // Fire server-side execution (don't await — runs in background)
+      // Pass topic so server can inject it into step prompts
+      fetch("/api/workflows/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflowId: wf.id, runId: run.id, ...(topic ? { topic } : {}) }),
+      }).catch(console.error);
+
+      setRunningWorkflow({ workflow: wf, run });
+    } catch (err) {
+      console.error("Failed to start workflow:", err);
+    }
+  }, []);
+
   // Run workflow: if topic exists, run directly; if not, ask for topic first
   const handleRun = (wf: Workflow) => {
     if (wf.topic) {
-      // Topic is pre-set — run directly
-      setRunningWorkflow(wf);
+      startWorkflow(wf);
     } else {
-      // No topic — ask user for input
       setTopicWorkflow(wf);
     }
   };
 
-  // Topic entered — inject into step prompts and run (one-time, not saved)
+  // Topic entered — pass to server for injection into step prompts
   const handleTopicRun = async (topic: string) => {
     if (!topicWorkflow) return;
-    // Create a modified workflow with topic injected into prompts (in-memory only)
-    const modifiedWf: Workflow = {
-      ...topicWorkflow,
-      steps: topicWorkflow.steps.map((s) => ({
-        ...s,
-        prompt: `Topic/Task: ${topic}\n\n${s.prompt}`,
-      })),
-    };
+    const wf = topicWorkflow;
     setTopicWorkflow(null);
-    setRunningWorkflow(modifiedWf);
+    startWorkflow(wf, topic);
   };
+
+  // View progress: fetch the latest running run and open it directly
+  const handleViewProgress = useCallback(async (wf: Workflow) => {
+    try {
+      const runs = await getWorkflowRuns(wf.id);
+      const latestRunning = runs.find(r => r.status === "running") || runs[0];
+      if (latestRunning) {
+        setRunningWorkflow({ workflow: wf, run: latestRunning });
+      } else {
+        // No running run found — reset workflow status and open history instead
+        await updateWorkflow(wf.id, { status: "ready" });
+        loadWorkflows();
+        setHistoryWorkflow(wf);
+      }
+    } catch (err) {
+      console.error("Failed to load running workflow:", err);
+      setHistoryWorkflow(wf);
+    }
+  }, [loadWorkflows]);
 
   const allWorkflows = workflows;
 
@@ -141,6 +179,7 @@ export default function WorkflowsPage() {
                 onEdit={() => router.push(`/workflows/edit/${wf.id}`)}
                 onDelete={() => handleDelete(wf)}
                 onHistory={() => setHistoryWorkflow(wf)}
+                onViewProgress={() => handleViewProgress(wf)}
                 onSchedule={() => {
                   if (!wf.topic) {
                     alert("Please set a Topic in the workflow editor before scheduling. Scheduled workflows need a pre-defined topic to run automatically.");
@@ -158,7 +197,7 @@ export default function WorkflowsPage() {
       </div>
 
       {/* Modals */}
-      {runningWorkflow && <WorkflowRunView workflow={runningWorkflow} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
+      {runningWorkflow && <WorkflowRunView workflow={runningWorkflow.workflow} existingRun={runningWorkflow.run} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
       {historyWorkflow && <WorkflowHistory workflow={historyWorkflow} onClose={() => setHistoryWorkflow(null)} />}
       {topicWorkflow && (
         <TopicInputModal

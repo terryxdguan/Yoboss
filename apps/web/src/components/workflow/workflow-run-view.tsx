@@ -11,6 +11,7 @@ import {
   createWorkflowRun,
   updateWorkflowRun,
   updateWorkflow,
+  getWorkflowRunById,
 } from "@/lib/db/actions";
 import type {
   Workflow,
@@ -111,7 +112,8 @@ export function WorkflowRunView({
   onComplete,
   existingRun,
 }: WorkflowRunViewProps) {
-  const isHistoryMode = !!existingRun;
+  const isPollingMode = !!existingRun && existingRun.status === "running";
+  const isHistoryMode = !!existingRun && !isPollingMode;
 
   // Build initial messages from existing run
   const buildHistoryMessages = useCallback((): ChatMessage[] => {
@@ -119,6 +121,8 @@ export function WorkflowRunView({
     const msgs: ChatMessage[] = [];
     for (let i = 0; i < existingRun.step_results.length; i++) {
       const result = existingRun.step_results[i];
+      // Skip pending steps with no content — don't show empty skeleton cards
+      if (result.status === "pending") continue;
       const step = workflow.steps[i];
       const agent = step ? findAgent(step.agentId) : null;
       msgs.push({
@@ -168,7 +172,7 @@ export function WorkflowRunView({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
     buildHistoryMessages()
   );
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(isPollingMode ? existingRun!.current_step : 0);
   const [isRunning, setIsRunning] = useState(!isHistoryMode);
   const [overallStatus, setOverallStatus] = useState<"running" | "success" | "failed">(
     isHistoryMode ? (existingRun!.status as "success" | "failed") : "running"
@@ -648,13 +652,127 @@ export function WorkflowRunView({
     }
   }, [workflow, initStepResults, runStep, generateWorkflowSummary, onComplete]);
 
-  // Start on mount (skip in history mode)
+  // Poll the database for run progress (for background server execution)
+  useEffect(() => {
+    if (!isPollingMode || !existingRun) return;
+
+    let active = true;
+    let recoveryTriggered = false;
+    let lastStepResultsHash = "";
+
+    const pollInterval = setInterval(async () => {
+      if (!active) return;
+      try {
+        const run = await getWorkflowRunById(existingRun.id);
+        if (!run || !active) return;
+
+        // Auto-recovery: if still "running" but no DB changes for 20 min, trigger recovery
+        if (run.status === "running" && !recoveryTriggered) {
+          const currentHash = JSON.stringify(run.step_results.map(s => s.status + (s.output?.length || 0)));
+          if (currentHash === lastStepResultsHash) {
+            // No change since last poll — check if stale
+            const updatedAt = run.completed_at || run.started_at;
+            const staleMs = Date.now() - new Date(updatedAt).getTime();
+            // Also check the last step result update time heuristically
+            const lastRunningStep = run.step_results.findIndex(s => s.status === "running");
+            const hasPartialOutput = lastRunningStep >= 0 && run.step_results[lastRunningStep].output;
+
+            if (staleMs > 20 * 60 * 1000 || (staleMs > 5 * 60 * 1000 && !hasPartialOutput && lastStepResultsHash === currentHash)) {
+              // Stale for 20 min (or 5 min with no output) — try recovery
+              console.log("[WorkflowPoll] Run appears stale, triggering recovery...");
+              recoveryTriggered = true;
+              try {
+                const resp = await fetch("/api/workflows/recover", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ runId: run.id }),
+                });
+                const result = await resp.json();
+                console.log("[WorkflowPoll] Recovery result:", result);
+              } catch { /* will pick up on next poll */ }
+              return; // Skip this poll cycle, next cycle will read recovered data
+            }
+          }
+          lastStepResultsHash = currentHash;
+        }
+
+        // Update step results and current step
+        setStepResults(run.step_results);
+        setCurrentStep(run.current_step);
+
+        // Rebuild chat messages from step results
+        const msgs: ChatMessage[] = [];
+        for (let i = 0; i < run.step_results.length; i++) {
+          const result = run.step_results[i];
+          const step = workflow.steps[i];
+          const agent = step ? findAgent(step.agentId) : null;
+          if (result.output || result.error || result.status === "running") {
+            msgs.push({
+              id: `poll_step_${i}`,
+              type: "step",
+              stepIndex: i,
+              agentId: step?.agentId,
+              agentLabel: agent?.label || "Agent",
+              agentAvatar: agent?.avatar,
+              durationMs: result.durationMs,
+              generatedFiles: result.files as GeneratedFile[] | undefined,
+              toolActivity: result.toolActivity as ToolActivity[] | undefined,
+              content: result.output || result.error || "",
+              isStreaming: result.status === "running",
+            });
+          }
+        }
+
+        // Check for completion
+        if (run.status !== "running") {
+          clearInterval(pollInterval);
+          setIsRunning(false);
+          setOverallStatus(run.status === "success" ? "success" : "failed");
+
+          if (run.status === "success") {
+            msgs.push({ id: genId(), type: "system", content: `All ${run.total_steps} steps completed successfully.` });
+            const outputs = run.step_results.filter(r => r.output).map(r => r.output!);
+            if (outputs.length > 0) generateWorkflowSummary(outputs);
+          } else if (run.status === "cancelled") {
+            msgs.push({ id: genId(), type: "system", content: "Workflow was stopped by user." });
+          } else {
+            const failedStep = run.step_results.find(r => r.status === "failed");
+            msgs.push({ id: genId(), type: "system", content: failedStep?.error ? `Workflow failed: ${failedStep.error}` : "Workflow failed." });
+          }
+
+          // Restore follow-up messages
+          if (run.follow_up_messages) {
+            for (const fm of run.follow_up_messages) {
+              if (fm.type === "user") {
+                msgs.push({ id: genId(), type: "user", content: fm.content });
+              } else {
+                msgs.push({ id: genId(), type: "assistant", agentLabel: "General Assistant", agentAvatar: "/pink.png", content: fm.content, toolActivity: fm.toolActivity as ToolActivity[] | undefined, generatedFiles: fm.generatedFiles as GeneratedFile[] | undefined });
+              }
+            }
+          }
+
+          onComplete();
+        }
+
+        setChatMessages(msgs);
+      } catch {
+        // Non-blocking polling error
+      }
+    }, 2000);
+
+    return () => {
+      active = false;
+      clearInterval(pollInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPollingMode]);
+
+  // Start on mount (history mode only — polling/execute handled separately)
   useEffect(() => {
     if (hasStarted.current) return;
     hasStarted.current = true;
 
     if (isHistoryMode) {
-      // Generate summary from existing outputs for follow-up chat
       const outputs = existingRun!.step_results
         .filter((r) => r.output)
         .map((r) => r.output!);
@@ -662,7 +780,10 @@ export function WorkflowRunView({
       return;
     }
 
-    executeWorkflow();
+    if (!isPollingMode) {
+      // Fresh run without existingRun — legacy path (shouldn't happen with new flow)
+      executeWorkflow();
+    }
 
     return () => {
       abortRef.current?.abort();
@@ -671,7 +792,18 @@ export function WorkflowRunView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleStop = () => {
+  const handleStop = async () => {
+    // For polling mode: request server-side cancellation
+    const rid = runIdRef.current || existingRun?.id;
+    if (rid) {
+      try {
+        await fetch("/api/workflows/stop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ runId: rid }),
+        });
+      } catch { /* non-blocking */ }
+    }
     abortRef.current?.abort();
     setIsRunning(false);
     setOverallStatus("failed");
@@ -1100,7 +1232,11 @@ export function WorkflowRunView({
                         return (
                           <span
                             key={i}
-                            className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7FAEE6]/10 text-[#7FAEE6]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}
+                            className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
+                              isLatest
+                                ? "bg-[#7FAEE6]/15 text-[#7FAEE6] shadow-[0_0_12px_rgba(127,174,230,0.2)]"
+                                : "bg-[#F1ECE4] text-[#6F6A64]"
+                            }`}
                           >
                             {isLatest && (
                               <span className="relative flex h-2 w-2 shrink-0">
@@ -1109,11 +1245,11 @@ export function WorkflowRunView({
                               </span>
                             )}
                             {tool.type === "web_search" ? (
-                              <Globe className="h-3 w-3" />
+                              <Globe className="h-3.5 w-3.5" />
                             ) : tool.type === "web_fetch" ? (
-                              <Globe className="h-3 w-3" />
+                              <Globe className="h-3.5 w-3.5" />
                             ) : (
-                              <Code className="h-3 w-3" />
+                              <Code className="h-3.5 w-3.5" />
                             )}
                             {tool.label}
                           </span>
@@ -1133,9 +1269,17 @@ export function WorkflowRunView({
                       )}
                     </div>
                   ) : msg.isStreaming ? (
-                    <div className="flex items-center gap-2 text-sm text-[#9B948B]">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-pulse" />
-                      {toolStatus || "Thinking..."}
+                    <div className="flex items-center gap-3 py-1">
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                      <span className="text-sm text-[#7FAEE6] font-medium animate-pulse">
+                        {msg.toolActivity && msg.toolActivity.length > 0
+                          ? msg.toolActivity[msg.toolActivity.length - 1].label
+                          : "AI is working..."}
+                      </span>
                     </div>
                   ) : null}
 

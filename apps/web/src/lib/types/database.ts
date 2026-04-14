@@ -206,6 +206,7 @@ export interface DashboardStats {
 
 export interface DashboardWorkflowRun {
   id: string;
+  workflowId: string;
   workflowName: string;
   status: "running" | "success" | "failed";
   triggeredBy: "manual" | "scheduled";

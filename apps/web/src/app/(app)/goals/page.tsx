@@ -1,170 +1,122 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, ChevronLeft, ChevronRight, Clock } from "lucide-react";
-import { GoalInput } from "@/components/landing/goal-input";
-import { ExampleGoals } from "@/components/landing/example-goals";
-import { GoalChat } from "@/components/goals/goal-chat";
+import { Plus, Flag, Clock, X, Trash2, Archive, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/db/client";
-import type { Goal } from "@/lib/types/database";
+import type { Goal, Phase } from "@/lib/types/database";
 
-type ActiveTab = "new" | string; // "new" or goal.id
+interface GoalWithPhases extends Goal {
+  phases: Phase[];
+}
 
 export default function GoalsPage() {
   const router = useRouter();
-  const [goalText, setGoalText] = useState("");
-  const [chatActive, setChatActive] = useState(false);
-  const [submittedGoal, setSubmittedGoal] = useState("");
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals] = useState<GoalWithPhases[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("new");
+  const [mounted, setMounted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const tabsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const loadGoals = useCallback(async () => {
     const supabase = createClient();
-    supabase
+    const { data } = await supabase
       .from("goals")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setGoals(data || []);
-        setLoading(false);
-      });
+      .select("*, phases(*)")
+      .order("created_at", { ascending: false });
+    setGoals((data || []) as GoalWithPhases[]);
+    setLoading(false);
   }, []);
 
-  const handleSubmitGoal = (text: string) => {
-    setSubmittedGoal(text);
-    setChatActive(true);
-  };
+  useEffect(() => { setMounted(true); loadGoals(); }, [loadGoals]);
 
-  const handleCancel = () => {
-    setChatActive(false);
-    setSubmittedGoal("");
-    setGoalText("");
-  };
-
-  const handleCloseTab = async (goalId: string, e: React.MouseEvent) => {
+  const handleArchive = async (goal: GoalWithPhases, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Archive the goal (soft delete)
     const supabase = createClient();
-    await supabase.from("goals").update({ status: "archived" }).eq("id", goalId);
-    setGoals((prev) => prev.filter((g) => g.id !== goalId));
-    if (activeTab === goalId) setActiveTab("new");
+    await supabase.from("goals").update({ status: "archived" }).eq("id", goal.id);
+    loadGoals();
   };
 
-  const scrollTabs = (direction: "left" | "right") => {
-    if (tabsRef.current) {
-      tabsRef.current.scrollBy({ left: direction === "left" ? -200 : 200, behavior: "smooth" });
-    }
+  const handleDelete = async (goal: GoalWithPhases, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Delete "${goal.title}"? This cannot be undone.`)) return;
+    const supabase = createClient();
+    await supabase.from("goals").delete().eq("id", goal.id);
+    loadGoals();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-[#9B948B]">Loading...</div>
-      </div>
-    );
-  }
+  if (!mounted) return <div className="flex items-center justify-center py-24"><div className="text-sm text-[#9B948B]">Loading...</div></div>;
 
-  const activeGoals = goals.filter((g) => g.status !== "archived");
+  const activeGoals = goals.filter(g => g.status !== "archived");
+  const archivedGoals = goals.filter(g => g.status === "archived");
 
   return (
-    <div className="-mx-6 md:-mx-8 -mb-12">
-      {/* Tab Bar */}
-      <div className="flex items-center border-b border-[#E7DED2] bg-[#F6F3EE] px-2">
-        {/* Scroll left */}
-        {activeGoals.length > 4 && (
-          <button
-            onClick={() => scrollTabs("left")}
-            className="p-1 text-[#9B948B] hover:text-[#2B2B2B] shrink-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        )}
-
-        {/* Tabs */}
-        <div ref={tabsRef} className="flex-1 flex items-center overflow-x-auto scrollbar-hide">
-          {/* Goal tab — always first, clicking goes to create view */}
-          <button
-            onClick={() => { setActiveTab("new"); setChatActive(false); }}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 ${
-              activeTab === "new"
-                ? "border-[#7FAEE6] text-[#7FAEE6] bg-[#FFFDF9]"
-                : "border-transparent text-[#6F6A64] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
-            }`}
-          >
-            Goal
-          </button>
-
-          {/* Goal tabs */}
-          {activeGoals.map((goal) => (
-            <div
-              key={goal.id}
-              onClick={() => { setActiveTab(goal.id); setChatActive(false); }}
-              className={`group flex items-center gap-1.5 pl-4 pr-2 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 max-w-[200px] cursor-pointer ${
-                activeTab === goal.id
-                  ? "border-[#7FAEE6] text-[#2B2B2B] bg-[#FFFDF9]"
-                  : "border-transparent text-[#6F6A64] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full shrink-0 ${
-                goal.status === "active" ? "bg-[#7FB38A]" : "bg-[#9B948B]"
-              }`} />
-              <span className="truncate">{goal.title}</span>
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-full px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-[#2B2B2B]">Goals</h1>
+            <p className="text-sm text-[#6F6A64] mt-1">Set goals and let AI help you plan and execute</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {archivedGoals.length > 0 && (
               <button
-                onClick={(e) => handleCloseTab(goal.id, e)}
-                className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-[#D5847A]/10 transition-all shrink-0 ml-1"
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors"
               >
-                <X className="h-3 w-3 text-[#9B948B] hover:text-[#D5847A]" />
+                <Clock className="h-4 w-4" />
+                History
               </button>
-            </div>
-          ))}
+            )}
+            <button
+              onClick={() => router.push("/goals/create")}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New Goal
+            </button>
+          </div>
         </div>
 
-        {/* Scroll right */}
-        {activeGoals.length > 4 && (
-          <button
-            onClick={() => scrollTabs("right")}
-            className="p-1 text-[#9B948B] hover:text-[#2B2B2B] shrink-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        )}
+        {/* All Goals */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="h-4 w-4 text-[#7FAEE6]" />
+            <h2 className="text-base font-semibold text-[#2B2B2B]">All Goals</h2>
+          </div>
 
-        {/* History button */}
-        <button
-          onClick={() => setShowHistory(true)}
-          className="flex items-center gap-1 px-3 py-2 text-xs text-[#9B948B] hover:text-[#2B2B2B] transition-colors shrink-0 border-l border-[#E7DED2] ml-1"
-        >
-          <Clock className="h-3.5 w-3.5" />
-          History
-        </button>
-      </div>
+          {!loading && activeGoals.length === 0 && (
+            <div className="text-center py-16 bg-[#FFFDF9] rounded-xl border border-dashed border-[#E7DED2]">
+              <Flag className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
+              <p className="text-sm text-[#9B948B] mb-1">No goals yet</p>
+              <p className="text-xs text-[#9B948B]">Create your first goal to get started</p>
+            </div>
+          )}
 
-      {/* Tab Content */}
-      <div className="px-6 md:px-8 pt-3 pb-12">
-        {activeTab === "new" ? (
-          chatActive ? (
-            <GoalChat initialGoal={submittedGoal} onCancel={handleCancel} />
-          ) : (
-            <NewGoalView
-              goalText={goalText}
-              setGoalText={setGoalText}
-              onSubmit={handleSubmitGoal}
-            />
-          )
-        ) : (
-          <GoalRedirect goalId={activeTab} />
-        )}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {activeGoals.map(goal => (
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                onClick={() => router.push(`/goals/${goal.id}`)}
+                onArchive={(e) => handleArchive(goal, e)}
+                onDelete={(e) => handleDelete(goal, e)}
+              />
+            ))}
+          </div>
+        </section>
       </div>
 
       {/* History Modal */}
       {showHistory && (
         <HistoryModal
-          goals={goals}
-          onSelect={(id) => { setActiveTab(id); setShowHistory(false); }}
+          goals={archivedGoals}
+          onSelect={(id) => { setShowHistory(false); router.push(`/goals/${id}`); }}
+          onRestore={async (id) => {
+            const supabase = createClient();
+            await supabase.from("goals").update({ status: "active" }).eq("id", id);
+            loadGoals();
+          }}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -172,66 +124,115 @@ export default function GoalsPage() {
   );
 }
 
-function NewGoalView({
-  goalText,
-  setGoalText,
-  onSubmit,
+/* ---------- GoalCard ---------- */
+
+function GoalCard({
+  goal,
+  onClick,
+  onArchive,
+  onDelete,
 }: {
-  goalText: string;
-  setGoalText: (v: string) => void;
-  onSubmit: (text: string) => void;
+  goal: GoalWithPhases;
+  onClick: () => void;
+  onArchive: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
 }) {
-  return (
-    <section className="max-w-3xl mx-auto text-center">
-      <div className="overflow-hidden h-[140px] md:h-[170px] mb-2">
-        <img
-          src="/Goal_Planner.PNG"
-          alt="YoBoss — Goal Planner"
-          className="mx-auto max-w-xs w-full h-auto object-cover object-center"
-        />
-      </div>
+  const phases = (goal.phases || []).sort((a, b) => a.sort_order - b.sort_order);
+  const totalPhases = phases.length;
+  const completedPhases = phases.filter(p => p.status === "completed").length;
+  const activePhase = phases.find(p => p.status === "active");
+  const progress = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
 
-      <h1 className="text-xl md:text-2xl font-semibold text-[#2B2B2B] mb-1">
-        What&apos;s the next thing you want to do?
-      </h1>
-      <p className="text-xs text-[#6F6A64] mb-4">
-        Describe your goal and we&apos;ll help you create an actionable plan
-      </p>
-
-      <GoalInput
-        value={goalText}
-        onChange={setGoalText}
-        onSubmit={onSubmit}
-      />
-
-      <div className="mt-3">
-        <ExampleGoals onSelect={(text) => setGoalText(text)} compact />
-      </div>
-    </section>
-  );
-}
-
-function GoalRedirect({ goalId }: { goalId: string }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.push(`/goals/${goalId}`);
-  }, [goalId, router]);
+  const statusConfig = {
+    active: { dot: "bg-[#7FB38A]", label: "Active", badge: "bg-[#7FB38A]/10 text-[#7FB38A]" },
+    completed: { dot: "bg-[#7FAEE6]", label: "Completed", badge: "bg-[#7FAEE6]/10 text-[#7FAEE6]" },
+    archived: { dot: "bg-[#9B948B]", label: "Archived", badge: "bg-[#F1ECE4] text-[#9B948B]" },
+  };
+  const status = statusConfig[goal.status] || statusConfig.active;
 
   return (
-    <div className="flex items-center justify-center py-24">
-      <div className="text-sm text-[#9B948B]">Loading goal...</div>
+    <div
+      onClick={onClick}
+      className="group rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-5 cursor-pointer transition-all hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7]"
+    >
+      {/* Title + Status */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="text-sm font-semibold text-[#2B2B2B] line-clamp-1 flex-1">{goal.title}</h3>
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${status.badge}`}>
+          {status.label}
+        </span>
+      </div>
+
+      {/* Description */}
+      {goal.description && (
+        <p className="text-xs text-[#6F6A64] line-clamp-2 mb-3">{goal.description}</p>
+      )}
+      {!goal.description && <div className="mb-3" />}
+
+      {/* Phase Progress */}
+      {totalPhases > 0 ? (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] text-[#6F6A64]">
+              {activePhase
+                ? `Phase ${phases.indexOf(activePhase) + 1} of ${totalPhases} — ${activePhase.title}`
+                : goal.status === "completed"
+                  ? "All phases completed"
+                  : `${totalPhases} phases`
+              }
+            </span>
+            <span className="text-[11px] font-medium text-[#2B2B2B]">{progress}%</span>
+          </div>
+          <div className="h-1.5 bg-[#F1ECE4] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all bg-[#7FB38A]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="mb-3">
+          <span className="text-[11px] text-[#9B948B]">No phases yet</span>
+        </div>
+      )}
+
+      {/* Footer: date + actions */}
+      <div className="flex items-center justify-between pt-2 border-t border-[#F1ECE4]">
+        <span className="text-[10px] text-[#9B948B]">
+          {new Date(goal.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </span>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={onArchive}
+            className="p-1.5 rounded-lg text-[#9B948B] hover:text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+            title="Archive"
+          >
+            <Archive className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
+/* ---------- History Modal ---------- */
+
 function HistoryModal({
   goals,
   onSelect,
+  onRestore,
   onClose,
 }: {
-  goals: Goal[];
+  goals: GoalWithPhases[];
   onSelect: (id: string) => void;
+  onRestore: (id: string) => void;
   onClose: () => void;
 }) {
   return (
@@ -240,8 +241,8 @@ function HistoryModal({
       <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[70vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
           <div>
-            <h2 className="text-lg font-semibold text-[#2B2B2B]">Goal History</h2>
-            <p className="text-sm text-[#6F6A64] mt-0.5">{goals.length} goals total</p>
+            <h2 className="text-lg font-semibold text-[#2B2B2B]">Archived Goals</h2>
+            <p className="text-sm text-[#6F6A64] mt-0.5">{goals.length} archived goals</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4]">
             <X className="h-5 w-5" />
@@ -250,32 +251,31 @@ function HistoryModal({
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
           {goals.map((goal) => (
-            <button
+            <div
               key={goal.id}
-              onClick={() => onSelect(goal.id)}
-              className="w-full text-left rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 hover:border-[#7FAEE6]/30 transition-all group"
+              className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 hover:border-[#7FAEE6]/30 transition-all"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-[#2B2B2B]">{goal.title}</h3>
-                  {goal.description && (
-                    <p className="text-xs text-[#6F6A64] mt-0.5 line-clamp-1">{goal.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-3">
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                    goal.status === "active" ? "bg-[#7FB38A]/10 text-[#7FB38A]"
-                    : goal.status === "completed" ? "bg-[#7FAEE6]/10 text-[#7FAEE6]"
-                    : "bg-[#F1ECE4] text-[#9B948B]"
-                  }`}>
-                    {goal.status}
-                  </span>
-                  <span className="text-[10px] text-[#9B948B]">
-                    {new Date(goal.created_at).toLocaleDateString()}
-                  </span>
-                </div>
+              <div
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => onSelect(goal.id)}
+              >
+                <h3 className="text-sm font-semibold text-[#2B2B2B]">{goal.title}</h3>
+                {goal.description && (
+                  <p className="text-xs text-[#6F6A64] mt-0.5 line-clamp-1">{goal.description}</p>
+                )}
               </div>
-            </button>
+              <span className="text-[10px] text-[#9B948B] shrink-0">
+                {new Date(goal.created_at).toLocaleDateString()}
+              </span>
+              <button
+                onClick={() => onRestore(goal.id)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7FAEE6] hover:bg-[#7FAEE6]/10 transition-colors shrink-0"
+                title="Restore to active"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Restore
+              </button>
+            </div>
           ))}
         </div>
       </div>

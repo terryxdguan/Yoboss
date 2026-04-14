@@ -8,7 +8,8 @@ import type {
   UserAnswer,
   AskQuestionData,
 } from "@/lib/types/goal-chat";
-import { createGoal, createPhases } from "@/lib/db/actions";
+import { createGoal, createPhases, createWeeklyPlan, createDailyTasks, addTodo } from "@/lib/db/actions";
+import { getWeekStart } from "@/lib/utils/date";
 
 let msgCounter = 0;
 function genId() {
@@ -310,7 +311,7 @@ export function useGoalChat() {
         description: plan.goal_description,
       });
 
-      await createPhases(
+      const phases = await createPhases(
         goal.id,
         plan.phases.map((p) => ({
           title: p.title,
@@ -318,6 +319,34 @@ export function useGoalChat() {
           estimated_weeks: p.estimated_weeks,
         }))
       );
+
+      // For short goals: save the direct weekly schedule
+      if (plan.weekly_schedule && phases.length > 0) {
+        const firstPhase = phases[0];
+        const weeklyPlan = await createWeeklyPlan({
+          phase_id: firstPhase.id,
+          week_start: getWeekStart(),
+          ai_summary: plan.weekly_schedule.ai_summary,
+        });
+        await createDailyTasks(
+          weeklyPlan.id,
+          plan.weekly_schedule.tasks.map((t) => ({
+            day_of_week: t.day_of_week,
+            title: t.title,
+            description: t.description,
+            time_estimate_minutes: t.time_estimate_minutes,
+            time_slot: t.time_slot,
+            sort_order: t.sort_order,
+          }))
+        );
+      }
+
+      // Save auto-generated goal todos
+      if (plan.goal_todos && plan.goal_todos.length > 0) {
+        for (const todo of plan.goal_todos) {
+          await addTodo(todo.title, "Goal", todo.priority, null, goal.id);
+        }
+      }
 
       setStage("done");
       return goal.id;

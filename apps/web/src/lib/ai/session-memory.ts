@@ -11,7 +11,7 @@ const MAX_RECENT_MESSAGES = 5;
 export async function generateSessionSummary(
   oldSummary: string | null,
   messagesToCompress: { role: string; content: string }[]
-): Promise<string> {
+): Promise<{ summary: string; usage?: { input_tokens: number; output_tokens: number } }> {
   const client = getAnthropicClient();
 
   const conversationText = messagesToCompress
@@ -29,7 +29,10 @@ export async function generateSessionSummary(
   });
 
   const textBlock = response.content.find((b) => b.type === "text");
-  return textBlock?.text || oldSummary || "";
+  return {
+    summary: textBlock?.text || oldSummary || "",
+    usage: response.usage,
+  };
 }
 
 /**

@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Flag, ListChecks, RefreshCw, Users, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Flag, ListChecks, RefreshCw, Users, ChevronDown, ChevronUp, ChevronRight, Clock, Package } from "lucide-react";
 import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
+import { getWorkflowRunById } from "@/lib/db/actions";
+import { WorkflowRunView } from "@/components/workflow/workflow-run-view";
+import { DeliverablesModal } from "@/components/workflow/deliverables-panel";
 import type { DashboardStats as DashboardStatsType } from "@/lib/types/database";
+import type { Workflow, WorkflowRun } from "@/lib/types/workflow";
 
 interface DashboardStatsProps {
   stats: DashboardStatsType;
+  workflows: Workflow[];
 }
 
 const HIRED_KEY = "yoboss_hired_agents";
@@ -24,12 +29,42 @@ function getTeamCount(): number {
   }
 }
 
-export function DashboardStats({ stats }: DashboardStatsProps) {
+export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
   const [showRuns, setShowRuns] = useState(false);
   const [teamCount, setTeamCount] = useState(DEFAULT_AGENTS.length);
+  const [detailRun, setDetailRun] = useState<{ run: WorkflowRun; workflow: Workflow } | null>(null);
+  const [deliverablesRun, setDeliverablesRun] = useState<WorkflowRun | null>(null);
+  const [loadingRunId, setLoadingRunId] = useState<string | null>(null);
 
   useEffect(() => {
     setTeamCount(getTeamCount());
+  }, []);
+
+  const handleViewDetails = useCallback(async (runId: string, workflowId: string) => {
+    setLoadingRunId(runId);
+    try {
+      const run = await getWorkflowRunById(runId);
+      const wf = workflows.find(w => w.id === workflowId);
+      if (run && wf) {
+        setDetailRun({ run, workflow: wf });
+      }
+    } catch (err) {
+      console.error("Failed to load run:", err);
+    } finally {
+      setLoadingRunId(null);
+    }
+  }, [workflows]);
+
+  const handleDeliverables = useCallback(async (runId: string) => {
+    setLoadingRunId(runId);
+    try {
+      const run = await getWorkflowRunById(runId);
+      if (run) setDeliverablesRun(run);
+    } catch (err) {
+      console.error("Failed to load run:", err);
+    } finally {
+      setLoadingRunId(null);
+    }
   }, []);
 
   const totalPendingTodos = stats.pendingGoalTodos + stats.pendingPersonalTodos;
@@ -130,19 +165,18 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
         </div>
       </div>
 
-      {/* Expandable today's workflow runs — max height with scroll */}
+      {/* Expandable today's workflow runs */}
       {showRuns && (
         <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <h3 className="text-sm font-semibold text-[#2B2B2B] mb-2">Today&apos;s Workflow Runs</h3>
           {stats.todayRuns.length === 0 ? (
             <p className="text-xs text-[#9B948B] py-3 text-center">No runs today</p>
           ) : (
-            <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
+            <div className="divide-y divide-dashed divide-[#E7DED2] max-h-[240px] overflow-y-auto">
               {stats.todayRuns.map((run) => (
-                <a
+                <div
                   key={run.id}
-                  href="/workflows"
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[#F6F3EE] transition-colors"
+                  className="flex items-center gap-3 px-3 py-2.5"
                 >
                   <span
                     className={`h-2 w-2 rounded-full shrink-0 ${
@@ -154,6 +188,27 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                   <span className="text-sm font-medium text-[#2B2B2B] flex-1 truncate">
                     {run.workflowName}
                   </span>
+
+                  {/* Action buttons — styled like Run History */}
+                  <button
+                    onClick={() => handleViewDetails(run.id, run.workflowId)}
+                    disabled={loadingRunId === run.id}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    View Detail
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                  {run.status === "success" && (
+                    <button
+                      onClick={() => handleDeliverables(run.id)}
+                      disabled={loadingRunId === run.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors shrink-0 disabled:opacity-50"
+                    >
+                      <Package className="h-3.5 w-3.5" />
+                      Deliverables
+                    </button>
+                  )}
+
                   <span className="text-[10px] uppercase tracking-wider text-[#9B948B] shrink-0">
                     {run.triggeredBy}
                   </span>
@@ -161,11 +216,29 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
                     <Clock className="h-3 w-3" />
                     {new Date(run.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                </a>
+                </div>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {/* View Details modal */}
+      {detailRun && (
+        <WorkflowRunView
+          workflow={detailRun.workflow}
+          existingRun={detailRun.run}
+          onClose={() => setDetailRun(null)}
+          onComplete={() => setDetailRun(null)}
+        />
+      )}
+
+      {/* Deliverables modal */}
+      {deliverablesRun && (
+        <DeliverablesModal
+          run={deliverablesRun}
+          onClose={() => setDeliverablesRun(null)}
+        />
       )}
     </div>
   );
