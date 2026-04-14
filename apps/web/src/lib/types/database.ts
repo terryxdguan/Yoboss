@@ -170,6 +170,12 @@ export interface UserQuota {
   cost_this_month_cents: number;
   last_reset_date: string;
   last_month_reset: string;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status?: string | null;
+  subscription_current_period_end?: string | null;
+  monthly_allowance_cents?: number | null;
+  credits_balance_cents?: number | null;
 }
 
 export interface AiUsageRecord {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Calendar, Globe, Check, Zap, BarChart3 } from "lucide-react";
+import { Calendar, Globe, Check, Zap, BarChart3, CreditCard, Sparkles } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
-  getUserQuota,
+  getBillingState,
   getMonthlyUsageSummary,
   getRecentAiUsage,
   getUserTimezone,
@@ -34,6 +34,7 @@ const TIMEZONES = [
 
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   free: { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", label: "Free" },
+  basic: { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", label: "Basic" },
   pro: { bg: "bg-[#7FAEE6]/10", text: "text-[#7FAEE6]", label: "Pro" },
   team: { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", label: "Team" },
 };
@@ -87,6 +88,7 @@ export default function AccountPage() {
   const [timezone, setTimezone] = useState("UTC");
   const [tzSaved, setTzSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -107,7 +109,7 @@ export default function AccountPage() {
         }
 
         const [q, m, u, tz] = await Promise.all([
-          getUserQuota(),
+          getBillingState(),
           getMonthlyUsageSummary(),
           getRecentAiUsage(30, 0),
           getUserTimezone(),
@@ -149,6 +151,24 @@ export default function AccountPage() {
     }
   }, [usage.length]);
 
+  async function handleManageSubscription() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Failed to open portal");
+      }
+    } catch (err) {
+      console.error("Portal error:", err);
+      alert("Failed to open portal");
+    } finally {
+      setPortalLoading(false);
+    }
+  }
+
   async function handleTimezoneChange(newTz: string) {
     setTimezone(newTz);
     try {
@@ -176,6 +196,16 @@ export default function AccountPage() {
   const requestPct = Math.min(100, Math.round((requestsToday / dailyLimit) * 100));
   const dailyCostPct = Math.min(100, Math.round((costToday / dailyCostLimit) * 100));
   const monthlyCostPct = Math.min(100, Math.round((costMonth / monthlyCostLimit) * 100));
+
+  // Billing-specific derived state
+  const monthlyAllowance = quota?.monthly_allowance_cents ?? 500;
+  const allowanceUsed = quota && quota.last_month_reset === thisMonth
+    ? Math.min(quota.cost_this_month_cents, monthlyAllowance)
+    : 0;
+  const allowancePct = Math.min(100, Math.round((allowanceUsed / monthlyAllowance) * 100));
+  const creditsBalance = quota?.credits_balance_cents ?? 0;
+  const hasStripeCustomer = !!quota?.stripe_customer_id;
+  const subscriptionPeriodEnd = quota?.subscription_current_period_end ?? null;
 
   if (loading) {
     return (
@@ -249,6 +279,96 @@ export default function AccountPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Section: Subscription & Billing */}
+      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7FAEE6]/10">
+            <CreditCard className="h-4 w-4 text-[#7FAEE6]" />
+          </div>
+          <h2 className="text-sm font-semibold text-[#2B2B2B]">Subscription & Billing</h2>
+        </div>
+
+        {/* Checkout result banner */}
+        {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && (
+          <div className="mb-4 rounded-lg border border-[#7FB38A]/30 bg-[#7FB38A]/10 px-4 py-2.5 flex items-center gap-2">
+            <Check className="h-4 w-4 text-[#7FB38A]" />
+            <span className="text-sm text-[#2B2B2B]">Payment successful. Your plan is active.</span>
+          </div>
+        )}
+        {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "cancelled" && (
+          <div className="mb-4 rounded-lg border border-[#D4B06A]/30 bg-[#D4B06A]/10 px-4 py-2.5 flex items-center gap-2">
+            <span className="text-sm text-[#2B2B2B]">Checkout cancelled. No charges were made.</span>
+          </div>
+        )}
+
+        {/* Current plan + actions */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#6F6A64]">Current Plan</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${tierStyle.bg} ${tierStyle.text}`}>
+                {tierStyle.label}
+              </span>
+            </div>
+            {subscriptionPeriodEnd && (
+              <p className="text-xs text-[#9B948B] mt-1">
+                Renews {new Date(subscriptionPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href="/pricing"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors"
+            >
+              {tier === "free" ? "Upgrade Plan" : "Change Plan"}
+            </a>
+            {hasStripeCustomer && (
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50"
+              >
+                {portalLoading ? "Loading..." : "Manage"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Monthly allowance progress */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-[#6F6A64] font-medium">Monthly Allowance</span>
+            <span className="text-[#2B2B2B] font-semibold">
+              {formatCost(allowanceUsed)} / {formatCost(monthlyAllowance)}
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
+            <div
+              className={`h-full rounded-full transition-all ${progressColor(allowancePct)}`}
+              style={{ width: `${allowancePct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Credits balance */}
+        <div className="flex items-center justify-between rounded-lg border border-[#E7DED2] bg-[#FAF9F6] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#D4B06A]" />
+            <div>
+              <p className="text-xs text-[#6F6A64]">Credits Balance</p>
+              <p className="text-lg font-bold text-[#2B2B2B]">{formatCost(creditsBalance)}</p>
+            </div>
+          </div>
+          <a
+            href="/pricing"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#7FAEE6] text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
+          >
+            Buy Credits
+          </a>
         </div>
       </div>
 
