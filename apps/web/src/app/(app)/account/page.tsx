@@ -206,6 +206,7 @@ export default function AccountPage() {
   const creditsBalance = quota?.credits_balance_cents ?? 0;
   const hasStripeCustomer = !!quota?.stripe_customer_id;
   const subscriptionPeriodEnd = quota?.subscription_current_period_end ?? null;
+  const cancelAtPeriodEnd = !!quota?.cancel_at_period_end;
 
   if (loading) {
     return (
@@ -312,20 +313,42 @@ export default function AccountPage() {
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${tierStyle.bg} ${tierStyle.text}`}>
                 {tierStyle.label}
               </span>
+              {cancelAtPeriodEnd && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#D4B06A]/10 text-[#C99442]">
+                  Canceling
+                </span>
+              )}
             </div>
             {subscriptionPeriodEnd && (
               <p className="text-xs text-[#9B948B] mt-1">
-                Renews {new Date(subscriptionPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                {cancelAtPeriodEnd ? "Cancels " : "Renews "}
+                {new Date(subscriptionPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </p>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <a
-              href="/pricing"
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors"
-            >
-              {tier === "free" ? "Upgrade Plan" : "Change Plan"}
-            </a>
+            {/* Free users see an Upgrade CTA that goes through checkout.
+                Paid users see a subtle "View plans" link (for browsing the
+                tier comparison) plus Manage → portal, which is the single
+                source of truth for plan changes, cancellation, and payment
+                methods. The pricing page itself now has guards so any
+                tier-change click routes to the portal instead of creating a
+                duplicate subscription. */}
+            {tier === "free" ? (
+              <a
+                href="/pricing"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors"
+              >
+                Upgrade Plan
+              </a>
+            ) : (
+              <a
+                href="/pricing"
+                className="px-3 py-1.5 text-xs font-medium text-[#7FAEE6] hover:text-[#6A9DDA] hover:underline transition-colors"
+              >
+                View plans
+              </a>
+            )}
             {hasStripeCustomer && (
               <button
                 onClick={handleManageSubscription}

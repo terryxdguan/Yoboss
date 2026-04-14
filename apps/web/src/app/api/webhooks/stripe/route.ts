@@ -79,12 +79,29 @@ export async function POST(request: NextRequest) {
         // Find the user via customer id
         const { data: quota } = await admin
           .from("user_quotas")
-          .select("user_id, cost_this_month_cents")
+          .select("user_id, cost_this_month_cents, stripe_subscription_id")
           .eq("stripe_customer_id", sub.customer as string)
           .single();
 
         if (!quota) {
           console.error("[stripe webhook] No quota row for customer", sub.customer);
+          break;
+        }
+
+        // If we're already tracking a *different* subscription for this
+        // customer (duplicate subs, stale webhook replays, manual Stripe
+        // Dashboard edits, etc.), ignore updates from the non-tracked one.
+        // Otherwise we'd let a stale subscription silently overwrite the
+        // user's real billing state. `created` events always take precedence
+        // so a fresh checkout can replace a previously-canceled sub.
+        if (
+          event.type === "customer.subscription.updated" &&
+          quota.stripe_subscription_id &&
+          quota.stripe_subscription_id !== sub.id
+        ) {
+          console.warn(
+            `[stripe webhook] Ignoring update for untracked sub ${sub.id}; tracked=${quota.stripe_subscription_id}`
+          );
           break;
         }
 
@@ -96,16 +113,36 @@ export async function POST(request: NextRequest) {
           (firstItem as unknown as { current_period_end?: number })?.current_period_end ??
           (sub as unknown as { current_period_end?: number }).current_period_end;
 
+        // Detect "scheduled to cancel at period end" in a version-proof way.
+        // API 2026-03-25.dahlia no longer populates `cancel_at_period_end`
+        // (it's always false). Instead, `cancel_at` is set to the future
+        // Unix timestamp when cancellation will take effect. Older API
+        // versions populated `cancel_at_period_end` directly. Support both.
+        const rawSub = sub as unknown as {
+          cancel_at_period_end?: boolean;
+          cancel_at?: number | null;
+          ended_at?: number | null;
+        };
+        const cancelAtPeriodEnd = Boolean(
+          rawSub.cancel_at_period_end || (rawSub.cancel_at && !rawSub.ended_at)
+        );
+
+        // When a cancellation is scheduled, `cancel_at` is the canonical end
+        // date (may differ from the billing period end for custom schedules).
+        // Fall back to billing period end for the normal renewal case.
+        const effectiveEndUnix = rawSub.cancel_at ?? periodEnd;
+
         await admin
           .from("user_quotas")
           .update({
             stripe_subscription_id: sub.id,
             subscription_status: wasActive ? "active" : sub.status,
-            subscription_current_period_end: periodEnd
-              ? new Date(periodEnd * 1000).toISOString()
+            subscription_current_period_end: effectiveEndUnix
+              ? new Date(effectiveEndUnix * 1000).toISOString()
               : null,
             monthly_allowance_cents: wasActive ? allowance : TIERS.free.monthlyAllowanceCents,
             tier,
+            cancel_at_period_end: cancelAtPeriodEnd,
           })
           .eq("user_id", quota.user_id);
         break;
@@ -113,13 +150,38 @@ export async function POST(request: NextRequest) {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
+
+        // Only downgrade if the deleted subscription is the one we're
+        // tracking. Otherwise a duplicate / stale sub being cleaned up
+        // would incorrectly reset the user to free even though their
+        // real subscription is still active.
+        const { data: quota } = await admin
+          .from("user_quotas")
+          .select("stripe_subscription_id")
+          .eq("stripe_customer_id", sub.customer as string)
+          .single();
+
+        if (!quota) {
+          console.error("[stripe webhook] No quota row for customer", sub.customer);
+          break;
+        }
+
+        if (quota.stripe_subscription_id && quota.stripe_subscription_id !== sub.id) {
+          console.warn(
+            `[stripe webhook] Ignoring delete for untracked sub ${sub.id}; tracked=${quota.stripe_subscription_id}`
+          );
+          break;
+        }
+
         await admin
           .from("user_quotas")
           .update({
             subscription_status: "canceled",
             stripe_subscription_id: null,
+            subscription_current_period_end: null,
             monthly_allowance_cents: TIERS.free.monthlyAllowanceCents,
             tier: "free",
+            cancel_at_period_end: false,
           })
           .eq("stripe_customer_id", sub.customer as string);
         break;

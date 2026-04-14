@@ -43,6 +43,41 @@ export async function POST(request: NextRequest) {
     if (tier === "free" || !TIERS[tier]?.stripePriceId) {
       return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
     }
+
+    // Guard: a customer must have AT MOST ONE active subscription at any time.
+    // Without this check, a Pro user could POST this endpoint again and Stripe
+    // would happily create a second parallel subscription — billing twice for
+    // the same plan. To change plans, users must go through the Customer Portal,
+    // which swaps the price on the existing subscription instead of creating a
+    // new one. We check Stripe directly (not the DB) because Stripe is the
+    // source of truth — if the DB is out of sync for any reason, this still
+    // prevents duplicate billing.
+    const existing = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+    });
+    const liveStatuses = new Set([
+      "active",
+      "trialing",
+      "past_due",
+      "unpaid",
+      "incomplete",
+    ]);
+    const hasLiveSub = existing.data.some(
+      (sub) => liveStatuses.has(sub.status) && !sub.ended_at
+    );
+    if (hasLiveSub) {
+      return NextResponse.json(
+        {
+          error:
+            "You already have an active subscription. To change plans, use the Manage button in your account to open the billing portal.",
+          code: "already_subscribed",
+        },
+        { status: 409 }
+      );
+    }
+
     priceId = TIERS[tier].stripePriceId!;
     mode = "subscription";
     metadata = { kind: "subscription", tier, user_id: user.id };

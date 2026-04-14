@@ -174,6 +174,7 @@ export interface UserQuota {
   stripe_subscription_id?: string | null;
   subscription_status?: string | null;
   subscription_current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
   monthly_allowance_cents?: number | null;
   credits_balance_cents?: number | null;
 }
