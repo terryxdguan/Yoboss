@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
+import { ALL_AGENTS, DEFAULT_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import { setAgentStatus } from "@/lib/stores/agent-status";
 import {
   getAgentSessions,
@@ -386,15 +386,9 @@ export default function AgentChatPage() {
             Back to Team
           </button>
           <div className="flex items-center gap-2.5">
-            {agent.avatar ? (
-              <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#E7DED2] shrink-0">
-                <Image src={agent.avatar} alt={agent.label} width={32} height={32} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-8 h-8 rounded-lg bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-[#7FAEE6]">{agent.label.charAt(0)}</span>
-              </div>
-            )}
+            <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#E7DED2] shrink-0">
+              <Image src={agent.avatar || DEFAULT_AGENT_AVATAR} alt={agent.label} width={32} height={32} className="w-full h-full object-cover" />
+            </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[#2B2B2B] truncate">{displayName}</p>
               <p className="text-[10px] text-[#9B948B] truncate">{agent.description.slice(0, 40)}...</p>

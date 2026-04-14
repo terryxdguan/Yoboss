@@ -1,5 +1,11 @@
 import type { AgentConfig } from "@/lib/types/agent";
 
+// Fallback avatar used for any agent that doesn't have a custom image set.
+// The 4 default team members (General Assistant, Content Writer, Market
+// Research, PPT Expert) have their own PNGs; every other hired agent
+// renders this default until they get a custom avatar.
+export const DEFAULT_AGENT_AVATAR = "/default.png";
+
 // 4 default team members
 export const DEFAULT_AGENTS: AgentConfig[] = [
   {

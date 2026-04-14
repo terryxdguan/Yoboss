@@ -15,7 +15,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
-import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
+import { DEFAULT_AGENTS, ALL_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import { subscribe, getSnapshot, getAgentStatus } from "@/lib/stores/agent-status";
 
 const FAVORITE_MEMBERS_KEY = "yoboss_favorite_members";
@@ -133,23 +133,15 @@ export function Sidebar() {
                           )}
                         >
                           {/* Avatar */}
-                          {agent.avatar ? (
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
-                              <Image
-                                src={agent.avatar}
-                                alt={displayName}
-                                width={32}
-                                height={32}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
-                              <span className="text-xs font-semibold text-[#7FAEE6]">
-                                {displayName.charAt(0)}
-                              </span>
-                            </div>
-                          )}
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
+                            <Image
+                              src={agent.avatar || DEFAULT_AGENT_AVATAR}
+                              alt={displayName}
+                              width={32}
+                              height={32}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                           {/* Name + status */}
                           <div className="flex-1 min-w-0">
                             <span className="text-[11px] font-medium truncate block">{displayName}</span>

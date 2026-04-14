@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Users } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
+import { DEFAULT_AGENTS, ALL_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import type { AgentConfig } from "@/lib/types/agent";
 import { MemberPickerModal } from "./member-picker-modal";
 
@@ -103,21 +103,15 @@ export function DashboardFavoriteMembers() {
               className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_4px_16px_rgba(43,43,43,0.04)] hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7] transition-all cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                {agent.avatar ? (
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
-                    <Image
-                      src={agent.avatar}
-                      alt={agent.label}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7FAEE6]/10 text-base font-semibold text-[#7FAEE6] shrink-0">
-                    {agent.label.charAt(0)}
-                  </div>
-                )}
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
+                  <Image
+                    src={agent.avatar || DEFAULT_AGENT_AVATAR}
+                    alt={agent.label}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#2B2B2B] truncate">{agent.label}</p>
                   <p className="text-[10px] uppercase tracking-[0.12em] text-[#9B948B]">

@@ -5,7 +5,7 @@ import { X, Square, Send, Clock, Download, Globe, Code } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
+import { ALL_AGENTS, DEFAULT_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import { setAgentStatus } from "@/lib/stores/agent-status";
 import {
   createWorkflowRun,
@@ -1188,19 +1188,13 @@ export function WorkflowRunView({
             <div key={msg.id} className="flex justify-start gap-3">
               {/* Avatar */}
               <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
-                {msg.agentAvatar ? (
-                  <Image
-                    src={msg.agentAvatar}
-                    alt={msg.agentLabel || "Agent"}
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-[#7FAEE6]">
-                    {(msg.agentLabel || "A").charAt(0)}
-                  </div>
-                )}
+                <Image
+                  src={msg.agentAvatar || DEFAULT_AGENT_AVATAR}
+                  alt={msg.agentLabel || "Agent"}
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               {/* Message bubble */}

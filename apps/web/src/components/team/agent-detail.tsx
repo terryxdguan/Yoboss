@@ -5,6 +5,7 @@ import Image from "next/image";
 import { X, Flame, CheckCircle2, Circle, Clock } from "lucide-react";
 import type { AgentConfig } from "@/lib/types/agent";
 import { CATEGORY_LABELS } from "@/lib/types/agent";
+import { DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 
 interface AgentDetailProps {
   agent: AgentConfig;
@@ -25,23 +26,15 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
       <div className="flex items-start justify-between p-6 border-b border-[#E7DED2]">
         <div className="flex items-start gap-4">
           {/* Avatar */}
-          {agent.avatar ? (
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F1ECE4] shrink-0">
-              <Image
-                src={agent.avatar}
-                alt={agent.label}
-                width={64}
-                height={64}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-16 h-16 rounded-xl bg-[#7FAEE6]/10 flex items-center justify-center shrink-0">
-              <span className="text-2xl font-semibold text-[#7FAEE6]">
-                {agent.label.charAt(0)}
-              </span>
-            </div>
-          )}
+          <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F1ECE4] shrink-0">
+            <Image
+              src={agent.avatar || DEFAULT_AGENT_AVATAR}
+              alt={agent.label}
+              width={64}
+              height={64}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
           <div>
             <div className="flex items-center gap-2">

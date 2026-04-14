@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Flame, ChevronDown, ChevronRight, Circle, Clock } from "lucide-react";
 import Image from "next/image";
-import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
+import { DEFAULT_AGENTS, ALL_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import type { AgentConfig } from "@/lib/types/agent";
 import { CATEGORY_LABELS } from "@/lib/types/agent";
 // HireModal replaced by /team/market page
@@ -49,21 +49,13 @@ function AgentRow({
           className="w-36 shrink-0 bg-[#F1ECE4] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
           title={`Chat with ${agent.label}`}
         >
-          {agent.avatar ? (
-            <Image
-              src={agent.avatar}
-              alt={agent.label}
-              width={200}
-              height={200}
-              className="w-[115%] h-[115%] object-cover object-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-3xl font-semibold text-[#7FAEE6]">
-                {agent.label.charAt(0)}
-              </span>
-            </div>
-          )}
+          <Image
+            src={agent.avatar || DEFAULT_AGENT_AVATAR}
+            alt={agent.label}
+            width={200}
+            height={200}
+            className="w-[115%] h-[115%] object-cover object-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          />
         </div>
 
         {/* Content */}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Search, Check } from "lucide-react";
 import Image from "next/image";
 import type { AgentConfig } from "@/lib/types/agent";
+import { DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 
 interface MemberPickerModalProps {
   availableAgents: AgentConfig[];
@@ -78,21 +79,15 @@ export function MemberPickerModal({ availableAgents, selectedIds, onSave, onClos
                       }`}>
                         {isSelected && <Check className="h-3 w-3 text-white" />}
                       </div>
-                      {agent.avatar ? (
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
-                          <Image
-                            src={agent.avatar}
-                            alt={agent.label}
-                            width={36}
-                            height={36}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7FAEE6]/10 text-sm font-semibold text-[#7FAEE6] shrink-0">
-                          {agent.label.charAt(0)}
-                        </div>
-                      )}
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
+                        <Image
+                          src={agent.avatar || DEFAULT_AGENT_AVATAR}
+                          alt={agent.label}
+                          width={36}
+                          height={36}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[#2B2B2B] truncate">{agent.label}</p>
                         <p className="text-[10px] uppercase tracking-wider text-[#9B948B]">{agent.category}</p>

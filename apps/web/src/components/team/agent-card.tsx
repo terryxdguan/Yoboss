@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { AgentConfig } from "@/lib/types/agent";
+import { DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 
 interface AgentCardProps {
   agent: AgentConfig;
@@ -20,23 +21,15 @@ export function AgentCard({ agent, isSelected, onClick }: AgentCardProps) {
       }`}
     >
       {/* Avatar */}
-      {agent.avatar ? (
-        <div className="w-14 h-14 rounded-full overflow-hidden bg-[#F1ECE4]">
-          <Image
-            src={agent.avatar}
-            alt={agent.label}
-            width={56}
-            height={56}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className="w-14 h-14 rounded-full bg-[#7FAEE6]/10 flex items-center justify-center">
-          <span className="text-lg font-semibold text-[#7FAEE6]">
-            {agent.label.charAt(0)}
-          </span>
-        </div>
-      )}
+      <div className="w-14 h-14 rounded-full overflow-hidden bg-[#F1ECE4]">
+        <Image
+          src={agent.avatar || DEFAULT_AGENT_AVATAR}
+          alt={agent.label}
+          width={56}
+          height={56}
+          className="w-full h-full object-cover"
+        />
+      </div>
 
       {/* Info */}
       <div className="text-center">
