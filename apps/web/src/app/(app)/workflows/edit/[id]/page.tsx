@@ -310,15 +310,21 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => router.push("/workflows")}
-          className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Workflows
-        </button>
+      {/* Back link — scrolls away normally */}
+      <button
+        onClick={() => router.push("/workflows")}
+        className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-4"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Workflows
+      </button>
+
+      {/* Sticky header — keeps the Save button visible no matter how far
+          the user scrolls through the steps list. Offset by 64px to sit
+          below the fixed top-nav (h-16). Negative horizontal margins +
+          matching padding let the bar extend to the page edges, and a
+          bottom border separates it from scrolling content below. */}
+      <div className="sticky top-16 z-20 -mx-6 md:-mx-8 px-6 md:px-8 py-3 mb-6 bg-[#F6F3EE]/95 backdrop-blur-sm border-b border-[#E7DED2]">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[#2B2B2B]">
             {isNew ? "New Workflow" : "Edit Workflow"}
