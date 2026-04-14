@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
-import { toggleTask, updateTodo, addTodo } from "@/lib/db/actions";
+import { toggleTask, updateTodo, addTodo, deleteTodo, deleteTask } from "@/lib/db/actions";
 import { TodoItemCard } from "@/components/todo/todo-item-card";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
 import { useDashboardChat } from "@/components/dashboard/dashboard-shell";
@@ -71,6 +71,36 @@ export function DashboardTodayItems({
           await updateTodo(item.id, patch as Parameters<typeof updateTodo>[1]);
         }
       } catch { /* rely on page refresh */ }
+    });
+  };
+
+  // Delete handler. Mirrors handleToggle: optimistically remove from local
+  // state, fire the server action in a transition, roll back on error.
+  // Branches on sourceType because todos and daily_tasks live in different
+  // tables and need different delete actions.
+  const handleDelete = (item: DashboardTodayItem, list: "today" | "high") => {
+    const setter = list === "today" ? setItems : setHighPriority;
+    // Snapshot for rollback
+    const prevItems = list === "today" ? items : highPriority;
+    setter(prev => prev.filter(i => i.id !== item.id));
+    // If the item also lives in the other list (merged via dedupe), remove there too.
+    if (list === "today") {
+      setHighPriority(prev => prev.filter(i => i.id !== item.id));
+    } else {
+      setItems(prev => prev.filter(i => i.id !== item.id));
+    }
+    startTransition(async () => {
+      try {
+        if (item.sourceType === "daily_task") {
+          await deleteTask(item.id);
+        } else {
+          await deleteTodo(item.id);
+        }
+      } catch (err) {
+        console.error("Failed to delete item:", err);
+        // Rollback
+        setter(prevItems);
+      }
     });
   };
 
@@ -215,7 +245,7 @@ export function DashboardTodayItems({
                 sourceLabel={isSchedule ? (item.sourceLabel || "Goal") : (item.tag || null)}
                 onToggle={() => handleToggle(item, "today")}
                 onUpdate={(patch) => handleUpdate(item, "today", patch)}
-                onDelete={() => {}}
+                onDelete={() => handleDelete(item, "today")}
                 onSendToAI={() => sendToAI?.(item)}
               />
             );

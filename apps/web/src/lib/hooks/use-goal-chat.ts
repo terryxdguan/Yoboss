@@ -16,6 +16,15 @@ function genId() {
   return `msg_${Date.now()}_${++msgCounter}`;
 }
 
+// Maps Anthropic tool names to the friendly label shown in the streaming
+// "is working on…" indicator. Anything not in this map gets a generic
+// fallback so new tools still render something meaningful.
+const TOOL_LABELS: Record<string, string> = {
+  ask_question: "Asking a clarifying question",
+  create_goal_plan: "Building your goal plan",
+  create_weekly_plan: "Creating your weekly schedule",
+};
+
 interface AnthropicMessage {
   role: "user" | "assistant";
   content: string | AnthropicContentBlock[];
@@ -110,6 +119,26 @@ export function useGoalChat() {
                 currentToolName = block.name || "";
                 currentToolId = block.id || "";
                 toolInputJson = "";
+
+                // Immediately surface a "working on…" indicator in the UI.
+                // We do this at tool_use *start* rather than stop so the user
+                // sees the status during the slow part (model generating the
+                // tool input), not just after the tool is fully formed.
+                const label =
+                  TOOL_LABELS[currentToolName] || `Running ${currentToolName}`;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          toolActivity: [
+                            ...(m.toolActivity || []),
+                            { type: currentToolName, label },
+                          ],
+                        }
+                      : m
+                  )
+                );
               }
             }
 

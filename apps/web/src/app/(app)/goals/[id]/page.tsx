@@ -414,7 +414,10 @@ export default function GoalDetailPage() {
             <Calendar className="h-4 w-4 text-[#7FAEE6]" />
             <h2 className="text-base font-semibold text-[#2B2B2B]">Weekly Schedule</h2>
           </div>
-          {hasTasks ? (
+          {/* Only show the top-right action once a plan exists. Before
+              generation, the primary CTA lives inside the empty-state card
+              so it's impossible to miss as the obvious next step. */}
+          {hasTasks && (
             <button
               onClick={() => setRightPanel("plan-chat")}
               className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
@@ -422,24 +425,23 @@ export default function GoalDetailPage() {
               <RefreshCw className="h-3.5 w-3.5" />
               Regenerate
             </button>
-          ) : (
-            <button
-              onClick={() => setRightPanel("plan-chat")}
-              className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Generate with AI
-            </button>
           )}
         </div>
 
         {!hasTasks && (
           <div className="rounded-2xl border border-dashed border-[#DDD3C7] bg-[#FFFDF9] p-12 text-center">
-            <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
-            <p className="text-sm text-[#9B948B]">No weekly plan yet</p>
-            <p className="text-xs text-[#9B948B] mt-1">
-              Generate a plan to see your daily schedule
+            <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
+            <p className="text-sm font-medium text-[#2B2B2B]">No weekly plan yet</p>
+            <p className="text-xs text-[#9B948B] mt-1 mb-5">
+              Generate a personalized weekly plan with AI — it&apos;s your next step
             </p>
+            <button
+              onClick={() => setRightPanel("plan-chat")}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate with AI
+            </button>
           </div>
         )}
 

@@ -52,6 +52,13 @@ export interface UserAnswer {
   other_text?: string;
 }
 
+// Live tool activity shown in the chat bubble while streaming.
+// Mirrors the workflow-run-view shape so both chats share one visual pattern.
+export interface ToolActivity {
+  type: string;   // machine name, e.g. "ask_question"
+  label: string;  // user-facing, e.g. "Asking a clarifying question"
+}
+
 // A message in the goal chat
 export interface ChatMessage {
   id: string;
@@ -62,6 +69,7 @@ export interface ChatMessage {
     name: string;
     data: AskQuestionData | GoalPlanData | WeeklyPlanData;
   } | null;
+  toolActivity?: ToolActivity[]; // all tool calls observed during this turn
   answered?: boolean; // for ask_question: has user answered?
 }
 

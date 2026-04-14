@@ -102,18 +102,6 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
           />
         ))}
 
-        {isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
-          <div className="flex justify-start">
-            <div className="bg-[#F1ECE4] rounded-lg px-4 py-3 text-sm text-[#9B948B]">
-              <span className="inline-flex gap-1">
-                <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: "150ms" }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: "300ms" }}>.</span>
-              </span>
-            </div>
-          </div>
-        )}
-
         {error && (
           <div className="flex justify-center">
             <div className="bg-[#D5847A]/5 border border-[#D5847A]/20 rounded-lg px-4 py-2 text-sm text-[#D5847A]">

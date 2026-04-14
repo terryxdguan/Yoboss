@@ -242,6 +242,15 @@ export async function toggleTask(taskId: string, completed: boolean) {
   if (error) throw error;
 }
 
+export async function deleteTask(taskId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("daily_tasks")
+    .delete()
+    .eq("id", taskId);
+  if (error) throw error;
+}
+
 export async function getTodayTasks(userId: string, weekStart: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
