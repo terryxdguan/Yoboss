@@ -1,5 +1,5 @@
 import {
-  TrendingUp,
+  Dumbbell,
   Rocket,
   Timer,
   Globe,
@@ -21,11 +21,11 @@ const EXAMPLES: {
   text: string;
 }[] = [
   {
-    icon: TrendingUp,
+    icon: Dumbbell,
     color: "#E8858B",    // pink character (planner with clipboard)
-    title: "Increase monthly revenue",
-    description: "Scale your operations and optimize conversion funnels.",
-    text: "I want to increase my monthly revenue by 50% in the next 6 months",
+    title: "Lose 30 lbs in 6 months",
+    description: "Hit your healthy weight goal through balanced diet and consistent exercise.",
+    text: "How to lose 30 lbs (13.6 kg) in 6 months",
   },
   {
     icon: Rocket,

@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 
-const PLACEHOLDER = "I want to launch my own business and earn my first dollar in 30 days...";
+const PLACEHOLDER = "How to lose 30 lbs (13.6 kg) in 6 months";
 
 interface GoalInputProps {
   value: string;
@@ -48,10 +48,13 @@ export function GoalInput({ value, onChange, onSubmit }: GoalInputProps) {
           className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-lg md:text-xl py-4 px-7 min-h-[90px] resize-none text-[#2B2B2B] placeholder:text-[#9B948B]"
           placeholder={PLACEHOLDER}
         />
-        <div className="flex justify-end items-center px-4 pb-2">
+        <div className="flex justify-between items-center px-4 pb-2 gap-3">
+          <span className="text-xs text-[#9B948B] leading-snug text-left">
+            Press <kbd className="px-1.5 py-0.5 rounded border border-[#E7DED2] bg-[#F1ECE4] text-[10px] font-medium text-[#6F6A64]">Tab</kbd> to autofill the example text
+          </span>
           <button
             onClick={() => value.trim() && onSubmit(value.trim())}
-            className="bg-[#7FAEE6] text-white h-12 w-12 flex items-center justify-center rounded-lg hover:bg-[#6A9DDA] transition-all active:scale-95 shadow-sm"
+            className="bg-[#7FAEE6] text-white h-12 w-12 flex items-center justify-center rounded-lg hover:bg-[#6A9DDA] transition-all active:scale-95 shadow-sm shrink-0"
             aria-label="Submit goal"
           >
             <svg
