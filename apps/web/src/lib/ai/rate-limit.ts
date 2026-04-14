@@ -92,34 +92,30 @@ export async function withRateLimit(
     quota.cost_this_month_cents = 0;
   }
 
-  // Check daily request limit
-  if (quota.requests_today >= quota.daily_request_limit) {
+  // Allowance + credits check — spend monthly allowance first, then credits
+  const monthlySpent = quota.cost_this_month_cents ?? 0;
+  const monthlyAllowance = quota.monthly_allowance_cents ?? 500;
+  const creditsBalance = quota.credits_balance_cents ?? 0;
+
+  if (monthlySpent >= monthlyAllowance && creditsBalance <= 0) {
+    return {
+      allowed: false,
+      response: NextResponse.json(
+        {
+          error: "Monthly allowance exhausted. Upgrade your plan or buy credits to continue.",
+          code: "QUOTA_EXCEEDED",
+        },
+        { status: 402 }
+      ),
+    };
+  }
+
+  // Check daily request limit (abuse guardrail)
+  if (quota.requests_today >= (quota.daily_request_limit ?? 500)) {
     return {
       allowed: false,
       response: NextResponse.json(
         { error: "Daily request limit reached. Resets at midnight." },
-        { status: 429 }
-      ),
-    };
-  }
-
-  // Check daily cost limit
-  if (quota.cost_today_cents >= quota.daily_cost_limit_cents) {
-    return {
-      allowed: false,
-      response: NextResponse.json(
-        { error: "Daily usage limit reached. Resets at midnight." },
-        { status: 429 }
-      ),
-    };
-  }
-
-  // Check monthly cost limit
-  if (quota.cost_this_month_cents >= quota.monthly_cost_limit_cents) {
-    return {
-      allowed: false,
-      response: NextResponse.json(
-        { error: "Monthly usage limit reached. Resets next month." },
         { status: 429 }
       ),
     };
@@ -156,20 +152,45 @@ export async function logUsage(
     estimated_cost_cents: costCents,
   });
 
-  // Update quota cost counters
+  // Re-fetch full quota state for accurate deduction
   const { data: quota } = await supabase
     .from("user_quotas")
-    .select("cost_today_cents, cost_this_month_cents")
+    .select("cost_today_cents, cost_this_month_cents, monthly_allowance_cents, credits_balance_cents")
     .eq("user_id", userId)
     .single();
 
-  if (quota) {
-    await supabase
-      .from("user_quotas")
-      .update({
-        cost_today_cents: quota.cost_today_cents + costCents,
-        cost_this_month_cents: quota.cost_this_month_cents + costCents,
-      })
-      .eq("user_id", userId);
+  if (!quota) return;
+
+  const spent = quota.cost_this_month_cents ?? 0;
+  const allowance = quota.monthly_allowance_cents ?? 500;
+  const credits = quota.credits_balance_cents ?? 0;
+
+  const allowanceRemaining = Math.max(0, allowance - spent);
+  const fromAllowance = Math.min(costCents, allowanceRemaining);
+  const fromCredits = Math.max(0, costCents - fromAllowance);
+
+  const newCreditsBalance = Math.max(0, credits - fromCredits);
+
+  // Update counters: cost_today_cents tracks gross spend, cost_this_month_cents
+  // tracks spend against allowance (capped at allowance so it cleanly represents
+  // "how much of the monthly bucket is used"), credits get debited.
+  await supabase
+    .from("user_quotas")
+    .update({
+      cost_today_cents: (quota.cost_today_cents ?? 0) + costCents,
+      cost_this_month_cents: spent + fromAllowance, // only counts against allowance, not credits
+      credits_balance_cents: newCreditsBalance,
+    })
+    .eq("user_id", userId);
+
+  // Audit trail: log credit spend as a transaction
+  if (fromCredits > 0) {
+    await supabase.from("credit_transactions").insert({
+      user_id: userId,
+      amount_cents: -fromCredits,
+      balance_after_cents: newCreditsBalance,
+      kind: "spend",
+      route,
+    });
   }
 }
