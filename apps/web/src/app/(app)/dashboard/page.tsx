@@ -8,6 +8,14 @@ import { DashboardFavoriteWorkflows } from "@/components/dashboard/favorite-work
 import { DashboardFavoriteMembers } from "@/components/dashboard/favorite-members";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
+// Opt out of Next.js router cache and static generation. Every visit to
+// /dashboard re-runs getDashboardData() / getWorkflows() / getTodoTags() on
+// the server so the stat cards (Goals, To-Dos, Workflows, Team) always
+// reflect the latest DB state. Without this, client-side navigation from
+// another page may serve a stale cached snapshot — e.g. a todo you deleted
+// in /todos would still be counted in the TO-DOS card here.
+export const dynamic = "force-dynamic";
+
 export default async function TodayPage() {
   const supabase = await createClient();
   const {

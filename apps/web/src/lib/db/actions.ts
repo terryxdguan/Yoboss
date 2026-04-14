@@ -1229,17 +1229,12 @@ export async function getDashboardData(): Promise<{
   const goalProgressPercent = activePhases.length > 0
     ? Math.round((completedPhases / activePhases.length) * 100) : 0;
 
-  // Pending goal todos: uncompleted daily tasks for today
-  // Use the latest plan per goal (not just current week) — matches goal detail page behavior
-  const goalPhaseMap = new Map<string, string[]>(); // goalId → phaseIds
-  for (const p of plans) {
-    const ph = Array.isArray(p.phases) ? p.phases[0] : p.phases;
-    if (!ph) continue;
-    const existing = goalPhaseMap.get(ph.goal_id) || [];
-    existing.push(ph.id);
-    goalPhaseMap.set(ph.goal_id, existing);
-  }
-  // For each active goal, pick the latest plan (by week_start desc)
+  // latestPlanIds is used by today-items rendering further down to pull
+  // each active goal's current weekly schedule. Pick the newest plan per
+  // phase by sorting plans by week_start desc and taking the first one we
+  // haven't seen yet.
+  // (Previously there was also an orphan goalPhaseMap built here that was
+  // never read — removed.)
   const latestPlanIds: string[] = [];
   const seenPhases = new Set<string>();
   const sortedPlans = [...plans].sort((a, b) => (b.week_start || "").localeCompare(a.week_start || ""));
@@ -1250,21 +1245,22 @@ export async function getDashboardData(): Promise<{
     seenPhases.add(ph.id);
     latestPlanIds.push(p.id);
   }
-  let pendingGoalTodos = 0;
 
-  if (latestPlanIds.length > 0) {
-    const { data: todayTasks } = await supabase
-      .from("daily_tasks")
-      .select("id, completed, day_of_week")
-      .in("weekly_plan_id", latestPlanIds)
-      .eq("day_of_week", todayDow);
-    if (todayTasks) {
-      pendingGoalTodos = todayTasks.filter(t => !t.completed).length;
-    }
-  }
-
-  // Pending personal todos: uncompleted items from To-Do List
-  const pendingPersonalTodos = todos.filter(t => !t.completed).length;
+  // TO-DOS card counts come from the todos table only, split by whether
+  // the todo is linked to an active goal. This fixes two prior bugs:
+  //   1. Old pendingGoalTodos counted daily_tasks (weekly schedule items),
+  //      not todos — two different concepts crammed into one card.
+  //   2. Old pendingPersonalTodos counted ALL todos including goal-linked
+  //      ones, so a todo with goal_id ≠ null rendered as "personal".
+  // Todos whose goal_id points at a non-active goal (completed / archived)
+  // fall into the "personal" bucket so they stay visible but aren't
+  // mis-labeled as belonging to an ongoing goal.
+  const pendingGoalTodos = todos.filter(
+    t => !t.completed && t.goal_id && activeGoalIds.has(t.goal_id)
+  ).length;
+  const pendingPersonalTodos = todos.filter(
+    t => !t.completed && !(t.goal_id && activeGoalIds.has(t.goal_id))
+  ).length;
 
   // Workflows stats
   const totalWorkflows = workflows.length;
