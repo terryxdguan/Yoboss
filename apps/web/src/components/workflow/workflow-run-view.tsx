@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { X, Square, Send, Clock, Download, Globe, Code } from "lucide-react";
+import { X, Square, Send, Clock, Download, Globe, Code, Info } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -30,6 +30,11 @@ interface WorkflowRunViewProps {
   onComplete: () => void;
   /** If provided, skip execution and load from history */
   existingRun?: WorkflowRun;
+  /** When true, treat existingRun as a cached demo: bail out of all
+      side effects, hydrate from step_results, and render the yellow
+      banner. Used by the workflows page when /api/workflows/check-cache
+      returns cached: true. */
+  cachedMode?: boolean;
 }
 
 // --- Types ---
@@ -111,6 +116,7 @@ export function WorkflowRunView({
   onClose,
   onComplete,
   existingRun,
+  cachedMode,
 }: WorkflowRunViewProps) {
   const isPollingMode = !!existingRun && existingRun.status === "running";
   const isHistoryMode = !!existingRun && !isPollingMode;
@@ -198,6 +204,10 @@ export function WorkflowRunView({
 
   // Persist follow-up messages to DB
   const saveFollowUpMessages = useCallback(async (msgs: ChatMessage[]) => {
+    // Cached demo runs have a synthetic run id (cached-...) that doesn't
+    // exist in workflow_runs. Persisting follow-up messages would always
+    // fail. Chat still works in-memory; just no persistence.
+    if (cachedMode) return;
     const rid = runIdRef.current;
     if (!rid) return;
     // Extract only user/assistant messages (skip step & system)
@@ -215,11 +225,15 @@ export function WorkflowRunView({
     } catch {
       // Non-blocking
     }
-  }, []);
+  }, [cachedMode]);
 
   // Resolve "download" filenames on mount (for history view)
   useEffect(() => {
     if (!isHistoryMode) return;
+    // Cached runs use Storage URLs (the href field is already attached
+    // server-side by /api/workflows/check-cache); there are no Anthropic
+    // file IDs to resolve, and the metadata endpoint would 404.
+    if (cachedMode) return;
     const unresolvedIds: string[] = [];
     for (const msg of chatMessages) {
       if (msg.generatedFiles) {
@@ -251,7 +265,7 @@ export function WorkflowRunView({
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHistoryMode]);
+  }, [isHistoryMode, cachedMode]);
 
   // Auto-scroll
   useEffect(() => {
@@ -351,8 +365,9 @@ export function WorkflowRunView({
 
           if (event.type === "session_created") {
             sessionIdRef.current = event.sessionId as string;
-            // Persist session_id to DB for history continuity
-            if (runIdRef.current) {
+            // Persist session_id to DB for history continuity (skip in cached
+            // mode — the synthetic run id doesn't exist in workflow_runs).
+            if (runIdRef.current && !cachedMode) {
               try {
                 await updateWorkflowRun(runIdRef.current, {
                   session_id: event.sessionId as string,
@@ -773,10 +788,15 @@ export function WorkflowRunView({
     hasStarted.current = true;
 
     if (isHistoryMode) {
-      const outputs = existingRun!.step_results
-        .filter((r) => r.output)
-        .map((r) => r.output!);
-      if (outputs.length > 0) generateWorkflowSummary(outputs);
+      // Cached demo runs don't need a generated summary — that would hit
+      // an AI endpoint just to recap content the user is seeing in the
+      // banner anyway. Skip it; the chat panel renders fine without one.
+      if (!cachedMode) {
+        const outputs = existingRun!.step_results
+          .filter((r) => r.output)
+          .map((r) => r.output!);
+        if (outputs.length > 0) generateWorkflowSummary(outputs);
+      }
       return;
     }
 
@@ -1082,6 +1102,20 @@ export function WorkflowRunView({
 
   return (
     <div className="fixed inset-0 z-40 ml-20 mt-16 flex flex-col bg-[#F6F3EE] overflow-hidden">
+      {/* Cached demo banner — only shown when this is a cached template run.
+          Communicates clearly that the user is looking at pre-recorded output
+          so they don't mistake it for a fresh run they just triggered. */}
+      {cachedMode && (
+        <div className="border-b border-[#D4B06A]/30 bg-[#D4B06A]/10 px-6 py-3 flex items-start gap-2.5">
+          <Info className="h-4 w-4 text-[#C99442] mt-0.5 shrink-0" />
+          <div className="text-sm text-[#2B2B2B] min-w-0">
+            <p className="font-medium">This is a cached demo run</p>
+            <p className="text-xs text-[#6F6A64] mt-0.5">
+              Your topic matches the default — we&apos;re showing you a previous successful output so you can see what this workflow produces. Edit the topic and run again to see it execute on your own input.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 bg-[#FFFDF9] border-b border-[#E7DED2]">
         <div className="flex items-center gap-3">
@@ -1280,17 +1314,39 @@ export function WorkflowRunView({
                   {/* Generated files */}
                   {msg.generatedFiles && msg.generatedFiles.length > 0 && (
                     <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1.5">
-                      {msg.generatedFiles.map((f, i) => (
-                        <a
-                          key={i}
-                          href={`/api/ai/files/${f.fileId}`}
-                          download={f.filename}
-                          className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          {f.filename}
-                        </a>
-                      ))}
+                      {msg.generatedFiles.map((f, i) => {
+                        // Cached runs attach `href` server-side (Storage URL) and may flag
+                        // files as `missing` if Anthropic expired them during bootstrap.
+                        // Live runs use the existing /api/ai/files/{fileId} pattern.
+                        const cachedFile = f as GeneratedFile & { href?: string; missing?: boolean };
+                        if (cachedFile.missing) {
+                          return (
+                            <span
+                              key={i}
+                              className="flex items-center gap-2 text-xs text-[#9B948B] italic"
+                              title="This file expired and is no longer available"
+                            >
+                              <Download className="h-3.5 w-3.5 opacity-50" />
+                              {f.filename} (expired)
+                            </span>
+                          );
+                        }
+                        const href = cachedFile.href ?? `/api/ai/files/${f.fileId}`;
+                        const isExternal = !!cachedFile.href;
+                        return (
+                          <a
+                            key={i}
+                            href={href}
+                            download={f.filename}
+                            target={isExternal ? "_blank" : undefined}
+                            rel={isExternal ? "noopener noreferrer" : undefined}
+                            className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            {f.filename}
+                          </a>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
