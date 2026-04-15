@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ListChecks } from "lucide-react";
 import { toggleTask, updateTodo, addTodo, deleteTodo, deleteTask } from "@/lib/db/actions";
 import { TodoItemCard } from "@/components/todo/todo-item-card";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
@@ -216,10 +216,22 @@ export function DashboardTodayItems({
 
       {/* Unified item grid */}
       {visibleItems.length === 0 ? (
-        <div className="py-6 text-center mb-6">
+        <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-8 text-center mb-6">
+          <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F1ECE4] flex items-center justify-center">
+            <ListChecks className="h-5 w-5 text-[#9B948B]" />
+          </div>
           <p className="text-sm text-[#6F6A64]">
             {tab === "pending" ? "No pending tasks. Enjoy your day!" : "No completed tasks yet."}
           </p>
+          {tab === "pending" && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#7FAEE6] bg-[#EAF3FD] hover:bg-[#7FAEE6]/20 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Task
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-6">

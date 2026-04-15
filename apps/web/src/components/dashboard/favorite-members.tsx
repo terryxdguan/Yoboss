@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Heart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { DEFAULT_AGENTS, ALL_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
@@ -11,14 +11,22 @@ import { MemberPickerModal } from "./member-picker-modal";
 const FAVORITES_KEY = "yoboss_favorite_members";
 const HIRED_KEY = "yoboss_hired_agents";
 
+// Default favorites for a user who has never touched the member picker:
+// all 4 DEFAULT_AGENTS are pinned so the dashboard feels populated out of
+// the box (matches the 4 slots in the member roster).
+const DEFAULT_FAVORITE_IDS = DEFAULT_AGENTS.map((a) => a.id);
+
 function loadFavoriteIds(): string[] {
-  if (typeof window === "undefined") return ["general_assistant"];
+  if (typeof window === "undefined") return DEFAULT_FAVORITE_IDS;
   try {
     const raw = localStorage.getItem(FAVORITES_KEY);
-    if (!raw) return ["general_assistant"];
+    // Never-set key: seed with all 4 defaults. A user-set empty array
+    // (after explicitly unfavoriting everyone via the heart toggle) is
+    // preserved and renders the empty state.
+    if (raw === null) return DEFAULT_FAVORITE_IDS;
     const ids = JSON.parse(raw);
-    return ids.length > 0 ? ids : ["general_assistant"];
-  } catch { return ["general_assistant"]; }
+    return Array.isArray(ids) ? ids : DEFAULT_FAVORITE_IDS;
+  } catch { return DEFAULT_FAVORITE_IDS; }
 }
 
 function saveFavoriteIds(ids: string[]) {
@@ -32,7 +40,9 @@ function loadHiredIds(): string[] {
 
 export function DashboardFavoriteMembers() {
   const router = useRouter();
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(["general_assistant"]);
+  // Starts empty — the mount effect hydrates from localStorage before the
+  // component becomes visible (we gate render on mounted below).
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [hiredIds, setHiredIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -59,6 +69,15 @@ export function DashboardFavoriteMembers() {
     setFavoriteIds(ids);
     saveFavoriteIds(ids);
     setShowPicker(false);
+  };
+
+  // Heart-toggle remove: clicking the filled heart inside a visible card
+  // unfavorites that member so the card disappears from the dashboard.
+  // Mirrors favorite-workflows.tsx:76 behavior.
+  const handleUnfavorite = (agentId: string) => {
+    const next = favoriteIds.filter((id) => id !== agentId);
+    setFavoriteIds(next);
+    saveFavoriteIds(next);
   };
 
   if (!mounted) return null;
@@ -102,22 +121,35 @@ export function DashboardFavoriteMembers() {
               onClick={() => router.push(`/team/chat/${agent.id}`)}
               className="rounded-[18px] border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_4px_16px_rgba(43,43,43,0.04)] hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7] transition-all cursor-pointer"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
-                  <Image
-                    src={agent.avatar || DEFAULT_AGENT_AVATAR}
-                    alt={agent.label}
-                    width={48}
-                    height={48}
-                    className="w-full h-full object-cover"
-                  />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-[#F1ECE4] shrink-0">
+                    <Image
+                      src={agent.avatar || DEFAULT_AGENT_AVATAR}
+                      alt={agent.label}
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#2B2B2B] truncate">{agent.label}</p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#9B948B]">
+                      {agent.category}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#2B2B2B] truncate">{agent.label}</p>
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-[#9B948B]">
-                    {agent.category}
-                  </p>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUnfavorite(agent.id);
+                  }}
+                  className="p-1.5 rounded-lg text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors shrink-0"
+                  title="Unfavorite"
+                  aria-label={`Unfavorite ${agent.label}`}
+                >
+                  <Heart className="h-3.5 w-3.5 fill-[#D5847A]" />
+                </button>
               </div>
             </div>
           ))}
