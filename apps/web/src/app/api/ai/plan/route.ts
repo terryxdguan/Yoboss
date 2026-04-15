@@ -10,6 +10,10 @@ import { generateWeeklyReview } from "@/lib/ai/review";
 import type { ConversationMessage } from "@/lib/ai/decompose";
 import type Anthropic from "@anthropic-ai/sdk";
 
+// Extend beyond the Hobby 60s default. Streaming actions like goal-chat,
+// weekly plan generation, and weekly review can take 30-120s on their own.
+export const maxDuration = 300;
+
 /** Attach a usage logger to an Anthropic MessageStream, then return the ReadableStream */
 function streamWithUsageLog(
   stream: ReturnType<Anthropic.Messages["stream"]>,

@@ -6,6 +6,10 @@ import {
 } from "@/lib/ai/coach";
 import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 
+// Streams the daily coaching message. Extend past Hobby's 60s default so
+// a slow Claude response or a few tool rounds doesn't silently truncate.
+export const maxDuration = 300;
+
 // POST /api/ai/coach
 // Generates a daily coaching message (streaming)
 export async function POST(request: NextRequest) {

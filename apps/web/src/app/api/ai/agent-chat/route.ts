@@ -6,6 +6,15 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type Anthropic from "@anthropic-ai/sdk";
 
+// Vercel Hobby serverless function default is 60s. Without this override,
+// any chat that triggers multiple web_search + code_execution rounds (e.g.
+// a research task that generates a downloadable file) dies silently mid-
+// stream: the SSE connection drops, the client sees the partial tool-use
+// chatter, no "done" signal arrives, and nothing is persisted. Extend to
+// the Hobby ceiling of 300s. Still not enough for very long research
+// tasks — those need Pro (900s) or a background-worker architecture.
+export const maxDuration = 300;
+
 const SERVER_TOOLS: Anthropic.Messages.ToolUnion[] = [
   { type: "web_search_20260209" as const, name: "web_search" as const },
   { type: "web_fetch_20260209" as const, name: "web_fetch" as const },

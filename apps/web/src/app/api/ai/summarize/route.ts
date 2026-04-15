@@ -3,6 +3,11 @@ import { createClient } from "@/lib/db/server";
 import { generateSessionSummary } from "@/lib/ai/session-memory";
 import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 
+// Rolling session summary — usually short but protect against the
+// Hobby 60s default in case of a slow Claude response or a very long
+// chat history.
+export const maxDuration = 300;
+
 // POST /api/ai/summarize — generate rolling session summary
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
