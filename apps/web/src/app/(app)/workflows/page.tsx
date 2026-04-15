@@ -40,7 +40,7 @@ export default function WorkflowsPage() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
-  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run: WorkflowRun } | null>(null);
+  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run: WorkflowRun; cachedMode?: boolean } | null>(null);
   const [historyWorkflow, setHistoryWorkflow] = useState<Workflow | null>(null);
 
   // Topic input for workflows without a pre-set topic
@@ -84,6 +84,44 @@ export default function WorkflowsPage() {
   // Start a workflow: create run record, fire server execution, open run view
   const startWorkflow = useCallback(async (wf: Workflow, topic?: string) => {
     try {
+      // 1. Check for a cached demo run first. Template-linked workflows
+      //    whose topic matches workflow_templates.topic serve a cached
+      //    successful run instead of executing live, so first-time users
+      //    can immediately see what the workflow produces without paying
+      //    for a real run.
+      const cacheRes = await fetch("/api/workflows/check-cache", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflowId: wf.id, ...(topic ? { topic } : {}) }),
+      });
+      const cacheData = cacheRes.ok ? await cacheRes.json() : { cached: false };
+
+      if (
+        cacheData.cached &&
+        cacheData.runData &&
+        Array.isArray(cacheData.runData.stepResults)
+      ) {
+        // Synthetic WorkflowRun: never written to DB. workflow-run-view
+        // recognizes cachedMode and renders step_results directly.
+        const syntheticRun: WorkflowRun = {
+          id: `cached-${wf.id}-${Date.now()}`,
+          workflow_id: wf.id,
+          user_id: "",
+          status: "success",
+          current_step: cacheData.runData.totalSteps,
+          total_steps: cacheData.runData.totalSteps,
+          step_results: cacheData.runData.stepResults,
+          follow_up_messages: cacheData.runData.followUpMessages ?? null,
+          session_id: null,
+          triggered_by: "manual",
+          started_at: cacheData.runData.recordedAt,
+          completed_at: cacheData.runData.recordedAt,
+        };
+        setRunningWorkflow({ workflow: wf, run: syntheticRun, cachedMode: true });
+        return;
+      }
+
+      // 2. No cache hit → existing live execution path (unchanged).
       const initialResults = wf.steps.map((s) => ({ stepId: s.id, status: "pending" as const }));
       const run = await createWorkflowRun({
         workflowId: wf.id,
@@ -197,7 +235,7 @@ export default function WorkflowsPage() {
       </div>
 
       {/* Modals */}
-      {runningWorkflow && <WorkflowRunView workflow={runningWorkflow.workflow} existingRun={runningWorkflow.run} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
+      {runningWorkflow && <WorkflowRunView workflow={runningWorkflow.workflow} existingRun={runningWorkflow.run} cachedMode={runningWorkflow.cachedMode} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
       {historyWorkflow && <WorkflowHistory workflow={historyWorkflow} onClose={() => setHistoryWorkflow(null)} />}
       {topicWorkflow && (
         <TopicInputModal
