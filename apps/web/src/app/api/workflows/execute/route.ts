@@ -106,7 +106,8 @@ async function pollSessionUntilIdle(
           if (block.type === "text" && block.text) {
             fullText += block.text;
           }
-          if (block.type === "tool_use" || block.type === "server_tool_use") {
+          const blockType = (block as { type: string }).type;
+          if (blockType === "tool_use" || blockType === "server_tool_use") {
             const toolName = (block as { name?: string }).name || "unknown";
             const activity = classifyTool(toolName);
             toolActivity.push(activity);

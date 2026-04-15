@@ -17,7 +17,7 @@ function streamWithUsageLog(
   route: string,
   model: string
 ): ReadableStream {
-  stream.on("message", (msg) => {
+  stream.on("message", (msg: Anthropic.Message) => {
     if (msg.usage) {
       logUsage(userId, route, model, msg.usage.input_tokens, msg.usage.output_tokens).catch(() => {});
     }
@@ -62,10 +62,10 @@ export async function POST(request: NextRequest) {
       const { context } = body;
       const plan = await generateWeeklyPlan(context);
       // Log usage from attached _usage field
-      const usage = (plan as Record<string, unknown>)._usage as { input_tokens: number; output_tokens: number } | undefined;
+      const usage = (plan as unknown as Record<string, unknown>)._usage as { input_tokens: number; output_tokens: number } | undefined;
       if (usage) {
         logUsage(user.id, "weekly", "claude-sonnet-4-6", usage.input_tokens, usage.output_tokens).catch(() => {});
-        delete (plan as Record<string, unknown>)._usage;
+        delete (plan as unknown as Record<string, unknown>)._usage;
       }
       return NextResponse.json(plan);
     }

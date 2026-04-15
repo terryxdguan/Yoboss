@@ -1270,7 +1270,7 @@ export async function getDashboardData(): Promise<{
       id: r.id as string,
       workflowId: r.workflow_id as string,
       workflowName: (wf as { name?: string })?.name || "Unknown",
-      status: r.status as "running" | "success" | "failed",
+      status: r.status as "running" | "success" | "failed" | "cancelled",
       triggeredBy: r.triggered_by as "manual" | "scheduled",
       startedAt: r.started_at as string,
       completedAt: r.completed_at as string | null,

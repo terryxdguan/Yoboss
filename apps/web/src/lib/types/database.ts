@@ -215,7 +215,7 @@ export interface DashboardWorkflowRun {
   id: string;
   workflowId: string;
   workflowName: string;
-  status: "running" | "success" | "failed";
+  status: "running" | "success" | "failed" | "cancelled";
   triggeredBy: "manual" | "scheduled";
   startedAt: string;
   completedAt: string | null;

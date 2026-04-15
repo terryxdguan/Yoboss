@@ -50,7 +50,7 @@ export interface WorkflowRun {
   id: string;
   workflow_id: string;
   user_id: string;
-  status: "running" | "success" | "failed";
+  status: "running" | "success" | "failed" | "cancelled";
   current_step: number;
   total_steps: number;
   step_results: WorkflowStepResult[];
