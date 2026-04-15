@@ -24,12 +24,21 @@ export async function POST(request: NextRequest) {
 
   let customerId = quota?.stripe_customer_id;
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email || undefined,
-      metadata: { supabase_user_id: user.id },
-    });
-    customerId = customer.id;
-    await admin.from("user_quotas").update({ stripe_customer_id: customerId }).eq("user_id", user.id);
+    try {
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        metadata: { supabase_user_id: user.id },
+      });
+      customerId = customer.id;
+      await admin.from("user_quotas").update({ stripe_customer_id: customerId }).eq("user_id", user.id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown Stripe error";
+      console.error("[billing/checkout] stripe.customers.create failed:", msg);
+      return NextResponse.json(
+        { error: `Stripe customer creation failed: ${msg}` },
+        { status: 500 }
+      );
+    }
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -91,17 +100,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
   }
 
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/account?checkout=success`,
-    cancel_url: `${appUrl}/account?checkout=cancelled`,
-    metadata,
-    ...(mode === "subscription"
-      ? { subscription_data: { metadata } }
-      : {}),
-  });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/account?checkout=success`,
+      cancel_url: `${appUrl}/account?checkout=cancelled`,
+      metadata,
+      ...(mode === "subscription"
+        ? { subscription_data: { metadata } }
+        : {}),
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown Stripe error";
+    const code = (err as { code?: string })?.code;
+    console.error("[billing/checkout] stripe.checkout.sessions.create failed:", msg, "code:", code);
+    // Surface the real Stripe error so the client can show it. Without
+    // this, Next.js silently returns an empty 500 body and the user just
+    // sees a flash of "Loading…" with no actionable information.
+    return NextResponse.json(
+      { error: `Stripe checkout failed: ${msg}`, code },
+      { status: 500 }
+    );
+  }
 }
