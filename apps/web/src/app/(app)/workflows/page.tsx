@@ -6,7 +6,6 @@ import { Plus, Layers } from "lucide-react";
 import {
   getWorkflows,
   deleteWorkflow,
-  createWorkflowRun,
   updateWorkflow,
   getWorkflowRuns,
 } from "@/lib/db/actions";
@@ -40,7 +39,7 @@ export default function WorkflowsPage() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
-  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run: WorkflowRun; cachedMode?: boolean } | null>(null);
+  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run?: WorkflowRun; cachedMode?: boolean; topic?: string } | null>(null);
   const [historyWorkflow, setHistoryWorkflow] = useState<Workflow | null>(null);
 
   // Topic input for workflows without a pre-set topic
@@ -121,24 +120,13 @@ export default function WorkflowsPage() {
         return;
       }
 
-      // 2. No cache hit → existing live execution path (unchanged).
-      const initialResults = wf.steps.map((s) => ({ stepId: s.id, status: "pending" as const }));
-      const run = await createWorkflowRun({
-        workflowId: wf.id,
-        totalSteps: wf.steps.length,
-        stepResults: initialResults,
-      });
-      await updateWorkflow(wf.id, { status: "running" });
-
-      // Fire server-side execution (don't await — runs in background)
-      // Pass topic so server can inject it into step prompts
-      fetch("/api/workflows/execute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workflowId: wf.id, runId: run.id, ...(topic ? { topic } : {}) }),
-      }).catch(console.error);
-
-      setRunningWorkflow({ workflow: wf, run });
+      // 2. No cache hit → open run view in client-driven execution mode.
+      // WorkflowRunView.executeWorkflow() creates the workflow_runs row
+      // itself and drives each step via /api/ai/agent-run-step, giving
+      // every step its own 300s HTTP budget. This keeps multi-step runs
+      // under the Vercel Hobby serverless function ceiling (one server
+      // request per step instead of one request for the whole workflow).
+      setRunningWorkflow({ workflow: wf, topic });
     } catch (err) {
       console.error("Failed to start workflow:", err);
     }
@@ -235,7 +223,7 @@ export default function WorkflowsPage() {
       </div>
 
       {/* Modals */}
-      {runningWorkflow && <WorkflowRunView workflow={runningWorkflow.workflow} existingRun={runningWorkflow.run} cachedMode={runningWorkflow.cachedMode} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
+      {runningWorkflow && <WorkflowRunView workflow={runningWorkflow.workflow} existingRun={runningWorkflow.run} cachedMode={runningWorkflow.cachedMode} topic={runningWorkflow.topic} onClose={() => { setRunningWorkflow(null); loadWorkflows(); }} onComplete={() => loadWorkflows()} />}
       {historyWorkflow && <WorkflowHistory workflow={historyWorkflow} onClose={() => setHistoryWorkflow(null)} />}
       {topicWorkflow && (
         <TopicInputModal

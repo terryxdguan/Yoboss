@@ -35,6 +35,10 @@ interface WorkflowRunViewProps {
       banner. Used by the workflows page when /api/workflows/check-cache
       returns cached: true. */
   cachedMode?: boolean;
+  /** One-off topic override entered at launch time. Falls back to
+      workflow.topic when absent. Prepended to each step's prompt at
+      run time so the agent knows what subject to work on. */
+  topic?: string;
 }
 
 // --- Types ---
@@ -117,6 +121,7 @@ export function WorkflowRunView({
   onComplete,
   existingRun,
   cachedMode,
+  topic,
 }: WorkflowRunViewProps) {
   const isPollingMode = !!existingRun && existingRun.status === "running";
   const isHistoryMode = !!existingRun && !isPollingMode;
@@ -311,6 +316,15 @@ export function WorkflowRunView({
       };
       setChatMessages((prev) => [...prev, stepMsg]);
 
+      // Inject run-time topic (one-off prop override, falling back to the
+      // workflow's saved topic) into the step prompt. Matches what the
+      // server-side /api/workflows/execute path used to do — see
+      // apps/web/src/app/api/workflows/execute/route.ts line 190.
+      const effectiveTopic = topic || workflow.topic;
+      const message = effectiveTopic
+        ? `Topic/Task: ${effectiveTopic}\n\n${step.prompt}`
+        : step.prompt;
+
       // Call Managed Agent via SSE route
       // Role prompt is loaded server-side; session context replaces previousOutputs
       const res = await fetch("/api/ai/agent-run-step", {
@@ -318,7 +332,7 @@ export function WorkflowRunView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: sessionIdRef.current || undefined,
-          message: step.prompt,
+          message,
           rolePromptFile: agent.promptFile,
           knownFileIds: knownFileIdsRef.current,
         }),
@@ -454,7 +468,7 @@ export function WorkflowRunView({
       setAgentStatus(step.agentId, "idle");
       return { text, files };
     },
-    [workflow.steps]
+    [workflow.steps, workflow.topic, topic, cachedMode]
   );
 
   // Generate summary of workflow outputs using Haiku

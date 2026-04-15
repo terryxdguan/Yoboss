@@ -9,7 +9,7 @@ import { WorkflowRunView } from "@/components/workflow/workflow-run-view";
 import { WorkflowHistory } from "@/components/workflow/workflow-history";
 import { TopicInputModal } from "@/components/workflow/topic-input-modal";
 import { ScheduleModal } from "@/components/workflow/schedule-modal";
-import { deleteWorkflow, getUserTimezone, upsertUserTimezone, createWorkflowRun, updateWorkflow, getWorkflowRuns } from "@/lib/db/actions";
+import { deleteWorkflow, getUserTimezone, upsertUserTimezone, updateWorkflow, getWorkflowRuns } from "@/lib/db/actions";
 import type { WorkflowSummary } from "@/lib/types/database";
 import type { Workflow, WorkflowRun } from "@/lib/types/workflow";
 
@@ -42,7 +42,7 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
   const [showPicker, setShowPicker] = useState(false);
 
   // Workflow action state
-  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run: WorkflowRun } | null>(null);
+  const [runningWorkflow, setRunningWorkflow] = useState<{ workflow: Workflow; run?: WorkflowRun; topic?: string } | null>(null);
   const [historyWorkflow, setHistoryWorkflow] = useState<Workflow | null>(null);
   const [topicWorkflow, setTopicWorkflow] = useState<Workflow | null>(null);
   const [scheduleWorkflow, setScheduleWorkflow] = useState<Workflow | null>(null);
@@ -77,14 +77,12 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
     saveFavorites(next);
   };
 
-  const startWorkflow = useCallback(async (wf: Workflow, topicOverride?: string) => {
-    try {
-      const initialResults = wf.steps.map((s) => ({ stepId: s.id, status: "pending" as const }));
-      const run = await createWorkflowRun({ workflowId: wf.id, totalSteps: wf.steps.length, stepResults: initialResults });
-      await updateWorkflow(wf.id, { status: "running" });
-      fetch("/api/workflows/execute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workflowId: wf.id, runId: run.id, ...(topicOverride ? { topic: topicOverride } : {}) }) }).catch(console.error);
-      setRunningWorkflow({ workflow: wf, run });
-    } catch (err) { console.error("Failed to start workflow:", err); }
+  const startWorkflow = useCallback((wf: Workflow, topicOverride?: string) => {
+    // Open run view in client-driven execution mode — WorkflowRunView
+    // creates the workflow_runs row itself and drives each step via
+    // /api/ai/agent-run-step. See workflows/page.tsx for the rationale
+    // (one HTTP request per step to fit under Vercel Hobby's 300s cap).
+    setRunningWorkflow({ workflow: wf, topic: topicOverride });
   }, []);
 
   const handleRun = (wf: Workflow) => {
@@ -205,6 +203,7 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
         <WorkflowRunView
           workflow={runningWorkflow.workflow}
           existingRun={runningWorkflow.run}
+          topic={runningWorkflow.topic}
           onClose={() => { setRunningWorkflow(null); router.refresh(); }}
           onComplete={() => router.refresh()}
         />
