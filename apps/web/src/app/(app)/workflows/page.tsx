@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Layers } from "lucide-react";
 import {
@@ -18,6 +18,8 @@ import { getUserTimezone, upsertUserTimezone } from "@/lib/db/actions";
 import type { Workflow, WorkflowStep, WorkflowRun } from "@/lib/types/workflow";
 
 const FAVORITES_KEY = "yoboss_favorite_workflows";
+const SORT_KEY = "yoboss_workflow_sort";
+type SortMode = "name" | "recent";
 
 /** Default placeholder topics per workflow name — shown as hint text in the topic input */
 const TOPIC_PLACEHOLDERS: Record<string, string> = {
@@ -47,8 +49,19 @@ export default function WorkflowsPage() {
 
   const [scheduleWorkflow, setScheduleWorkflow] = useState<Workflow | null>(null);
   const [userTimezone, setUserTimezone] = useState("UTC");
+  const [sortMode, setSortMode] = useState<SortMode>("name");
 
-  useEffect(() => { setFavoriteIds(loadFavorites()); setMounted(true); }, []);
+  useEffect(() => {
+    setFavoriteIds(loadFavorites());
+    const saved = localStorage.getItem(SORT_KEY);
+    if (saved === "name" || saved === "recent") setSortMode(saved);
+    setMounted(true);
+  }, []);
+
+  const handleSortChange = (mode: SortMode) => {
+    setSortMode(mode);
+    localStorage.setItem(SORT_KEY, mode);
+  };
 
   const loadWorkflows = useCallback(async () => {
     try { setWorkflows(await getWorkflows()); } catch (err) { console.error(err); } finally { setLoading(false); }
@@ -168,7 +181,22 @@ export default function WorkflowsPage() {
     }
   }, [loadWorkflows]);
 
-  const allWorkflows = workflows;
+  const allWorkflows = useMemo(() => {
+    const arr = [...workflows];
+    if (sortMode === "name") {
+      arr.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // "recent": last_run_at DESC, never-run workflows sink to bottom,
+      // ties broken by name so order stays deterministic.
+      arr.sort((a, b) => {
+        if (!a.last_run_at && !b.last_run_at) return a.name.localeCompare(b.name);
+        if (!a.last_run_at) return 1;
+        if (!b.last_run_at) return -1;
+        return b.last_run_at.localeCompare(a.last_run_at);
+      });
+    }
+    return arr;
+  }, [workflows, sortMode]);
 
   if (!mounted) return <div className="flex items-center justify-center py-24"><div className="text-sm text-[#9B948B]">Loading...</div></div>;
 
@@ -189,9 +217,20 @@ export default function WorkflowsPage() {
 
         {/* All Workflows */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="h-4 w-4 text-[#7FAEE6]" />
-            <h2 className="text-base font-semibold text-[#2B2B2B]">All Workflows</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-[#7FAEE6]" />
+              <h2 className="text-base font-semibold text-[#2B2B2B]">All Workflows</h2>
+            </div>
+            <select
+              value={sortMode}
+              onChange={(e) => handleSortChange(e.target.value as SortMode)}
+              className="text-xs text-[#6F6A64] bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#7FAEE6] cursor-pointer"
+              aria-label="Sort workflows"
+            >
+              <option value="name">Sort: Name (A–Z)</option>
+              <option value="recent">Sort: Most recent run</option>
+            </select>
           </div>
           {!loading && allWorkflows.length === 0 && (
             <div className="text-center py-12 bg-[#FFFDF9] rounded-xl border border-[#E7DED2]">

@@ -870,11 +870,16 @@ export async function getWorkflows(): Promise<Workflow[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Alphabetical by name. The workflows page applies its own client-side
+  // sort (name vs. last_run_at) on top of this; dashboard favorites are
+  // ordered by a localStorage list, not DB order. A stable alphabetical
+  // default prevents cards from reshuffling whenever a run bumps
+  // updated_at (the previous order field).
   const { data, error } = await supabase
     .from("workflows")
     .select("*")
     .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+    .order("name", { ascending: true });
 
   if (error) throw error;
   const workflows = data || [];
