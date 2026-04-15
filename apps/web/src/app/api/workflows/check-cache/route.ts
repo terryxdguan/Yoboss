@@ -21,6 +21,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 
+// Mime types that browsers can render inline correctly. Everything else
+// gets forced to download via Supabase Storage's `?download=` query
+// param — without this, HTML files open as raw source (sometimes with
+// charset mojibake), markdown shows as plain text, code files dump as
+// text walls, etc. None of those are what the user wants from a "click
+// to view this deliverable" link.
+const INLINE_VIEWABLE_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "application/pdf",
+]);
+
 function norm(s: string | null | undefined): string {
   return (s ?? "").trim().toLowerCase();
 }
@@ -109,7 +125,16 @@ export async function POST(request: NextRequest) {
     // characters (?, #, &, +, %, unicode) don't break the resulting link.
     // Split-encode-join preserves the templateId/filename separator.
     const encodedPath = f.storagePath.split("/").map(encodeURIComponent).join("/");
-    return { ...f, href: `${bucketBase}/${encodedPath}` };
+    const baseHref = `${bucketBase}/${encodedPath}`;
+    // Image and PDF files render fine inline; everything else gets forced
+    // to download via Supabase's ?download=<filename> query param so the
+    // browser saves the file locally instead of trying to render raw
+    // bytes as text.
+    const shouldForceDownload = !INLINE_VIEWABLE_MIMES.has((f.mimeType ?? "").toLowerCase());
+    const href = shouldForceDownload
+      ? `${baseHref}?download=${encodeURIComponent(f.filename ?? "download")}`
+      : baseHref;
+    return { ...f, href };
   };
 
   const stepResults = Array.isArray(cached.step_results)
