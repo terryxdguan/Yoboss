@@ -816,7 +816,7 @@ export async function getTodoTags(): Promise<TodoTag[]> {
 
   // Create default tags if none exist
   if (!data || data.length === 0) {
-    const defaults = ["Work", "AIProject", "Life", "Other"];
+    const defaults = ["Work", "Life", "Other"];
     const inserts = defaults.map((name, i) => ({
       user_id: user.id,
       name,
