@@ -7,3 +7,11 @@ dist/
 *.tsbuildinfo
 .vercel
 .DS_Store
+
+# local debug & scratch
+apps/web/.agent-state.json
+apps/web/test-agent*.mjs
+apps/web/test-cli*.js
+apps/web/test-cli-output*.txt
+apps/web/src/lib/ai/client.js
+supabase/.temp/
