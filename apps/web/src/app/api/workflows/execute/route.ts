@@ -137,7 +137,7 @@ async function isRunCancelled(supabase: ReturnType<typeof createAdminClient>, ru
   return data?.status === "cancelled";
 }
 
-export const maxDuration = 600; // 10 min per step
+export const maxDuration = 300; // 5 min per step (Vercel Hobby cap; Pro allows up to 900)
 
 export async function POST(request: NextRequest) {
   // Dual auth: CRON_SECRET for scheduled runs, user session for manual runs
