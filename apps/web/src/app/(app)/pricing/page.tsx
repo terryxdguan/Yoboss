@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Check, Zap } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { getBillingState } from "@/lib/db/actions";
 
 type TierId = "free" | "basic" | "pro";
@@ -64,7 +63,6 @@ const CREDIT_PACKS_DISPLAY = [
 ];
 
 export default function PricingPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [currentTier, setCurrentTier] = useState<TierId>("free");
   const [hasActiveSub, setHasActiveSub] = useState(false);
@@ -110,7 +108,10 @@ export default function PricingPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (data.url) router.push(data.url);
+      // Stripe Checkout lives on checkout.stripe.com — router.push() treats
+      // that as an internal Next.js route and silently does nothing. Use a
+      // hard nav, same pattern as the portal handler above.
+      if (data.url) window.location.href = data.url;
       else alert(data.error || "Checkout failed");
     } finally {
       setLoading(null);
