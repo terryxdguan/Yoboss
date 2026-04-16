@@ -26,6 +26,7 @@ import {
   getSessionMessages,
   getSessionMessageCount,
   saveMessage,
+  upsertAssistantMessage,
   updateSessionSummary,
   getSession,
 } from "@/lib/db/actions";
@@ -52,6 +53,10 @@ interface UIMessage {
   attachments?: FileAttachment[];
   toolActivity?: ToolActivity[];
   generatedFiles?: GeneratedFile[];
+  /** Set by incremental upsert when the stream died mid-flight (Vercel
+   *  maxDuration hit, tab closed, etc). UI renders a warning badge so
+   *  the user knows the turn was cut short and can send a continue. */
+  interrupted?: boolean;
 }
 
 let counter = 0;
@@ -114,6 +119,12 @@ export default function AgentChatPage() {
         content: m.content,
         generatedFiles: m.metadata?.generatedFiles as GeneratedFile[] | undefined,
         toolActivity: m.metadata?.toolActivity as ToolActivity[] | undefined,
+        // metadata.interrupted is set on the error path of sendToApi when
+        // the SSE stream was cut off mid-flight. metadata.partial=true
+        // without interrupted would mean a still-in-progress write from a
+        // stream that finished normally but hadn't done its final flush
+        // yet — same visual treatment for now.
+        interrupted: Boolean(m.metadata?.interrupted) || Boolean(m.metadata?.partial),
       }));
       setMessages(uiMsgs);
       setSessionSummary(session?.summary || null);
@@ -136,6 +147,65 @@ export default function AgentChatPage() {
     const assistantId = genId();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
+    // Hoisted so the catch block can finalize whatever partial state we had
+    // when the stream died. Previously these were try-scoped, so an error
+    // meant losing the half-rendered assistant turn entirely.
+    let text = "";
+    const tools: ToolActivity[] = [];
+    const files: GeneratedFile[] = [];
+
+    // Create the DB row up front so incremental flushes have something
+    // to update. If this fails we degrade to the old behavior (one final
+    // saveMessage at the end) — see the fallback in the success branch.
+    let assistantDbId: string | null = null;
+    try {
+      const placeholder = await upsertAssistantMessage({
+        sessionId: activeSessionId,
+        messageId: null,
+        content: "",
+        metadata: { partial: true },
+      });
+      assistantDbId = placeholder.id;
+    } catch (err) {
+      console.error("[chat] Failed to create assistant placeholder:", err);
+    }
+
+    // Throttled flush (mirrors the flushOutput pattern from the old
+    // server-side workflow/execute route). Writes the current text +
+    // tools + files to chat_messages at most every 2s so Vercel
+    // killing the function mid-stream doesn't vaporize the turn.
+    let flushInFlight = false;
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let finalized = false;
+
+    const flushNow = async () => {
+      if (flushInFlight || finalized || !assistantDbId || !activeSessionId) return;
+      flushInFlight = true;
+      try {
+        await upsertAssistantMessage({
+          sessionId: activeSessionId,
+          messageId: assistantDbId,
+          content: text,
+          metadata: {
+            partial: true,
+            ...(tools.length > 0 ? { toolActivity: tools } : {}),
+            ...(files.length > 0 ? { generatedFiles: files } : {}),
+          },
+        });
+      } catch {
+        // Non-blocking — the next flush or the final flush will retry
+      }
+      flushInFlight = false;
+    };
+
+    const scheduleFlush = () => {
+      if (flushTimer || finalized) return;
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        flushNow();
+      }, 2000);
+    };
+
     try {
       // Apply session memory: summary + last 5 messages
       const recentMessages = buildMessagesWithMemory(sessionSummary, apiMessages);
@@ -154,9 +224,6 @@ export default function AgentChatPage() {
       if (!reader) throw new Error("No response body");
 
       const decoder = new TextDecoder();
-      let text = "";
-      const tools: ToolActivity[] = [];
-      const files: GeneratedFile[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -181,6 +248,7 @@ export default function AgentChatPage() {
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, content: text, toolActivity: tools.length > 0 ? [...tools] : undefined, generatedFiles: files.length > 0 ? [...files] : undefined } : m))
             );
+            scheduleFlush();
           }
 
           // Server-side tool use started
@@ -200,6 +268,7 @@ export default function AgentChatPage() {
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, toolActivity: [...tools] } : m))
             );
+            scheduleFlush();
           }
 
           // Code execution result — check for generated files
@@ -215,6 +284,7 @@ export default function AgentChatPage() {
                 setMessages((prev) =>
                   prev.map((m) => (m.id === assistantId ? { ...m, generatedFiles: [...files] } : m))
                 );
+                scheduleFlush();
               }
             }
           }
@@ -233,12 +303,38 @@ export default function AgentChatPage() {
 
       historyRef.current.push({ role: "assistant", content: text });
 
-      // Save to DB with metadata
-      const metadata = (files.length > 0 || tools.length > 0) ? {
+      // Finalize the DB row — mark partial=false so the UI stops
+      // showing an "interrupted" badge. If the placeholder insert
+      // failed earlier, fall back to the legacy saveMessage-on-
+      // completion path so we at least persist something.
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      finalized = true;
+      const finalMetadata = (files.length > 0 || tools.length > 0) ? {
+        partial: false,
         generatedFiles: files.length > 0 ? files : undefined,
         toolActivity: tools.length > 0 ? tools : undefined,
-      } : undefined;
-      await saveMessage(activeSessionId, "assistant", text, metadata);
+      } : { partial: false };
+      if (assistantDbId) {
+        try {
+          await upsertAssistantMessage({
+            sessionId: activeSessionId,
+            messageId: assistantDbId,
+            content: text,
+            metadata: finalMetadata,
+          });
+        } catch (err) {
+          console.error("[chat] Final upsert failed:", err);
+        }
+      } else {
+        const legacyMetadata = (files.length > 0 || tools.length > 0) ? {
+          generatedFiles: files.length > 0 ? files : undefined,
+          toolActivity: tools.length > 0 ? tools : undefined,
+        } : undefined;
+        await saveMessage(activeSessionId, "assistant", text, legacyMetadata);
+      }
 
       // Auto-title: if this is the first exchange, use the user's first message as title
       if (messages.length <= 1) {
@@ -277,9 +373,44 @@ export default function AgentChatPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, content: `Error: ${msg}` } : m))
+        prev.map((m) => (m.id === assistantId ? { ...m, content: text || `Error: ${msg}`, interrupted: true } : m))
       );
+      // Persist whatever we got so far + mark interrupted. This is the
+      // main benefit of the refactor: before, an error here threw away
+      // the entire assistant turn. Now the partial rendering survives
+      // page reload and the user can send a follow-up to continue.
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      finalized = true;
+      if (assistantDbId && activeSessionId) {
+        try {
+          await upsertAssistantMessage({
+            sessionId: activeSessionId,
+            messageId: assistantDbId,
+            content: text,
+            metadata: {
+              partial: false,
+              interrupted: true,
+              ...(tools.length > 0 ? { toolActivity: tools } : {}),
+              ...(files.length > 0 ? { generatedFiles: files } : {}),
+            },
+          });
+        } catch {
+          // Non-blocking
+        }
+      }
+      // Also keep the partial content in history so the next user
+      // message sees it and Claude can continue naturally.
+      if (text) {
+        historyRef.current.push({ role: "assistant", content: text });
+      }
     } finally {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
       setIsStreaming(false);
       setAgentStatus(agentId, "idle");
     }
@@ -519,6 +650,11 @@ export default function AgentChatPage() {
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     {isStreaming && msg === messages[messages.length - 1] && (
                       <span className="inline-block ml-0.5 animate-pulse">|</span>
+                    )}
+                    {msg.interrupted && !(isStreaming && msg === messages[messages.length - 1]) && (
+                      <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[11px] text-[#C9843D]">
+                        ⚠️ This response was interrupted. Send a new message to continue from here.
+                      </div>
                     )}
                   </div>
                 ) : (

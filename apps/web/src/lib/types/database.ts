@@ -130,6 +130,15 @@ export interface ChatMessage {
   metadata?: {
     generatedFiles?: { fileId: string; filename: string }[];
     toolActivity?: { type: string; label: string }[];
+    /** Set while an assistant turn is still streaming and has not
+     *  received its final upsert. Rehydrated messages with this flag
+     *  get the interrupted UI treatment because we can't distinguish
+     *  "in-progress" from "crashed" after the fact. */
+    partial?: boolean;
+    /** Explicitly set on the error path of sendToApi (Vercel
+     *  maxDuration hit, fetch threw, user closed tab mid-stream, etc).
+     *  Signals the UI to render a "continue from here" warning. */
+    interrupted?: boolean;
   } | null;
   created_at: string;
 }

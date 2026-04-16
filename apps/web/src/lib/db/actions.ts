@@ -696,6 +696,70 @@ export async function saveMessage(
   return data;
 }
 
+/**
+ * Incremental upsert for a streaming assistant message.
+ *
+ * Called repeatedly during an SSE stream so that if the Vercel function
+ * is killed mid-stream (or the user closes the tab) the partial content
+ * is already persisted and can be rehydrated on the next page load.
+ * Without this, the old saveMessage-on-completion pattern lost the entire
+ * assistant turn on any interruption.
+ *
+ * - First call: pass messageId=null, returns a freshly inserted row id.
+ *   The row starts with metadata.partial=true so the UI can badge it.
+ * - Subsequent calls: pass the same messageId, updates content + metadata
+ *   in place. Caller is responsible for throttling (don't hammer every
+ *   SSE delta — flush every ~2s is plenty).
+ * - Final call: pass messageId + full content + metadata.partial=false
+ *   (and optional metadata.interrupted=true on the error path).
+ */
+export async function upsertAssistantMessage(params: {
+  sessionId: string;
+  messageId: string | null;
+  content: string;
+  metadata?: ChatMessage["metadata"];
+}): Promise<{ id: string }> {
+  const supabase = await createClient();
+
+  if (params.messageId) {
+    // Update the existing row's content + metadata. We don't touch the
+    // session's updated_at on every flush — it's refreshed only on the
+    // first insert and on the final flush to avoid 30 writes per chat turn.
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .update({
+        content: params.content,
+        metadata: params.metadata ?? { partial: true },
+      })
+      .eq("id", params.messageId)
+      .select("id")
+      .single();
+    if (error) throw error;
+    return { id: data.id };
+  }
+
+  // First call — create the row with partial=true
+  const row: Record<string, unknown> = {
+    session_id: params.sessionId,
+    role: "assistant",
+    content: params.content,
+    metadata: params.metadata ?? { partial: true },
+  };
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert(row)
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  await supabase
+    .from("chat_sessions")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", params.sessionId);
+
+  return { id: data.id };
+}
+
 export async function updateSessionSummary(
   sessionId: string,
   summary: string
