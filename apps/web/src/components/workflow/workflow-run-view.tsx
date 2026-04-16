@@ -212,6 +212,11 @@ export function WorkflowRunView({
   const runIdRef = useRef<string | null>(existingRun?.id || null);
   const sessionIdRef = useRef<string | null>(existingRun?.session_id || null);
   const knownFileIdsRef = useRef<string[]>([]);
+  // Mirror of stepResults state for synchronous reads inside runStep's
+  // throttled flush. Updated every time executeWorkflow mutates results.
+  const stepResultsRef = useRef<WorkflowStepResult[]>(
+    existingRun ? existingRun.step_results : []
+  );
 
   // Persist follow-up messages to DB
   const saveFollowUpMessages = useCallback(async (msgs: ChatMessage[]) => {
@@ -362,6 +367,42 @@ export function WorkflowRunView({
       const tools: ToolActivity[] = [];
       const files: GeneratedFile[] = [];
 
+      // Throttled partial flush — every 2s, persist whatever text/tools/files
+      // have arrived so far into step_results[stepIndex]. If Vercel kills the
+      // function mid-step the recovery handler can read partial output from
+      // the DB instead of relying on heuristic Anthropic event reconstruction.
+      let flushInFlight = false;
+      let flushTimer: ReturnType<typeof setTimeout> | null = null;
+      let stepFlushFinalized = false;
+
+      const flushStepProgress = async () => {
+        const rid = runIdRef.current;
+        if (flushInFlight || stepFlushFinalized || !rid || cachedMode) return;
+        flushInFlight = true;
+        try {
+          const snapshot = [...stepResultsRef.current];
+          snapshot[stepIndex] = {
+            ...snapshot[stepIndex],
+            status: "running",
+            output: text || undefined,
+            toolActivity: tools.length > 0 ? [...tools] : undefined,
+            files: files.length > 0 ? [...files] : undefined,
+          };
+          await updateWorkflowRun(rid, { step_results: snapshot });
+        } catch {
+          // Non-blocking; next flush retries with newer state.
+        }
+        flushInFlight = false;
+      };
+
+      const scheduleStepFlush = () => {
+        if (flushTimer || stepFlushFinalized) return;
+        flushTimer = setTimeout(() => {
+          flushTimer = null;
+          flushStepProgress();
+        }, 2000);
+      };
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -437,6 +478,7 @@ export function WorkflowRunView({
                   : m
               )
             );
+            scheduleStepFlush();
           }
 
           if (event.type === "file") {
@@ -451,6 +493,7 @@ export function WorkflowRunView({
                 m.id === msgId ? { ...m, generatedFiles: [...files] } : m
               )
             );
+            scheduleStepFlush();
           }
 
           if (event.type === "done") {
@@ -458,6 +501,11 @@ export function WorkflowRunView({
           }
         }
       }
+
+      // Cancel any pending flush — the caller will do a full write with
+      // the final status immediately after we return.
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      stepFlushFinalized = true;
 
       // Finalize message — no longer streaming
       setChatMessages((prev) =>
@@ -512,6 +560,7 @@ export function WorkflowRunView({
   const executeWorkflow = useCallback(async () => {
     const initialResults = initStepResults();
     setStepResults(initialResults);
+    stepResultsRef.current = initialResults;
 
     let run: WorkflowRun;
     try {
@@ -551,6 +600,7 @@ export function WorkflowRunView({
       }
       updatedResults[i] = { ...updatedResults[i], status: "running" };
       setStepResults(updatedResults);
+      stepResultsRef.current = updatedResults;
 
       try {
         await updateWorkflowRun(run.id, {
@@ -585,6 +635,7 @@ export function WorkflowRunView({
           files: result.files.length > 0 ? result.files : undefined,
         };
         setStepResults([...updatedResults]);
+        stepResultsRef.current = [...updatedResults];
 
         try {
           await updateWorkflowRun(run.id, {
@@ -618,6 +669,7 @@ export function WorkflowRunView({
           durationMs: duration,
         };
         setStepResults([...updatedResults]);
+        stepResultsRef.current = [...updatedResults];
         setOverallStatus("failed");
         setIsRunning(false);
         setAgentStatus(workflow.steps[i].agentId, "idle");
