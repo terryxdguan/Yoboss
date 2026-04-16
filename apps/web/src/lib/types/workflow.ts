@@ -44,6 +44,10 @@ export interface FollowUpMessage {
   content: string;
   toolActivity?: { type: string; label: string }[];
   generatedFiles?: GeneratedFile[];
+  /** Set when the assistant turn's stream was cut off mid-flight
+   *  (Vercel maxDuration, network, tab close). UI renders a warning
+   *  so the user knows a follow-up will continue from partial state. */
+  interrupted?: boolean;
 }
 
 export interface WorkflowRun {

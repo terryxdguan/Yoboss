@@ -11,6 +11,7 @@ import {
   getOrCreateGoalSession,
   getSessionMessages,
   saveMessage,
+  upsertAssistantMessage,
   updateSessionSummary,
 } from "@/lib/db/actions";
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
@@ -42,6 +43,10 @@ interface Message {
   attachments?: FileAttachment[];
   toolActivity?: ToolActivity[];
   generatedFiles?: GeneratedFile[];
+  /** True when the assistant turn's stream was cut off (Vercel maxDuration,
+   *  tab close, etc). Mirrored from chat_messages.metadata.interrupted so
+   *  reloading the panel still shows the "continue from here" warning. */
+  interrupted?: boolean;
 }
 
 interface ApiMessage {
@@ -120,6 +125,9 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           content: m.content,
           generatedFiles: m.metadata?.generatedFiles as GeneratedFile[] | undefined,
           toolActivity: m.metadata?.toolActivity as ToolActivity[] | undefined,
+          // Either an explicit interrupt marker or a partial row where the
+          // final flush never happened — both render the same warning.
+          interrupted: Boolean(m.metadata?.interrupted) || Boolean(m.metadata?.partial),
         }));
         setMessages(uiMsgs);
         historyRef.current = dbMessages.map((m) => ({
@@ -147,6 +155,67 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
     const assistantId = genId();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
+    // Hoisted so the catch/finally can see whatever partial state we had
+    // when the stream died. The pattern mirrors team/chat — see
+    // apps/web/src/app/(app)/team/chat/[agentId]/page.tsx sendToApi.
+    let text = "";
+    const tools: ToolActivity[] = [];
+    const files: GeneratedFile[] = [];
+
+    // Create the DB placeholder up front so incremental flushes have a
+    // target row to update. If sessionId isn't ready or the insert fails,
+    // fall back to the legacy saveMessage-on-completion path.
+    let assistantDbId: string | null = null;
+    if (sessionId) {
+      try {
+        const placeholder = await upsertAssistantMessage({
+          sessionId,
+          messageId: null,
+          content: "",
+          metadata: { partial: true },
+        });
+        assistantDbId = placeholder.id;
+      } catch (err) {
+        console.error("[goal-chat] Failed to create assistant placeholder:", err);
+      }
+    }
+
+    // Throttled flush: at most one DB upsert every 2s. Debounced via a
+    // single setTimeout handle + an in-flight guard so rapid events don't
+    // cause overlapping writes. `finalized` short-circuits any late
+    // scheduler firings after the success/error finalize has run.
+    let flushInFlight = false;
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let finalized = false;
+
+    const flushNow = async () => {
+      if (flushInFlight || finalized || !assistantDbId || !sessionId) return;
+      flushInFlight = true;
+      try {
+        await upsertAssistantMessage({
+          sessionId,
+          messageId: assistantDbId,
+          content: text,
+          metadata: {
+            partial: true,
+            ...(tools.length > 0 ? { toolActivity: tools } : {}),
+            ...(files.length > 0 ? { generatedFiles: files } : {}),
+          },
+        });
+      } catch {
+        // Non-blocking; next flush will retry with the newer state
+      }
+      flushInFlight = false;
+    };
+
+    const scheduleFlush = () => {
+      if (flushTimer || finalized) return;
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        flushNow();
+      }, 2000);
+    };
+
     try {
       const res = await fetch("/api/ai/plan", {
         method: "POST",
@@ -164,9 +233,6 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       if (!reader) throw new Error("No response body");
 
       const decoder = new TextDecoder();
-      let text = "";
-      const tools: ToolActivity[] = [];
-      const files: GeneratedFile[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -196,6 +262,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, content: text, toolActivity: tools.length > 0 ? [...tools] : undefined, generatedFiles: files.length > 0 ? [...files] : undefined } : m))
             );
+            scheduleFlush();
           }
 
           // Server-side tool use started
@@ -215,6 +282,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, toolActivity: [...tools] } : m))
             );
+            scheduleFlush();
           }
 
           // Code execution result — check for generated files
@@ -230,6 +298,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                 setMessages((prev) =>
                   prev.map((m) => (m.id === assistantId ? { ...m, generatedFiles: [...files] } : m))
                 );
+                scheduleFlush();
               }
             }
           }
@@ -253,13 +322,40 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
       historyRef.current.push({ role: "assistant", content: text });
 
-      // Persist to DB
+      // Finalize the DB row with partial=false. Cancel any pending flush
+      // so a late timer doesn't overwrite our final write with a stale
+      // partial snapshot.
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      finalized = true;
       if (sessionId && text) {
-        const metadata = (files.length > 0 || tools.length > 0) ? {
+        const finalMetadata = (files.length > 0 || tools.length > 0) ? {
+          partial: false,
           generatedFiles: files.length > 0 ? files : undefined,
           toolActivity: tools.length > 0 ? tools : undefined,
-        } : undefined;
-        saveMessage(sessionId, "assistant", text, metadata).catch(console.error);
+        } : { partial: false };
+        if (assistantDbId) {
+          try {
+            await upsertAssistantMessage({
+              sessionId,
+              messageId: assistantDbId,
+              content: text,
+              metadata: finalMetadata,
+            });
+          } catch (err) {
+            console.error("[goal-chat] Final upsert failed:", err);
+          }
+        } else {
+          // Fallback: placeholder was never created. Fire the legacy
+          // insert so we at least persist the completed turn.
+          const legacyMetadata = (files.length > 0 || tools.length > 0) ? {
+            generatedFiles: files.length > 0 ? files : undefined,
+            toolActivity: tools.length > 0 ? tools : undefined,
+          } : undefined;
+          saveMessage(sessionId, "assistant", text, legacyMetadata).catch(console.error);
+        }
 
         // Session memory: generate rolling summary when messages exceed threshold
         const totalMessages = historyRef.current.length;
@@ -287,14 +383,47 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, content: `Error: ${msg}` } : m
+          m.id === assistantId ? { ...m, content: text || `Error: ${msg}`, interrupted: true } : m
         )
       );
+      // Persist partial state + mark interrupted so reloading the panel
+      // shows the warning and preserves whatever text/tools/files arrived
+      // before the stream died. Also push the partial text into history
+      // so the next send can continue the conversation naturally.
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      finalized = true;
+      if (sessionId && assistantDbId) {
+        try {
+          await upsertAssistantMessage({
+            sessionId,
+            messageId: assistantDbId,
+            content: text,
+            metadata: {
+              partial: false,
+              interrupted: true,
+              ...(tools.length > 0 ? { toolActivity: tools } : {}),
+              ...(files.length > 0 ? { generatedFiles: files } : {}),
+            },
+          });
+        } catch {
+          // Non-blocking
+        }
+      }
+      if (text) {
+        historyRef.current.push({ role: "assistant", content: text });
+      }
     } finally {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
       setIsStreaming(false);
       setAgentStatus("general_assistant", "idle");
     }
-  }, [goalContext]);
+  }, [goalContext, sessionId, sessionSummary]);
 
   // --- Start conversation (only if no history loaded) ---
   useEffect(() => {
@@ -483,6 +612,11 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                   </ReactMarkdown>
                   {isStreaming && msg === displayMessages[displayMessages.length - 1] && (
                     <span className="inline-block ml-0.5 animate-pulse">|</span>
+                  )}
+                  {msg.interrupted && !(isStreaming && msg === displayMessages[displayMessages.length - 1]) && (
+                    <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[11px] text-[#C9843D]">
+                      ⚠️ This response was interrupted. Send a new message to continue from here.
+                    </div>
                   )}
                 </div>
               ) : (

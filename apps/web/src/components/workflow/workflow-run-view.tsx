@@ -62,6 +62,11 @@ interface ChatMessage {
   // common
   content: string;
   isStreaming?: boolean;
+  /** Set on the error path of handleSend when the follow-up chat
+   *  stream was cut off. Serialized into follow_up_messages and the
+   *  render path shows an "interrupted — send a new message to
+   *  continue" warning when the message is no longer the streaming one. */
+  interrupted?: boolean;
 }
 
 // --- Helpers ---
@@ -169,6 +174,7 @@ export function WorkflowRunView({
             content: fm.content,
             toolActivity: fm.toolActivity as ToolActivity[] | undefined,
             generatedFiles: fm.generatedFiles as GeneratedFile[] | undefined,
+            interrupted: Boolean(fm.interrupted),
           });
         }
       }
@@ -215,7 +221,10 @@ export function WorkflowRunView({
     if (cachedMode) return;
     const rid = runIdRef.current;
     if (!rid) return;
-    // Extract only user/assistant messages (skip step & system)
+    // Extract only user/assistant messages (skip step & system). Carry
+    // `interrupted` through so a mid-stream death survives reload: the
+    // render path reads it back and shows the "send a new message to
+    // continue" warning.
     const followUp = msgs
       .filter((m) => m.type === "user" || m.type === "assistant")
       .map((m) => ({
@@ -223,6 +232,7 @@ export function WorkflowRunView({
         content: m.content,
         toolActivity: m.toolActivity,
         generatedFiles: m.generatedFiles,
+        ...(m.interrupted ? { interrupted: true } : {}),
       }));
     if (followUp.length === 0) return;
     try {
@@ -880,12 +890,44 @@ export function WorkflowRunView({
 
     chatHistoryRef.current.push({ role: "user", content: text });
 
+    // Hoisted so the catch/finally can see the partial state when the
+    // stream dies. Previously these were try-scoped, so an error lost
+    // everything the assistant had already streamed.
+    let responseText = "";
+    const chatTools: ToolActivity[] = [];
+    const chatFiles: GeneratedFile[] = [];
+
+    // Throttled flush of the entire chatMessages array into
+    // workflow_runs.follow_up_messages. We read the latest React state
+    // via a functional setter no-op (React skips the re-render when the
+    // returned reference is unchanged). The flush mirrors the 2s cadence
+    // in team/chat and goal-chat-panel for consistency.
+    let flushInFlight = false;
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let finalized = false;
+
+    const flushNow = async () => {
+      if (flushInFlight || finalized) return;
+      flushInFlight = true;
+      let latestMsgs: ChatMessage[] = [];
+      setChatMessages((prev) => { latestMsgs = prev; return prev; });
+      try {
+        await saveFollowUpMessages(latestMsgs);
+      } catch {
+        // Non-blocking
+      }
+      flushInFlight = false;
+    };
+
+    const scheduleFlush = () => {
+      if (flushTimer || finalized) return;
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        flushNow();
+      }, 2000);
+    };
+
     try {
-      let responseText = "";
-      const chatTools: ToolActivity[] = [];
-
-      const chatFiles: GeneratedFile[] = [];
-
       if (sessionIdRef.current) {
         // Live mode — continue the Managed Agent session (full context preserved)
         const res = await fetch("/api/ai/agent-run-step", {
@@ -940,6 +982,7 @@ export function WorkflowRunView({
                   m.id === assistantMsgId ? { ...m, toolActivity: [...chatTools] } : m
                 )
               );
+              scheduleFlush();
             }
 
             if (event.type === "content") {
@@ -951,6 +994,7 @@ export function WorkflowRunView({
                     : m
                 )
               );
+              scheduleFlush();
             }
 
             if (event.type === "file") {
@@ -965,6 +1009,7 @@ export function WorkflowRunView({
                   m.id === assistantMsgId ? { ...m, generatedFiles: [...chatFiles] } : m
                 )
               );
+              scheduleFlush();
             }
 
             if (event.type === "done") {
@@ -1027,6 +1072,7 @@ export function WorkflowRunView({
                     : m
                 )
               );
+              scheduleFlush();
             }
 
             if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
@@ -1045,6 +1091,7 @@ export function WorkflowRunView({
                   m.id === assistantMsgId ? { ...m, toolActivity: [...chatTools] } : m
                 )
               );
+              scheduleFlush();
             }
           }
         }
@@ -1065,24 +1112,64 @@ export function WorkflowRunView({
       );
       chatHistoryRef.current.push({ role: "assistant", content: responseText });
 
-      // Persist follow-up messages to DB
-      // Use functional setChatMessages to get latest snapshot, then save
+      // Finalize — cancel any pending throttled flush and do one synchronous
+      // final save so the last delta definitely lands (not left to the 2s
+      // timer that may be cleared in finally before firing).
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      finalized = true;
       let latestMsgs: ChatMessage[] = [];
       setChatMessages((prev) => { latestMsgs = prev; return prev; });
-      // latestMsgs is set synchronously by React's setState callback
       if (latestMsgs.length > 0) {
         saveFollowUpMessages(latestMsgs);
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "Something went wrong";
+      // Preserve whatever the assistant had produced so far + mark
+      // interrupted. The new message content is either the partial
+      // responseText (if anything streamed) or the error string as a
+      // fallback. The interrupted flag propagates into follow_up_messages
+      // via saveFollowUpMessages so reload shows the warning badge.
       setChatMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsgId
-            ? { ...m, content: `Error: ${errMsg}`, isStreaming: false }
+            ? {
+              ...m,
+              content: responseText || `Error: ${errMsg}`,
+              isStreaming: false,
+              toolActivity: chatTools.length > 0 ? chatTools : undefined,
+              generatedFiles: chatFiles.length > 0 ? chatFiles : undefined,
+              interrupted: true,
+            }
             : m
         )
       );
+      // Also push partial text into the local history so a follow-up
+      // send continues the conversation naturally on retry.
+      if (responseText) {
+        chatHistoryRef.current.push({ role: "assistant", content: responseText });
+      }
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      finalized = true;
+      let latestMsgs: ChatMessage[] = [];
+      setChatMessages((prev) => { latestMsgs = prev; return prev; });
+      if (latestMsgs.length > 0) {
+        try {
+          await saveFollowUpMessages(latestMsgs);
+        } catch {
+          // Non-blocking
+        }
+      }
     } finally {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
       setIsChatStreaming(false);
       setAgentStatus("general_assistant", "idle");
     }
@@ -1308,6 +1395,11 @@ export function WorkflowRunView({
                       </ReactMarkdown>
                       {msg.isStreaming && (
                         <span className="inline-block ml-0.5 animate-pulse">|</span>
+                      )}
+                      {msg.interrupted && !msg.isStreaming && (
+                        <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[11px] text-[#C9843D]">
+                          ⚠️ This response was interrupted. Send a new message to continue from here.
+                        </div>
                       )}
                     </div>
                   ) : msg.isStreaming ? (
