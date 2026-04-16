@@ -71,6 +71,10 @@ export interface ChatMessage {
   } | null;
   toolActivity?: ToolActivity[]; // all tool calls observed during this turn
   answered?: boolean; // for ask_question: has user answered?
+  /** Rehydrated from a draft chat where the assistant turn never finished
+   *  (Vercel maxDuration hit, tab closed mid-stream, etc). UI shows a
+   *  "continue from here" warning. */
+  interrupted?: boolean;
 }
 
 // Chat flow stage
