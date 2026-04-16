@@ -205,6 +205,7 @@ export function WorkflowRunView({
   const runIdRef = useRef<string | null>(existingRun?.id || null);
   const sessionIdRef = useRef<string | null>(existingRun?.session_id || null);
   const knownFileIdsRef = useRef<string[]>([]);
+  const resumeActiveRef = useRef(false);
   // Mirror of stepResults state for synchronous reads inside runStep's
   // throttled flush. Updated every time executeWorkflow mutates results.
   const stepResultsRef = useRef<WorkflowStepResult[]>(
@@ -826,6 +827,171 @@ export function WorkflowRunView({
     }
   }, [workflow, initStepResults, runStep, generateWorkflowSummary, onComplete]);
 
+  const resumeAndContinue = useCallback(async (run: WorkflowRun) => {
+    if (!run.session_id) return false;
+
+    const runningIdx = run.step_results.findIndex((s) => s.status === "running");
+    if (runningIdx < 0) return false;
+
+    resumeActiveRef.current = true;
+
+    // Bind refs for the continuation loop — same as executeWorkflow.
+    runIdRef.current = run.id;
+    sessionIdRef.current = run.session_id;
+    stepResultsRef.current = [...run.step_results];
+
+    const abort = new AbortController();
+    abortRef.current = abort;
+    const outputs = run.step_results
+      .slice(0, runningIdx)
+      .filter((r) => r.output)
+      .map((r) => r.output!);
+
+    setCurrentStep(runningIdx);
+    setIsRunning(true);
+    setOverallStatus("running");
+
+    // Step 1: resume the in-flight step.
+    try {
+      const startTime = Date.now();
+      const result = await resumeStep(runningIdx, run.session_id, abort.signal);
+      const duration = Date.now() - startTime;
+      outputs.push(result.text);
+
+      const updated = [...stepResultsRef.current];
+      updated[runningIdx] = {
+        ...updated[runningIdx],
+        status: "success",
+        output: result.text,
+        durationMs: duration,
+        files: result.files.length > 0 ? result.files : undefined,
+      };
+      setStepResults([...updated]);
+      stepResultsRef.current = [...updated];
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.type === "step" && m.stepIndex === runningIdx
+            ? { ...m, durationMs: duration }
+            : m
+        )
+      );
+      await updateWorkflowRun(run.id, {
+        current_step: runningIdx + 1,
+        step_results: updated,
+      });
+    } catch (err) {
+      if (abort.signal.aborted) return false;
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      const updated = [...stepResultsRef.current];
+      updated[runningIdx] = {
+        ...updated[runningIdx],
+        status: "failed",
+        error: errorMsg,
+      };
+      setStepResults([...updated]);
+      stepResultsRef.current = [...updated];
+      setOverallStatus("failed");
+      setIsRunning(false);
+      try {
+        await updateWorkflowRun(run.id, {
+          status: "failed",
+          step_results: updated,
+          completed_at: new Date().toISOString(),
+        });
+      } catch { /* non-blocking */ }
+      return true;
+    }
+
+    // Step 2+: run remaining steps via the existing runStep loop.
+    for (let i = runningIdx + 1; i < workflow.steps.length; i++) {
+      if (abort.signal.aborted) break;
+
+      setCurrentStep(i);
+      setToolStatus(null);
+      const updatedResults = [...stepResultsRef.current];
+      updatedResults[i] = { ...updatedResults[i], status: "running" };
+      setStepResults(updatedResults);
+      stepResultsRef.current = updatedResults;
+      try {
+        await updateWorkflowRun(run.id, {
+          current_step: i,
+          step_results: updatedResults,
+        });
+      } catch { /* non-blocking */ }
+
+      const startTime = Date.now();
+      try {
+        const result = await runStep(i, abort.signal);
+        const duration = Date.now() - startTime;
+        outputs.push(result.text);
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.type === "step" && m.stepIndex === i
+              ? { ...m, durationMs: duration }
+              : m
+          )
+        );
+        updatedResults[i] = {
+          ...updatedResults[i],
+          status: "success",
+          output: result.text,
+          durationMs: duration,
+          files: result.files.length > 0 ? result.files : undefined,
+        };
+        setStepResults([...updatedResults]);
+        stepResultsRef.current = [...updatedResults];
+        try {
+          await updateWorkflowRun(run.id, {
+            current_step: i + 1,
+            step_results: updatedResults,
+          });
+        } catch { /* non-blocking */ }
+      } catch (err) {
+        if (abort.signal.aborted) break;
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
+        updatedResults[i] = {
+          ...updatedResults[i],
+          status: "failed",
+          error: errorMsg,
+        };
+        setStepResults([...updatedResults]);
+        stepResultsRef.current = [...updatedResults];
+        setOverallStatus("failed");
+        setIsRunning(false);
+        try {
+          await updateWorkflowRun(run.id, {
+            status: "failed",
+            step_results: updatedResults,
+            completed_at: new Date().toISOString(),
+          });
+        } catch { /* non-blocking */ }
+        return true;
+      }
+    }
+
+    // All done.
+    const finalResults = [...stepResultsRef.current];
+    setOverallStatus("success");
+    setIsRunning(false);
+    try {
+      await updateWorkflowRun(run.id, {
+        status: "success",
+        current_step: workflow.steps.length,
+        step_results: finalResults,
+        completed_at: new Date().toISOString(),
+      });
+      await updateWorkflow(workflow.id, {
+        last_run_at: new Date().toISOString(),
+        last_run_status: "success",
+        status: "ready",
+      });
+    } catch { /* non-blocking */ }
+
+    if (outputs.length > 0) generateWorkflowSummary(outputs);
+    onComplete();
+    return true;
+  }, [workflow, resumeStep, runStep, generateWorkflowSummary, onComplete]);
+
   // Poll the database for run progress (for background server execution)
   useEffect(() => {
     if (!isPollingMode || !existingRun) return;
@@ -835,7 +1001,7 @@ export function WorkflowRunView({
     let lastStepResultsHash = "";
 
     const pollInterval = setInterval(async () => {
-      if (!active) return;
+      if (!active || resumeActiveRef.current) return;
       try {
         const run = await getWorkflowRunById(existingRun.id);
         if (!run || !active) return;
@@ -956,6 +1122,24 @@ export function WorkflowRunView({
           .map((r) => r.output!);
         if (outputs.length > 0) generateWorkflowSummary(outputs);
       }
+      return;
+    }
+
+    if (isPollingMode && existingRun) {
+      // Try to resume the in-flight Anthropic session directly. If there's
+      // no session_id, or no running step, or resume throws unexpectedly,
+      // we fall through to the existing DB-polling useEffect.
+      resumeAndContinue(existingRun).then((handled) => {
+        if (!handled) {
+          // Not handled — re-enable DB polling fallback.
+          resumeActiveRef.current = false;
+          console.log("[WorkflowRunView] Resume not applicable — falling back to DB polling");
+        }
+      }).catch((err) => {
+        // Unexpected failure — re-enable DB polling fallback.
+        resumeActiveRef.current = false;
+        console.error("[WorkflowRunView] Resume failed, falling back to DB polling:", err);
+      });
       return;
     }
 
