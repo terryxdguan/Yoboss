@@ -24,6 +24,23 @@ async function loadPromptFile(promptFile: string): Promise<string> {
   }
 }
 
+/**
+ * Walk the session event list (ordered ascending) from the tail and return
+ * the text of the most recent user.message, if any. Used to dedup identical
+ * user messages when a client refresh causes a duplicate POST to this route.
+ */
+function extractLastUserMessageText(events: unknown[]): string | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i] as { type?: string; content?: unknown };
+    if (e.type !== "user.message") continue;
+    const content = e.content as Array<{ type?: string; text?: string }> | undefined;
+    if (!Array.isArray(content)) return null;
+    const textBlock = content.find((b) => b?.type === "text");
+    return typeof textBlock?.text === "string" ? textBlock.text : null;
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -119,15 +136,27 @@ export async function POST(request: NextRequest) {
           });
           for (const e of existing.data) seenIds.add(e.id);
 
-          console.log(`[ManagedAgent] Sending message to session ${sessionId} (${fullMessage.length} chars)`);
-          await client.beta.sessions.events.send(sessionId, {
-            events: [
-              {
-                type: "user.message",
-                content: [{ type: "text", text: fullMessage }],
-              },
-            ],
-          });
+          // Dedup guard: if the client refreshed mid-fetch, a previous
+          // invocation of this route may have already written the exact
+          // same user.message into the session before the client aborted.
+          // Sending it again would cause Anthropic to queue two identical
+          // user turns — the model processes them as separate requests
+          // and the step effectively runs twice. Walk the tail of the
+          // event list and skip the send if the last user.message matches.
+          const lastUserMessageText = extractLastUserMessageText(existing.data);
+          if (lastUserMessageText !== null && lastUserMessageText === fullMessage) {
+            console.log(`[ManagedAgent] Skipping duplicate user.message to session ${sessionId} — identical to last user.message already in session`);
+          } else {
+            console.log(`[ManagedAgent] Sending message to session ${sessionId} (${fullMessage.length} chars)`);
+            await client.beta.sessions.events.send(sessionId, {
+              events: [
+                {
+                  type: "user.message",
+                  content: [{ type: "text", text: fullMessage }],
+                },
+              ],
+            });
+          }
         } else {
           console.log(`[ManagedAgent] Resuming session ${sessionId} — replaying history`);
         }
