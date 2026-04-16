@@ -34,6 +34,7 @@ import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-m
 import type { ChatSession, ChatMessage as DBChatMessage } from "@/lib/types/database";
 import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
 import { parseSSEStream } from "@/lib/utils/sse-parser";
+import { LiveTimer } from "@/components/ui/live-timer";
 import Image from "next/image";
 
 interface GeneratedFile {
@@ -637,6 +638,13 @@ export default function AgentChatPage() {
                   ? "bg-[#7FAEE6] text-white"
                   : "bg-[#F6F3EE] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
+                {/* Agent name + timer for assistant messages */}
+                {msg.role === "assistant" && (
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-semibold text-[#6F6A64]">{displayName}</span>
+                    <LiveTimer active={isStreaming && msg === messages[messages.length - 1]} />
+                  </div>
+                )}
                 {/* Tool activity badges */}
                 {msg.toolActivity && msg.toolActivity.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">

@@ -18,6 +18,7 @@ import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-m
 import { setAgentStatus } from "@/lib/stores/agent-status";
 import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
 import { parseSSEStream } from "@/lib/utils/sse-parser";
+import { LiveTimer } from "@/components/ui/live-timer";
 
 interface GoalChatPanelProps {
   goalId: string;
@@ -575,6 +576,13 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                 ? "bg-[#7FAEE6] text-white"
                 : "bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
+              {/* Agent name + timer for assistant messages */}
+              {msg.role === "assistant" && (
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[10px] font-semibold text-[#6F6A64]">General Assistant</span>
+                  <LiveTimer active={isStreaming && msg === displayMessages[displayMessages.length - 1]} />
+                </div>
+              )}
               {/* Tool activity badges */}
               {msg.toolActivity && msg.toolActivity.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { AskQuestionCard } from "./ask-question-card";
+import { LiveTimer } from "@/components/ui/live-timer";
 import type { ChatMessage as ChatMessageType, AskQuestionData, UserAnswer } from "@/lib/types/goal-chat";
 
 interface ChatMessageProps {
@@ -60,6 +61,7 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
         {/* Agent name header */}
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-semibold text-[#2B2B2B]">{AGENT_LABEL}</span>
+          <LiveTimer active={!!isStreaming} />
         </div>
 
         {/* Bubble */}

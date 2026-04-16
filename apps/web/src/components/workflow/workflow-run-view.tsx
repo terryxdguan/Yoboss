@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { X, Square, Send, Clock, Download, Globe, Code, Info } from "lucide-react";
+import { X, Square, Send, Download, Globe, Code, Info } from "lucide-react";
+import { LiveTimer } from "@/components/ui/live-timer";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -76,15 +77,6 @@ const allAgents = [...DEFAULT_AGENTS, ...ALL_AGENTS];
 
 function findAgent(agentId: string) {
   return allAgents.find((a) => a.id === agentId);
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const secs = Math.round(ms / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  return `${mins}m ${remSecs}s`;
 }
 
 let counter = 0;
@@ -1419,12 +1411,10 @@ export function WorkflowRunView({
                       Step {msg.stepIndex + 1}
                     </span>
                   )}
-                  {msg.durationMs && (
-                    <span className="flex items-center gap-0.5 text-[10px] text-[#9B948B]">
-                      <Clock className="h-2.5 w-2.5" />
-                      {formatDuration(msg.durationMs)}
-                    </span>
-                  )}
+                  <LiveTimer
+                    active={!!msg.isStreaming}
+                    durationMs={msg.durationMs}
+                  />
                 </div>
 
                 <div className="rounded-xl bg-[#FFFDF9] border border-[#E7DED2] px-4 py-3 text-sm text-[#2B2B2B]">
