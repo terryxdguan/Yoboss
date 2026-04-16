@@ -122,8 +122,8 @@ export function useContinuationStream(
           });
 
           if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            throw new Error(`API error ${res.status}: ${text}`);
+            const body = await res.json().catch(() => null);
+            throw new Error(body?.error || `API error: ${res.status}`);
           }
 
           let turnComplete: {

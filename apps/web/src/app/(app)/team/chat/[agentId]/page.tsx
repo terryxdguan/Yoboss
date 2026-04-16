@@ -229,7 +229,10 @@ export default function AgentChatPage() {
           body: JSON.stringify(body),
         });
 
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.error || `API error: ${res.status}`);
+        }
 
         let turnComplete: {
           stop_reason: string;

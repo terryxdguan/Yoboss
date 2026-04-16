@@ -187,7 +187,10 @@ export function useWeeklyPlanChat(options?: UseWeeklyPlanChatOptions) {
         }),
       });
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `API error: ${res.status}`);
+      }
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");

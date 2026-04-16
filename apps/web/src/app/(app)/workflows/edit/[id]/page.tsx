@@ -40,7 +40,10 @@ async function streamAgentChat(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error("Failed");
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error || `API error: ${res.status}`);
+  }
   const reader = res.body?.getReader();
   if (!reader) throw new Error("No body");
   const decoder = new TextDecoder();
