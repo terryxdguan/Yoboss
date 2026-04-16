@@ -295,63 +295,17 @@ export function WorkflowRunView({
     }));
   }, [workflow.steps]);
 
-  // Run a single step via Managed Agent session — polls for events and updates UI
-  const runStep = useCallback(
+  // Consume an SSE stream from /api/ai/agent-run-step for a single step.
+  // Handles event parsing, UI updates, throttled partial-progress DB flushes,
+  // and session_id capture. Shared between `runStep` (fresh step) and
+  // `resumeStep` (Task 3 — resuming an interrupted step).
+  const consumeAgentStepStream = useCallback(
     async (
+      res: Response,
       stepIndex: number,
+      assistantMsgId: string,
       signal: AbortSignal
-    ): Promise<{ text: string; files: GeneratedFile[] }> => {
-      const step = workflow.steps[stepIndex];
-      const agent = findAgent(step.agentId);
-      if (!agent) throw new Error(`Agent ${step.agentId} not found`);
-
-      setAgentStatus(step.agentId, "working");
-
-      // Add step message (streaming)
-      const msgId = genId();
-      streamingMsgId.current = msgId;
-      const stepMsg: ChatMessage = {
-        id: msgId,
-        type: "step",
-        stepIndex,
-        agentId: step.agentId,
-        agentLabel: agent.label,
-        agentAvatar: agent.avatar,
-        content: "",
-        isStreaming: true,
-        toolActivity: [],
-        generatedFiles: [],
-      };
-      setChatMessages((prev) => [...prev, stepMsg]);
-
-      // Inject run-time topic (one-off prop override, falling back to the
-      // workflow's saved topic) into the step prompt. Matches what the
-      // server-side /api/workflows/execute path used to do — see
-      // apps/web/src/app/api/workflows/execute/route.ts line 190.
-      const effectiveTopic = topic || workflow.topic;
-      const message = effectiveTopic
-        ? `Topic/Task: ${effectiveTopic}\n\n${step.prompt}`
-        : step.prompt;
-
-      // Call Managed Agent via SSE route
-      // Role prompt is loaded server-side; session context replaces previousOutputs
-      const res = await fetch("/api/ai/agent-run-step", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: sessionIdRef.current || undefined,
-          message,
-          rolePromptFile: agent.promptFile,
-          knownFileIds: knownFileIdsRef.current,
-        }),
-        signal,
-      });
-
-      if (!res.ok) {
-        const errorBody = await res.text().catch(() => "");
-        throw new Error(`API error ${res.status}: ${errorBody}`);
-      }
-
+    ): Promise<{ text: string; files: GeneratedFile[]; tools: ToolActivity[] }> => {
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");
 
@@ -456,7 +410,7 @@ export function WorkflowRunView({
             setToolStatus(labels[toolName] || `Using ${toolName}...`);
             setChatMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, toolActivity: [...tools] } : m
+                m.id === assistantMsgId ? { ...m, toolActivity: [...tools] } : m
               )
             );
           }
@@ -466,7 +420,7 @@ export function WorkflowRunView({
             setToolStatus(null);
             setChatMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId
+                m.id === assistantMsgId
                   ? { ...m, content: text, toolActivity: [...tools] }
                   : m
               )
@@ -483,7 +437,7 @@ export function WorkflowRunView({
             knownFileIdsRef.current.push(newFile.fileId);
             setChatMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, generatedFiles: [...files] } : m
+                m.id === assistantMsgId ? { ...m, generatedFiles: [...files] } : m
               )
             );
             scheduleStepFlush();
@@ -499,6 +453,75 @@ export function WorkflowRunView({
       // the final status immediately after we return.
       if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
       stepFlushFinalized = true;
+
+      return { text, files, tools };
+    },
+    [cachedMode]
+  );
+
+  // Run a single step via Managed Agent session — polls for events and updates UI
+  const runStep = useCallback(
+    async (
+      stepIndex: number,
+      signal: AbortSignal
+    ): Promise<{ text: string; files: GeneratedFile[] }> => {
+      const step = workflow.steps[stepIndex];
+      const agent = findAgent(step.agentId);
+      if (!agent) throw new Error(`Agent ${step.agentId} not found`);
+
+      setAgentStatus(step.agentId, "working");
+
+      // Add step message (streaming)
+      const msgId = genId();
+      streamingMsgId.current = msgId;
+      const stepMsg: ChatMessage = {
+        id: msgId,
+        type: "step",
+        stepIndex,
+        agentId: step.agentId,
+        agentLabel: agent.label,
+        agentAvatar: agent.avatar,
+        content: "",
+        isStreaming: true,
+        toolActivity: [],
+        generatedFiles: [],
+      };
+      setChatMessages((prev) => [...prev, stepMsg]);
+
+      // Inject run-time topic (one-off prop override, falling back to the
+      // workflow's saved topic) into the step prompt. Matches what the
+      // server-side /api/workflows/execute path used to do — see
+      // apps/web/src/app/api/workflows/execute/route.ts line 190.
+      const effectiveTopic = topic || workflow.topic;
+      const message = effectiveTopic
+        ? `Topic/Task: ${effectiveTopic}\n\n${step.prompt}`
+        : step.prompt;
+
+      // Call Managed Agent via SSE route
+      // Role prompt is loaded server-side; session context replaces previousOutputs
+      const res = await fetch("/api/ai/agent-run-step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current || undefined,
+          message,
+          rolePromptFile: agent.promptFile,
+          knownFileIds: knownFileIdsRef.current,
+        }),
+        signal,
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => "");
+        throw new Error(`API error ${res.status}: ${errorBody}`);
+      }
+
+      const { text, files, tools } = await consumeAgentStepStream(
+        res,
+        stepIndex,
+        msgId,
+        signal
+      );
 
       // Finalize message — no longer streaming
       setChatMessages((prev) =>
@@ -519,7 +542,7 @@ export function WorkflowRunView({
       setAgentStatus(step.agentId, "idle");
       return { text, files };
     },
-    [workflow.steps, workflow.topic, topic, cachedMode]
+    [workflow.steps, workflow.topic, topic, consumeAgentStepStream]
   );
 
   // Generate summary of workflow outputs using Haiku
