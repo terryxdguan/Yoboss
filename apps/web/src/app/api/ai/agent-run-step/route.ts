@@ -6,7 +6,7 @@ import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 async function loadPromptFile(promptFile: string): Promise<string> {
   const filePath = join(
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         // Poll for new events
         let fullText = "";
         const POLL_INTERVAL = 2000;
-        const MAX_POLLS = 150; // 5 min max
+        const MAX_POLLS = 600; // 20 min max
 
         for (let poll = 0; poll < MAX_POLLS; poll++) {
           await new Promise((r) => setTimeout(r, POLL_INTERVAL));
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Timeout
-        send({ type: "error", message: "Step timed out after 5 minutes" });
+        send({ type: "error", message: "Step timed out after 20 minutes" });
         controller.close();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
