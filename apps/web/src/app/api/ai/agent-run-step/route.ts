@@ -42,26 +42,45 @@ export async function POST(request: NextRequest) {
     message,
     rolePromptFile,
     knownFileIds,
+    resume,
   } = (await request.json()) as {
     sessionId?: string;
-    message: string;
+    message?: string;
     rolePromptFile?: string;
     knownFileIds?: string[];
+    resume?: boolean;
   };
+
+  if (resume && !existingSessionId) {
+    return NextResponse.json(
+      { error: "resume=true requires an existing sessionId" },
+      { status: 400 }
+    );
+  }
+  if (!resume && !message) {
+    return NextResponse.json(
+      { error: "message is required unless resume=true" },
+      { status: 400 }
+    );
+  }
 
   const client = getAnthropicClient();
   const encoder = new TextEncoder();
 
-  // Build the full message with optional role instructions
-  const FILE_INSTRUCTION = `\n\nIMPORTANT: When generating ANY file (HTML, PDF, PPT, Excel, code files, etc.), you MUST save the file to /mnt/session/outputs/ so the user can download it. For example: write the file to /mnt/session/outputs/filename.html. Always save output files there.`;
-  let fullMessage = message;
-  if (rolePromptFile) {
-    const rolePrompt = await loadPromptFile(rolePromptFile);
-    if (rolePrompt) {
-      fullMessage = `## Role Instructions\n${rolePrompt}\n\n## Task\n${message}${FILE_INSTRUCTION}`;
+  // Build the full message with optional role instructions.
+  // Skipped on resume: we're replaying an already-started session, not sending a new turn.
+  let fullMessage = "";
+  if (!resume) {
+    const FILE_INSTRUCTION = `\n\nIMPORTANT: When generating ANY file (HTML, PDF, PPT, Excel, code files, etc.), you MUST save the file to /mnt/session/outputs/ so the user can download it. For example: write the file to /mnt/session/outputs/filename.html. Always save output files there.`;
+    fullMessage = message!;
+    if (rolePromptFile) {
+      const rolePrompt = await loadPromptFile(rolePromptFile);
+      if (rolePrompt) {
+        fullMessage = `## Role Instructions\n${rolePrompt}\n\n## Task\n${message}${FILE_INSTRUCTION}`;
+      }
+    } else {
+      fullMessage = message! + FILE_INSTRUCTION;
     }
-  } else {
-    fullMessage = message + FILE_INSTRUCTION;
   }
 
   const stream = new ReadableStream({
@@ -88,24 +107,30 @@ export async function POST(request: NextRequest) {
           console.log(`[ManagedAgent] Reusing session: ${sessionId}`);
         }
 
-        // Snapshot existing event IDs so we only process new ones
+        // Snapshot + send user.message only when NOT resuming. On resume,
+        // leave seenIds empty so the poll loop's first iteration treats every
+        // historic event as "new" and streams it (plus any pending
+        // agent.custom_tool_use gets executed automatically).
         const seenIds = new Set<string>();
-        const existing = await client.beta.sessions.events.list(sessionId, {
-          limit: 500,
-          order: "asc",
-        });
-        for (const e of existing.data) seenIds.add(e.id);
+        if (!resume) {
+          const existing = await client.beta.sessions.events.list(sessionId, {
+            limit: 500,
+            order: "asc",
+          });
+          for (const e of existing.data) seenIds.add(e.id);
 
-        // Send user message
-        console.log(`[ManagedAgent] Sending message to session ${sessionId} (${fullMessage.length} chars)`);
-        await client.beta.sessions.events.send(sessionId, {
-          events: [
-            {
-              type: "user.message",
-              content: [{ type: "text", text: fullMessage }],
-            },
-          ],
-        });
+          console.log(`[ManagedAgent] Sending message to session ${sessionId} (${fullMessage.length} chars)`);
+          await client.beta.sessions.events.send(sessionId, {
+            events: [
+              {
+                type: "user.message",
+                content: [{ type: "text", text: fullMessage }],
+              },
+            ],
+          });
+        } else {
+          console.log(`[ManagedAgent] Resuming session ${sessionId} — replaying history`);
+        }
 
         // Poll for new events
         let fullText = "";
@@ -171,9 +196,9 @@ export async function POST(request: NextRequest) {
               console.log(`[ManagedAgent] Session idle — response complete (${fullText.length} chars)`);
 
               // Estimate token usage from text lengths (Managed Agent doesn't return usage)
-              const estInputTokens = Math.ceil(fullMessage.length / 4);
+              const estInputTokens = resume ? 0 : Math.ceil(fullMessage.length / 4);
               const estOutputTokens = Math.ceil(fullText.length / 4);
-              logUsage(user.id, "agent-run-step", "managed-agent", estInputTokens, estOutputTokens).catch(() => {});
+              logUsage(user.id, resume ? "agent-run-step-resume" : "agent-run-step", "managed-agent", estInputTokens, estOutputTokens).catch(() => {});
 
               // Check for new files in the session
               const knownSet = new Set(knownFileIds || []);
