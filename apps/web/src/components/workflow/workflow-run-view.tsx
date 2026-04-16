@@ -545,6 +545,73 @@ export function WorkflowRunView({
     [workflow.steps, workflow.topic, topic, consumeAgentStepStream]
   );
 
+  const resumeStep = useCallback(async (
+    stepIndex: number,
+    sessionIdForResume: string,
+    signal: AbortSignal
+  ): Promise<{ text: string; files: GeneratedFile[] }> => {
+    const step = workflow.steps[stepIndex];
+    const agent = findAgent(step.agentId);
+    if (!agent) throw new Error(`Agent ${step.agentId} not found`);
+
+    setAgentStatus(step.agentId, "working");
+
+    // Create the streaming message placeholder — same as runStep.
+    const msgId = genId();
+    streamingMsgId.current = msgId;
+    const stepMsg: ChatMessage = {
+      id: msgId,
+      type: "step",
+      stepIndex,
+      agentId: step.agentId,
+      agentLabel: agent.label,
+      agentAvatar: agent.avatar,
+      content: "",
+      isStreaming: true,
+      toolActivity: [],
+      generatedFiles: [],
+    };
+    setChatMessages((prev) => [...prev, stepMsg]);
+
+    // Call the resume variant of agent-run-step.
+    const res = await fetch("/api/ai/agent-run-step", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: sessionIdForResume,
+        resume: true,
+        knownFileIds: knownFileIdsRef.current,
+      }),
+      signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error || `API error: ${res.status}`);
+    }
+
+    const { text, files, tools } = await consumeAgentStepStream(res, stepIndex, msgId, signal);
+
+    // Finalize the step message — same pattern as runStep.
+    setChatMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              content: text,
+              isStreaming: false,
+              toolActivity: tools.length > 0 ? tools : undefined,
+              generatedFiles: files.length > 0 ? files : undefined,
+            }
+          : m
+      )
+    );
+    streamingMsgId.current = null;
+    setToolStatus(null);
+    setAgentStatus(step.agentId, "idle");
+    return { text, files };
+  }, [workflow.steps, consumeAgentStepStream]);
+
   // Generate summary of workflow outputs using Haiku
   const generateWorkflowSummary = useCallback(async (outputs: string[]) => {
     try {
