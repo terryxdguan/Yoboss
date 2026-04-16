@@ -11,8 +11,11 @@ export function getAnthropicClient(): Anthropic {
   return client;
 }
 
+// Opus is pinned to 4.7 — used for multi-turn planning conversations
+// (goal creation, weekly plan creation) where quality of question /
+// answer reasoning directly shapes the plan the user commits to.
 export const MODELS = {
-  opus: "claude-opus-4-6" as const,
+  opus: "claude-opus-4-7" as const,
   sonnet: "claude-sonnet-4-6" as const,
 } as const;
 

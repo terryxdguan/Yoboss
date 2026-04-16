@@ -133,7 +133,9 @@ ${previousWeekSummary}${midWeekNote}
 Generate this week's plan with daily tasks.`;
 
   const response = await client.messages.create({
-    model: MODELS.sonnet,
+    // Opus 4.7 — weekly plan generation is the user's actionable
+    // roadmap; worth paying for higher reasoning quality.
+    model: MODELS.opus,
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     tools: [WEEKLY_PLAN_TOOL],

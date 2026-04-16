@@ -85,6 +85,7 @@ export async function decomposeGoal(
   const client = getAnthropicClient();
 
   const response = await client.messages.create({
+    // Opus 4.7 — goal decomposition directly shapes the plan structure.
     model: MODELS.opus,
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
@@ -109,6 +110,7 @@ export async function chatWithCoach(
   const client = getAnthropicClient();
 
   const stream = await client.messages.stream({
+    // Opus 4.7 — clarification chat reasoning.
     model: MODELS.opus,
     max_tokens: 4096,
     system: `${SYSTEM_PROMPT}
