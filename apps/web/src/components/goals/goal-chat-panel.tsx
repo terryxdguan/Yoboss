@@ -17,6 +17,7 @@ import {
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
 import { setAgentStatus } from "@/lib/stores/agent-status";
 import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
+import { parseSSEStream } from "@/lib/utils/sse-parser";
 
 interface GoalChatPanelProps {
   goalId: string;
@@ -217,43 +218,44 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
     };
 
     try {
-      const res = await fetch("/api/ai/plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "goal-detail-chat",
-          messages: buildMessagesWithMemory(sessionSummary, apiMessages),
-          context: goalContext,
-        }),
-      });
+      // Client-driven continuation loop: each iteration is a separate
+      // HTTP request with its own Vercel timeout budget.
+      const MAX_CONTINUATIONS = 10;
+      const body = {
+        action: "goal-detail-chat",
+        messages: buildMessagesWithMemory(sessionSummary, apiMessages),
+        context: goalContext,
+      };
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      for (let turn = 0; turn < MAX_CONTINUATIONS; turn++) {
+        const res = await fetch("/api/ai/plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
 
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
 
-      const decoder = new TextDecoder();
+        let turnComplete: {
+          stop_reason: string;
+          finalContent: unknown[];
+        } | null = null;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter((l) => l.trim());
-
-        for (const line of lines) {
-          if (line.startsWith("event:")) continue;
-          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
-          let event;
-          try { event = JSON.parse(jsonStr); } catch { continue; }
-
-          if (event.type !== "content_block_delta" || event.delta?.type !== "text_delta") {
-            console.log("[DEBUG API Event] goal-chat-panel:", event);
+        for await (const event of parseSSEStream(res)) {
+          if (event.type === "turn_complete") {
+            turnComplete = {
+              stop_reason: event.stop_reason as string,
+              finalContent: event.finalContent as unknown[],
+            };
+            continue;
           }
 
-          // Error from API
           if (event.type === "error") {
-            throw new Error(event.error?.message || "AI service error");
+            throw new Error(
+              (event.error as { message?: string })?.message ||
+              (event.message as string) ||
+              "AI service error"
+            );
           }
 
           // Text content
@@ -302,12 +304,18 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
               }
             }
           }
-
-          // Also check content_block_stop for tool results with files
-          if (event.type === "content_block_stop") {
-            // Files may appear in the final content blocks
-          }
         }
+
+        // If pause_turn, append assistant content and loop (new HTTP).
+        if (turnComplete?.stop_reason === "pause_turn") {
+          (body.messages as unknown[]).push({
+            role: "assistant",
+            content: turnComplete.finalContent,
+          });
+          continue;
+        }
+
+        break;
       }
 
       // Final update with all accumulated data

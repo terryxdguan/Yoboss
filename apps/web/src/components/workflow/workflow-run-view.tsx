@@ -6,6 +6,7 @@ import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ALL_AGENTS, DEFAULT_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
+import { parseSSEStream } from "@/lib/utils/sse-parser";
 import { setAgentStatus } from "@/lib/stores/agent-status";
 import {
   createWorkflowRun,
@@ -1070,45 +1071,49 @@ export function WorkflowRunView({
           }
         }
       } else {
-        // History mode — use agent-chat with summary context (no session available)
+        // History mode — use agent-chat with summary context (no session available).
+        // Client-driven continuation loop: each iteration is a separate
+        // HTTP request with its own Vercel timeout budget.
         const systemContext = workflowSummary
           ? `The user just ran a workflow called "${workflow.name}". Here is a summary of the workflow outputs:\n\n${workflowSummary}\n\nNow the user wants to discuss or refine the results.`
           : `The user just ran a workflow called "${workflow.name}". Help them with any follow-up questions.`;
 
-        const res = await fetch("/api/ai/agent-chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            promptFile: "general_assistant.txt",
-            messages: chatHistoryRef.current,
-            extraContext: systemContext,
-          }),
-        });
+        const MAX_CONTINUATIONS = 10;
+        const body = {
+          promptFile: "general_assistant.txt",
+          messages: chatHistoryRef.current,
+          extraContext: systemContext,
+        };
 
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("No response body");
+        for (let turn = 0; turn < MAX_CONTINUATIONS; turn++) {
+          const res = await fetch("/api/ai/agent-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
 
-        const decoder = new TextDecoder();
+          if (!res.ok) throw new Error(`API error: ${res.status}`);
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter((l) => l.trim());
+          let turnComplete: {
+            stop_reason: string;
+            finalContent: unknown[];
+          } | null = null;
 
-          for (const line of lines) {
-            if (line.startsWith("event:")) continue;
-            const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
-            let event;
-            try {
-              event = JSON.parse(jsonStr);
-            } catch {
+          for await (const event of parseSSEStream(res)) {
+            if (event.type === "turn_complete") {
+              turnComplete = {
+                stop_reason: event.stop_reason as string,
+                finalContent: event.finalContent as unknown[],
+              };
               continue;
             }
 
             if (event.type === "error") {
-              throw new Error(event.error?.message || "AI service error");
+              throw new Error(
+                (event.error as { message?: string })?.message ||
+                (event.message as string) ||
+                "AI service error"
+              );
             }
 
             if (
@@ -1146,6 +1151,17 @@ export function WorkflowRunView({
               scheduleFlush();
             }
           }
+
+          // If pause_turn, append assistant content and loop (new HTTP).
+          if (turnComplete?.stop_reason === "pause_turn") {
+            (body.messages as unknown[]).push({
+              role: "assistant",
+              content: turnComplete.finalContent,
+            });
+            continue;
+          }
+
+          break;
         }
       }
 

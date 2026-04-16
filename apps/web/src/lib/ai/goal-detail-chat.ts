@@ -88,51 +88,46 @@ export function streamGoalDetailChat(
   const systemPrompt = buildSystemPrompt(context);
   const encoder = new TextEncoder();
 
+  // Single-turn stream: run exactly ONE messages.stream() call and
+  // emit a synthetic turn_complete event at the end. The client-side
+  // useContinuationStream hook handles the pause_turn → re-fetch
+  // loop, giving each turn its own Vercel timeout budget.
   return new ReadableStream({
     async start(controller) {
-      let currentMessages = [...messages];
-      let continuations = 0;
-      const MAX_CONTINUATIONS = 5;
-      let totalInputTokens = 0;
-      let totalOutputTokens = 0;
-
       try {
-        while (continuations < MAX_CONTINUATIONS) {
-          const stream = client.messages.stream({
-            model: MODELS.sonnet,
-            max_tokens: 16000,
-            system: systemPrompt,
-            tools: SERVER_TOOLS,
-            messages: currentMessages,
-          });
+        const stream = client.messages.stream({
+          model: MODELS.sonnet,
+          max_tokens: 16000,
+          system: systemPrompt,
+          tools: SERVER_TOOLS,
+          messages,
+        });
 
-          // Forward all SSE events to the client
-          for await (const event of stream) {
-            const data = JSON.stringify(event);
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-          }
-
-          const finalMessage = await stream.finalMessage();
-
-          // Accumulate usage from each continuation
-          if (finalMessage.usage) {
-            totalInputTokens += finalMessage.usage.input_tokens;
-            totalOutputTokens += finalMessage.usage.output_tokens;
-          }
-
-          if (finalMessage.stop_reason === "pause_turn") {
-            // Server-side tool loop hit limit — continue
-            currentMessages = [
-              ...currentMessages,
-              { role: "assistant" as const, content: finalMessage.content },
-            ];
-            continuations++;
-            continue;
-          }
-
-          // Done — end_turn or other terminal reason
-          break;
+        for await (const event of stream) {
+          const data = JSON.stringify(event);
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         }
+
+        const finalMessage = await stream.finalMessage();
+
+        // Log usage per-turn.
+        if (onUsage && finalMessage.usage) {
+          try {
+            onUsage(
+              finalMessage.usage.input_tokens,
+              finalMessage.usage.output_tokens
+            );
+          } catch { /* non-blocking */ }
+        }
+
+        // Emit synthetic turn_complete so the client knows whether
+        // to auto-continue (pause_turn) or finalize (end_turn etc).
+        const turnComplete = JSON.stringify({
+          type: "turn_complete",
+          stop_reason: finalMessage.stop_reason,
+          finalContent: finalMessage.content,
+        });
+        controller.enqueue(encoder.encode(`data: ${turnComplete}\n\n`));
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         const errorEvent = JSON.stringify({
@@ -141,10 +136,6 @@ export function streamGoalDetailChat(
         });
         controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
       } finally {
-        // Report accumulated usage
-        if (onUsage && (totalInputTokens > 0 || totalOutputTokens > 0)) {
-          try { onUsage(totalInputTokens, totalOutputTokens); } catch { /* non-blocking */ }
-        }
         controller.close();
       }
     },

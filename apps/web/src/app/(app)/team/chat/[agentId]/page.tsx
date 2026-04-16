@@ -33,6 +33,7 @@ import {
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
 import type { ChatSession, ChatMessage as DBChatMessage } from "@/lib/types/database";
 import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
+import { parseSSEStream } from "@/lib/utils/sse-parser";
 import Image from "next/image";
 
 interface GeneratedFile {
@@ -210,36 +211,48 @@ export default function AgentChatPage() {
       // Apply session memory: summary + last 5 messages
       const recentMessages = buildMessagesWithMemory(sessionSummary, apiMessages);
 
-      const res = await fetch("/api/ai/agent-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          promptFile: agent.promptFile,
-          messages: recentMessages,
-        }),
-      });
+      // Client-driven continuation loop: each iteration is a separate
+      // HTTP request with its own Vercel timeout budget. The server
+      // emits a turn_complete event at the end of each turn — if
+      // stop_reason is pause_turn, we append the assistant content
+      // and fire another request.
+      const MAX_CONTINUATIONS = 10;
+      const body = {
+        promptFile: agent.promptFile,
+        messages: recentMessages,
+      };
 
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
+      for (let turn = 0; turn < MAX_CONTINUATIONS; turn++) {
+        const res = await fetch("/api/ai/agent-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
 
-      const decoder = new TextDecoder();
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter((l) => l.trim());
+        let turnComplete: {
+          stop_reason: string;
+          finalContent: unknown[];
+        } | null = null;
 
-        for (const line of lines) {
-          if (line.startsWith("event:")) continue;
-          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
-          let event;
-          try { event = JSON.parse(jsonStr); } catch { continue; }
+        for await (const event of parseSSEStream(res)) {
+          // Synthetic turn_complete from the modified server route.
+          if (event.type === "turn_complete") {
+            turnComplete = {
+              stop_reason: event.stop_reason as string,
+              finalContent: event.finalContent as unknown[],
+            };
+            continue;
+          }
 
           // Error from API
           if (event.type === "error") {
-            throw new Error(event.error?.message || "AI service error");
+            throw new Error(
+              (event.error as { message?: string })?.message ||
+              (event.message as string) ||
+              "AI service error"
+            );
           }
 
           // Text content
@@ -289,6 +302,18 @@ export default function AgentChatPage() {
             }
           }
         }
+
+        // If pause_turn, append assistant content and loop (new HTTP).
+        if (turnComplete?.stop_reason === "pause_turn") {
+          (body.messages as unknown[]).push({
+            role: "assistant",
+            content: turnComplete.finalContent,
+          });
+          continue;
+        }
+
+        // Any other stop_reason or no turn_complete → done.
+        break;
       }
 
       // Final update with all accumulated data

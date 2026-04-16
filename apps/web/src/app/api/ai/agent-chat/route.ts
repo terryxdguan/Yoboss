@@ -13,7 +13,9 @@ import type Anthropic from "@anthropic-ai/sdk";
 // chatter, no "done" signal arrives, and nothing is persisted. Extend to
 // the Hobby ceiling of 300s. Still not enough for very long research
 // tasks — those need Pro (900s) or a background-worker architecture.
-export const maxDuration = 300;
+// Single-turn now (continuation loop moved to client). Each turn is one
+// messages.stream() call which typically completes in 30-60s.
+export const maxDuration = 120;
 
 const SERVER_TOOLS: Anthropic.Messages.ToolUnion[] = [
   { type: "web_search_20260209" as const, name: "web_search" as const },
@@ -74,46 +76,48 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
     const encoder = new TextEncoder();
 
     const modelName = useOpus ? MODELS.opus : MODELS.sonnet;
+    // Single-turn stream: run exactly ONE messages.stream() call and
+    // emit a synthetic turn_complete event at the end. The client-side
+    // useContinuationStream hook handles the pause_turn → re-fetch
+    // loop, giving each turn its own Vercel timeout budget.
     const stream = new ReadableStream({
       async start(controller) {
-        let currentMessages = [...messages];
-        let continuations = 0;
-        const MAX_CONTINUATIONS = 5;
-        let totalInput = 0;
-        let totalOutput = 0;
-
         try {
-          while (continuations < MAX_CONTINUATIONS) {
-            const apiStream = client.messages.stream({
-              model: modelName,
-              max_tokens: 16000,
-              system: systemPrompt,
-              tools: SERVER_TOOLS,
-              messages: currentMessages,
-            });
+          const apiStream = client.messages.stream({
+            model: modelName,
+            max_tokens: 16000,
+            system: systemPrompt,
+            tools: SERVER_TOOLS,
+            messages,
+          });
 
-            for await (const event of apiStream) {
-              const data = JSON.stringify(event);
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-            }
-
-            const finalMessage = await apiStream.finalMessage();
-            if (finalMessage.usage) {
-              totalInput += finalMessage.usage.input_tokens;
-              totalOutput += finalMessage.usage.output_tokens;
-            }
-
-            if (finalMessage.stop_reason === "pause_turn") {
-              currentMessages = [
-                ...currentMessages,
-                { role: "assistant" as const, content: finalMessage.content },
-              ];
-              continuations++;
-              continue;
-            }
-
-            break;
+          for await (const event of apiStream) {
+            const data = JSON.stringify(event);
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
+
+          const finalMessage = await apiStream.finalMessage();
+
+          // Log usage per-turn (server-side, simpler than accumulating
+          // across client-driven continuations).
+          if (finalMessage.usage) {
+            logUsage(
+              user.id,
+              "agent-chat",
+              modelName,
+              finalMessage.usage.input_tokens,
+              finalMessage.usage.output_tokens
+            ).catch(() => {});
+          }
+
+          // Emit synthetic turn_complete so the client knows whether
+          // to auto-continue (pause_turn) or finalize (end_turn etc).
+          const turnComplete = JSON.stringify({
+            type: "turn_complete",
+            stop_reason: finalMessage.stop_reason,
+            finalContent: finalMessage.content,
+          });
+          controller.enqueue(encoder.encode(`data: ${turnComplete}\n\n`));
         } catch (err) {
           const errorMsg =
             err instanceof Error ? err.message : "Unknown error";
@@ -123,9 +127,6 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
           });
           controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
         } finally {
-          if (totalInput > 0 || totalOutput > 0) {
-            logUsage(user.id, "agent-chat", modelName, totalInput, totalOutput).catch(() => {});
-          }
           controller.close();
         }
       },
