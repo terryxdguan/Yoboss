@@ -6,15 +6,35 @@ import { ArrowLeft } from "lucide-react";
 import { GoalInput } from "@/components/landing/goal-input";
 import { ExampleGoals } from "@/components/landing/example-goals";
 import { GoalChat } from "@/components/goals/goal-chat";
+import { GoalDraftList } from "@/components/goals/goal-draft-list";
+import type { UseGoalChatInitialDraft } from "@/lib/hooks/use-goal-chat";
 
 export default function CreateGoalPage() {
   const router = useRouter();
   const [goalText, setGoalText] = useState("");
   const [chatActive, setChatActive] = useState(false);
   const [submittedGoal, setSubmittedGoal] = useState("");
+  // When the user resumes a draft from the list we hand this to GoalChat.
+  // Non-null means "resume mode"; GoalChat will skip startChat and rehydrate
+  // from the persisted messages instead.
+  const [resumeDraft, setResumeDraft] =
+    useState<UseGoalChatInitialDraft | null>(null);
+  // Bumped on chat exit so GoalDraftList re-fetches and reflects the new
+  // state (a just-confirmed or deleted draft should drop off the list).
+  const [draftListRefresh, setDraftListRefresh] = useState(0);
 
   const handleSubmitGoal = (text: string) => {
     setSubmittedGoal(text);
+    setResumeDraft(null);
+    setChatActive(true);
+  };
+
+  const handleResumeDraft = (draft: UseGoalChatInitialDraft) => {
+    setResumeDraft(draft);
+    // initialGoal is unused in resume mode but we clear it so the
+    // component's initialGoal prop doesn't carry stale state from a
+    // previous fresh-chat attempt.
+    setSubmittedGoal("");
     setChatActive(true);
   };
 
@@ -22,6 +42,11 @@ export default function CreateGoalPage() {
     setChatActive(false);
     setSubmittedGoal("");
     setGoalText("");
+    setResumeDraft(null);
+    // Re-fetch in case the chat produced or touched a draft — even
+    // cancelling leaves a draft row behind (we don't auto-delete on
+    // cancel; the user can dismiss from the list).
+    setDraftListRefresh((n) => n + 1);
   };
 
   return (
@@ -37,7 +62,11 @@ export default function CreateGoalPage() {
         </button>
 
         {chatActive ? (
-          <GoalChat initialGoal={submittedGoal} onCancel={handleCancel} />
+          <GoalChat
+            initialGoal={submittedGoal}
+            onCancel={handleCancel}
+            initialDraft={resumeDraft}
+          />
         ) : (
           <section className="max-w-3xl mx-auto text-center">
             <div className="overflow-hidden h-[140px] md:h-[170px] mb-2">
@@ -54,6 +83,11 @@ export default function CreateGoalPage() {
             <p className="text-xs text-[#6F6A64] mb-4">
               Describe your goal and we&apos;ll help you create an actionable plan
             </p>
+
+            <GoalDraftList
+              onResume={handleResumeDraft}
+              refreshKey={draftListRefresh}
+            />
 
             <GoalInput
               value={goalText}

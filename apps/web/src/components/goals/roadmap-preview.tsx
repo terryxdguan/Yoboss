@@ -26,7 +26,11 @@ export function RoadmapPreview({
   isSaving,
   error,
 }: RoadmapPreviewProps) {
-  const totalTodos = plan.phases.reduce((sum, p) => sum + p.todos.length, 0);
+  // Defensive: Claude can occasionally emit malformed tool_use where phases
+  // is not an array (e.g. after an interrupted resume). The hook validates
+  // too, but belt-and-suspenders here prevents a hard crash.
+  const phases = Array.isArray(plan.phases) ? plan.phases : [];
+  const totalTodos = phases.reduce((sum, p) => sum + (p.todos?.length ?? 0), 0);
   const hasSchedule = !!plan.weekly_schedule;
   const hasGoalTodos = plan.goal_todos && plan.goal_todos.length > 0;
   const scheduleTasks = plan.weekly_schedule?.tasks || [];
@@ -41,7 +45,7 @@ export function RoadmapPreview({
 
   const summaryParts: string[] = [];
   if (hasSchedule) summaryParts.push(`${scheduleTasks.length} scheduled tasks`);
-  else summaryParts.push(`${plan.phases.length} phases, ${totalTodos} tasks`);
+  else summaryParts.push(`${phases.length} phases, ${totalTodos} tasks`);
   if (hasGoalTodos) summaryParts.push(`${plan.goal_todos!.length} to-dos`);
 
   return (
@@ -132,9 +136,9 @@ export function RoadmapPreview({
             {!hasSchedule && (
               <div>
                 <div className="space-y-0">
-                  {plan.phases.map((phase, phaseIdx) => (
+                  {phases.map((phase, phaseIdx) => (
                     <div key={phaseIdx} className="relative">
-                      {phaseIdx < plan.phases.length - 1 && (
+                      {phaseIdx < phases.length - 1 && (
                         <div className="absolute left-[15px] top-[32px] bottom-0 w-px bg-[#E7DED2]" />
                       )}
 

@@ -316,8 +316,21 @@ export function useGoalChat(options?: UseGoalChatOptions) {
 
                 if (currentToolName === "create_goal_plan") {
                   const planData = toolInput as GoalPlanData;
-                  setPlan(planData);
-                  setStage("preview");
+                  // Validate that phases is an array before rendering the
+                  // preview. Claude occasionally emits malformed tool_use
+                  // input (phases as object, missing field, etc.) especially
+                  // when the conversation was interrupted and resumed with
+                  // incomplete context. Without this guard RoadmapPreview
+                  // crashes on plan.phases.reduce.
+                  if (!Array.isArray(planData.phases)) {
+                    console.error(
+                      "[use-goal-chat] create_goal_plan has non-array phases, skipping preview:",
+                      JSON.stringify(planData).slice(0, 500)
+                    );
+                  } else {
+                    setPlan(planData);
+                    setStage("preview");
+                  }
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantMsgId

@@ -3,16 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useGoalChat } from "@/lib/hooks/use-goal-chat";
+import { useGoalChat, type UseGoalChatInitialDraft } from "@/lib/hooks/use-goal-chat";
 import { ChatMessage } from "./chat-message";
 import { RoadmapPreview } from "./roadmap-preview";
 
 interface GoalChatProps {
+  /** Text of the opening user message. Ignored when `initialDraft` is
+   *  provided — resuming a draft uses whatever opening message is
+   *  already persisted on the session. */
   initialGoal: string;
   onCancel: () => void;
+  /** Pass a rehydrated draft from GoalDraftList to resume an in-progress
+   *  conversation instead of starting a fresh one. */
+  initialDraft?: UseGoalChatInitialDraft | null;
 }
 
-export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
+export function GoalChat({ initialGoal, onCancel, initialDraft }: GoalChatProps) {
   const router = useRouter();
   const {
     messages,
@@ -25,7 +31,7 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
     answerQuestion,
     confirmPlan,
     editPlan,
-  } = useGoalChat();
+  } = useGoalChat({ initialDraft });
 
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -33,13 +39,20 @@ export function GoalChat({ initialGoal, onCancel }: GoalChatProps) {
   const started = useRef(false);
   const lastGoalIdRef = useRef<string | null>(null);
 
-  // Start chat on mount
+  // Start chat on mount — but only when we're not resuming a draft.
+  // Resume hydrates the hook state directly from `initialDraft`, so
+  // firing startChat would reset the conversation and create a second
+  // draft row pointing at nothing.
   useEffect(() => {
+    if (initialDraft) {
+      started.current = true;
+      return;
+    }
     if (!started.current) {
       started.current = true;
       startChat(initialGoal);
     }
-  }, [initialGoal, startChat]);
+  }, [initialGoal, startChat, initialDraft]);
 
   // Auto-scroll to bottom
   useEffect(() => {

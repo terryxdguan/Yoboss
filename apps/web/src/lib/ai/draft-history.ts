@@ -129,9 +129,17 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
         latestToolUseId = toolUse.id;
 
         if (toolUse.name === "create_goal_plan") {
-          latestGoalPlan = toolUse.data as GoalPlanData;
+          const candidate = toolUse.data as GoalPlanData;
+          // Only accept plans with a valid phases array — Claude can
+          // emit malformed tool_use on interrupted/resumed conversations.
+          if (Array.isArray(candidate?.phases)) {
+            latestGoalPlan = candidate;
+          }
         } else if (toolUse.name === "create_weekly_plan") {
-          latestWeeklyPlan = toolUse.data as WeeklyPlanData;
+          const candidate = toolUse.data as WeeklyPlanData;
+          if (Array.isArray(candidate?.tasks)) {
+            latestWeeklyPlan = candidate;
+          }
         }
       }
 
