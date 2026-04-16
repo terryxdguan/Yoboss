@@ -131,7 +131,8 @@ export function useContinuationStream(
             finalContent: unknown[];
           } | null = null;
 
-          for await (const event of parseSSEStream(res)) {
+          for await (const rawEvent of parseSSEStream(res)) {
+            const event = rawEvent as Record<string, any>;
             if (abort.signal.aborted) throw new Error("Aborted");
 
             // Detect our synthetic turn_complete event.

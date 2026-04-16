@@ -155,7 +155,7 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
         } else if (toolUse.name === "create_weekly_plan") {
           const candidate = toolUse.data as WeeklyPlanData;
           if (typeof candidate?.tasks === "string") {
-            try { (candidate as Record<string, unknown>).tasks = JSON.parse(candidate.tasks as unknown as string); } catch { /* ignore */ }
+            try { (candidate as unknown as Record<string, unknown>).tasks = JSON.parse(candidate.tasks as unknown as string); } catch { /* ignore */ }
           }
           if (Array.isArray(candidate?.tasks)) {
             latestWeeklyPlan = candidate;
@@ -209,7 +209,7 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
  *  create_goal_plan tool_use are emitted as JSON strings instead of
  *  inline arrays. Mutates the candidate in place. */
 export function fixDoubleSerializedPlan(plan: GoalPlanData): void {
-  const p = plan as Record<string, unknown>;
+  const p = plan as unknown as Record<string, unknown>;
   if (typeof p.phases === "string") {
     try { p.phases = JSON.parse(p.phases as string); } catch { /* leave as-is */ }
   }

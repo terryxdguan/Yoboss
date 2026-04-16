@@ -1105,7 +1105,8 @@ export function WorkflowRunView({
             finalContent: unknown[];
           } | null = null;
 
-          for await (const event of parseSSEStream(res)) {
+          for await (const rawEvent of parseSSEStream(res)) {
+            const event = rawEvent as Record<string, any>;
             if (event.type === "turn_complete") {
               turnComplete = {
                 stop_reason: event.stop_reason as string,

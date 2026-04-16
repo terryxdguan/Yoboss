@@ -289,7 +289,7 @@ export function useWeeklyPlanChat(options?: UseWeeklyPlanChatOptions) {
                   // Fix Claude double-serialization quirk
                   if (typeof planData.tasks === "string") {
                     try {
-                      (planData as Record<string, unknown>).tasks = JSON.parse(planData.tasks as unknown as string);
+                      (planData as unknown as Record<string, unknown>).tasks = JSON.parse(planData.tasks as unknown as string);
                     } catch { /* guard below catches it */ }
                   }
                   if (!Array.isArray(planData.tasks)) {

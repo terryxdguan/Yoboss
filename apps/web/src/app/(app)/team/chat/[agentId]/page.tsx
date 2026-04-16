@@ -239,7 +239,10 @@ export default function AgentChatPage() {
           finalContent: unknown[];
         } | null = null;
 
-        for await (const event of parseSSEStream(res)) {
+        for await (const rawEvent of parseSSEStream(res)) {
+          // Cast to any — Anthropic SSE events have dynamic shapes
+          // that don't fit a single static type.
+          const event = rawEvent as Record<string, any>;
           // Synthetic turn_complete from the modified server route.
           if (event.type === "turn_complete") {
             turnComplete = {
