@@ -1,0 +1,13 @@
+-- Goal / weekly plan draft persistence: add metadata jsonb to chat_sessions.
+--
+-- Goal draft chats and weekly plan draft chats now live in chat_sessions with
+-- agent_id='__goal-draft__' / '__weekly-draft__'. Session metadata stores:
+--   intent:             "goal-creation" | "weekly-plan-creation"
+--   confirmedAt:        ISO timestamp (Confirm path successfully wrote real rows)
+--   resultGoalId:       goals.id written on confirm (goal draft)
+--   resultWeeklyPlanId: weekly_plans.id written on confirm (weekly draft)
+--   weeklyContext:      phaseId/weekStart/goalTitle/etc snapshot for weekly drafts
+--
+-- No index — expected volume is tiny (a draft list per user) and the existing
+-- idx_chat_sessions_user_agent already narrows to the right agent_id.
+ALTER TABLE public.chat_sessions ADD COLUMN metadata jsonb DEFAULT NULL;

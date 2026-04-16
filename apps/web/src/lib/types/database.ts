@@ -111,6 +111,34 @@ export interface GoalDeliverable {
   created_at: string;
 }
 
+/** Session-level metadata. Used by goal/weekly plan draft chats so that an
+ *  interrupted or backgrounded draft can be resumed, and so Confirm can be
+ *  an idempotent "write real rows + stamp confirmedAt" operation. */
+export interface ChatSessionMetadata {
+  intent?: "goal-creation" | "weekly-plan-creation";
+  /** ISO timestamp. Set only after confirmPlan successfully wrote real
+   *  goals/phases/weekly_plans rows. Drafts with confirmedAt are hidden
+   *  from the Continue draft list. */
+  confirmedAt?: string;
+  resultGoalId?: string;
+  resultWeeklyPlanId?: string;
+  /** Weekly plan drafts need the parent phase/week context to resume — the
+   *  original startChat call took these as arguments, so we snapshot them
+   *  onto the session on create. */
+  weeklyContext?: {
+    phaseId: string;
+    weekStart: string;
+    goalTitle: string;
+    goalDescription: string;
+    phaseTitle: string;
+    phaseDescription: string;
+    weekNumber: number;
+    estimatedWeeks: number;
+    isMidWeekStart: boolean;
+    startDayOfWeek?: number;
+  };
+}
+
 export interface ChatSession {
   id: string;
   user_id: string;
@@ -118,6 +146,7 @@ export interface ChatSession {
   goal_id: string | null;
   title: string;
   summary: string | null;
+  metadata: ChatSessionMetadata | null;
   created_at: string;
   updated_at: string;
 }
@@ -139,6 +168,22 @@ export interface ChatMessage {
      *  maxDuration hit, fetch threw, user closed tab mid-stream, etc).
      *  Signals the UI to render a "continue from here" warning. */
     interrupted?: boolean;
+    /** Goal / weekly draft chats: the Anthropic `tool_use` block the
+     *  assistant emitted in this turn. Persisted so that a resumed draft
+     *  can rehydrate the plan preview and rebuild Anthropic history for
+     *  the next API call without re-running the model. */
+    toolUse?: {
+      id: string;
+      name: string;
+      data: unknown;
+    };
+    /** Goal / weekly draft chats, user messages only: the tool_use id that
+     *  this user message is a tool_result for. When rebuilding Anthropic
+     *  history on draft resume we emit a tool_result block keyed by this. */
+    toolResultFor?: string;
+    /** Assistant message with a pending ask_question has been answered —
+     *  UI stops showing the selection buttons after the user responds. */
+    answered?: boolean;
   } | null;
   created_at: string;
 }

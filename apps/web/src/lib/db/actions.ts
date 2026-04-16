@@ -786,6 +786,232 @@ export async function getSession(sessionId: string): Promise<ChatSession | null>
 }
 
 // ============================================================
+// Goal / Weekly Plan Draft Chats
+// ============================================================
+//
+// Goal and weekly plan creation chats are multi-turn Claude conversations that
+// happen BEFORE any real goal/phase/weekly_plan row exists. A_class persistence
+// (agent chat, workflow follow-up) could lean on an existing parent row to
+// attach messages to. B_class — goal drafts — has no such parent, so we reuse
+// chat_sessions with a reserved agent_id and stamp the intent into metadata.
+//
+// Lifecycle:
+//   1. User starts a new goal chat          → createGoalDraft({ title })
+//   2. Each assistant streaming turn         → upsertAssistantMessage(...)
+//   3. Each user answer / message            → saveMessage(sessionId, "user", ...)
+//      (tool_result user messages set metadata.toolResultFor for rehydration)
+//   4. Confirm successfully writes real rows → markGoalDraftConfirmed(id, goalId)
+//   5. Unconfirmed drafts show on Continue   → listOpenGoalDrafts()
+//
+// Reserved agent_id literals (also exported from ./draft-constants.ts for
+// client-side consumers that need to reference them outside a server action):
+//   __goal-draft__    — goal creation draft chat
+//   __weekly-draft__  — weekly plan draft chat
+
+export async function createGoalDraft(params?: {
+  title?: string;
+}): Promise<ChatSession> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({
+      user_id: user.id,
+      agent_id: "__goal-draft__",
+      goal_id: null,
+      title: params?.title || "New Goal Draft",
+      metadata: { intent: "goal-creation" },
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function listOpenGoalDrafts(): Promise<ChatSession[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("agent_id", "__goal-draft__")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+
+  // Drafts with confirmedAt set are hidden. Filter in JS — the Continue draft
+  // list is tiny (<10 rows typical) so a partial index is overkill.
+  return (data || []).filter(
+    (s) => !(s.metadata && (s.metadata as ChatSession["metadata"])?.confirmedAt)
+  );
+}
+
+export async function loadDraftSession(sessionId: string): Promise<{
+  session: ChatSession;
+  messages: ChatMessage[];
+} | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: session, error: sErr } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .single();
+  if (sErr || !session) return null;
+
+  const { data: messages, error: mErr } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+  if (mErr) throw mErr;
+
+  return { session, messages: messages || [] };
+}
+
+export async function markGoalDraftConfirmed(
+  sessionId: string,
+  goalId: string
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Fetch-then-write to merge JSONB (supabase-js has no partial jsonb update).
+  const { data: existing } = await supabase
+    .from("chat_sessions")
+    .select("metadata")
+    .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .single();
+
+  const merged = {
+    ...((existing?.metadata as ChatSession["metadata"]) || {}),
+    confirmedAt: new Date().toISOString(),
+    resultGoalId: goalId,
+  };
+
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ metadata: merged, updated_at: new Date().toISOString() })
+    .eq("id", sessionId)
+    .eq("user_id", user.id);
+  if (error) throw error;
+}
+
+export async function createWeeklyDraft(params: {
+  weeklyContext: NonNullable<ChatSession["metadata"]>["weeklyContext"];
+  title?: string;
+}): Promise<ChatSession> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({
+      user_id: user.id,
+      agent_id: "__weekly-draft__",
+      goal_id: null,
+      title: params.title || "New Weekly Plan Draft",
+      metadata: {
+        intent: "weekly-plan-creation",
+        weeklyContext: params.weeklyContext,
+      },
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function listOpenWeeklyDrafts(): Promise<ChatSession[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("agent_id", "__weekly-draft__")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+
+  return (data || []).filter(
+    (s) => !(s.metadata && (s.metadata as ChatSession["metadata"])?.confirmedAt)
+  );
+}
+
+export async function markWeeklyDraftConfirmed(
+  sessionId: string,
+  weeklyPlanId: string
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: existing } = await supabase
+    .from("chat_sessions")
+    .select("metadata")
+    .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .single();
+
+  const merged = {
+    ...((existing?.metadata as ChatSession["metadata"]) || {}),
+    confirmedAt: new Date().toISOString(),
+    resultWeeklyPlanId: weeklyPlanId,
+  };
+
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ metadata: merged, updated_at: new Date().toISOString() })
+    .eq("id", sessionId)
+    .eq("user_id", user.id);
+  if (error) throw error;
+}
+
+export async function deleteDraftSession(sessionId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Cascade deletes chat_messages thanks to FK ON DELETE CASCADE.
+  const { error } = await supabase
+    .from("chat_sessions")
+    .delete()
+    .eq("id", sessionId)
+    .eq("user_id", user.id);
+  if (error) throw error;
+}
+
+// ============================================================
 // TODO Items
 // ============================================================
 
