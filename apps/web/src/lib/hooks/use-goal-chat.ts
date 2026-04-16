@@ -501,6 +501,18 @@ export function useGoalChat(options?: UseGoalChatOptions) {
 
   // ------------------------------------------------------------
   // Free-form user follow-up message.
+  //
+  // IMPORTANT: if the last assistant turn emitted a tool_use block
+  // (ask_question, create_goal_plan, etc.), the Anthropic API requires
+  // the very next user message to be a tool_result. Sending plain text
+  // instead causes a 400 and permanently poisons the conversation.
+  //
+  // This happens in practice when: plan preview crashes → overlay
+  // disappears → user types directly in the input box → sendMessage
+  // pushes plain text → all subsequent API calls fail.
+  //
+  // Fix: detect a pending tool_use via lastToolUseIdRef and auto-inject
+  // a synthetic tool_result before the user's free-text message.
   // ------------------------------------------------------------
 
   const sendMessage = useCallback(
@@ -512,14 +524,50 @@ export function useGoalChat(options?: UseGoalChatOptions) {
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      const apiMsg: AnthropicMessage = { role: "user", content: text };
-      historyRef.current.push(apiMsg);
+      // If the last assistant turn had a tool_use that hasn't been
+      // answered with a tool_result yet, inject one now. We detect
+      // this by checking whether the last entry in historyRef is an
+      // assistant message with content blocks (tool_use lives there).
+      const lastEntry = historyRef.current[historyRef.current.length - 1];
+      const needsToolResult =
+        lastEntry?.role === "assistant" &&
+        Array.isArray(lastEntry.content) &&
+        lastEntry.content.some(
+          (b: AnthropicContentBlock) => b.type === "tool_use"
+        );
 
-      if (sessionIdRef.current) {
-        try {
-          await saveMessage(sessionIdRef.current, "user", text);
-        } catch (err) {
-          console.error("[use-goal-chat] saveMessage failed:", err);
+      if (needsToolResult && lastToolUseIdRef.current) {
+        const syntheticResult: AnthropicMessage = {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: lastToolUseIdRef.current,
+              content: text,
+            },
+          ],
+        };
+        historyRef.current.push(syntheticResult);
+
+        if (sessionIdRef.current) {
+          try {
+            await saveMessage(sessionIdRef.current, "user", text, {
+              toolResultFor: lastToolUseIdRef.current,
+            });
+          } catch (err) {
+            console.error("[use-goal-chat] saveMessage failed:", err);
+          }
+        }
+      } else {
+        const apiMsg: AnthropicMessage = { role: "user", content: text };
+        historyRef.current.push(apiMsg);
+
+        if (sessionIdRef.current) {
+          try {
+            await saveMessage(sessionIdRef.current, "user", text);
+          } catch (err) {
+            console.error("[use-goal-chat] saveMessage failed:", err);
+          }
         }
       }
 

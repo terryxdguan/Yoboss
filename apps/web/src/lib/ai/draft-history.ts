@@ -105,6 +105,24 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
             },
           ],
         });
+      } else if (latestToolUseId && needsToolResultBefore(apiMessages)) {
+        // Edge case: a plain-text user message was saved after an
+        // assistant tool_use WITHOUT the required tool_result (this
+        // happens when the plan preview crashes and the user types
+        // directly into the input). The Anthropic API requires a
+        // tool_result between the tool_use and the next user text.
+        // Auto-inject a synthetic tool_result so the conversation
+        // can continue without a permanent 400 loop.
+        apiMessages.push({
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: latestToolUseId,
+              content: row.content,
+            },
+          ],
+        });
       } else {
         apiMessages.push({ role: "user", content: row.content });
       }
@@ -183,4 +201,15 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
     latestToolUseId,
     lastAssistantInterrupted,
   };
+}
+
+/** Returns true if the last API message is an assistant turn containing a
+ *  tool_use block that hasn't been followed by a tool_result yet. The
+ *  Anthropic API returns 400 if we send a plain user message in that case. */
+function needsToolResultBefore(apiMsgs: AnthropicMessage[]): boolean {
+  if (apiMsgs.length === 0) return false;
+  const last = apiMsgs[apiMsgs.length - 1];
+  if (last.role !== "assistant") return false;
+  if (!Array.isArray(last.content)) return false;
+  return last.content.some((b) => b.type === "tool_use");
 }
