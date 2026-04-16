@@ -6,7 +6,7 @@ import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 async function loadPromptFile(promptFile: string): Promise<string> {
   const filePath = join(
