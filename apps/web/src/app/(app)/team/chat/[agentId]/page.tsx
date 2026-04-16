@@ -673,7 +673,7 @@ export default function AgentChatPage() {
                 {msg.role === "assistant" ? (
                   <div className="prose-chat">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                    {isStreaming && msg === messages[messages.length - 1] && (
+                    {isStreaming && msg === messages[messages.length - 1] && !msg.toolActivity?.length && (
                       <span className="inline-block ml-0.5 animate-pulse">|</span>
                     )}
                     {msg.interrupted && !(isStreaming && msg === messages[messages.length - 1]) && (

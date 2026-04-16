@@ -618,7 +618,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {msg.content}
                   </ReactMarkdown>
-                  {isStreaming && msg === displayMessages[displayMessages.length - 1] && (
+                  {isStreaming && msg === displayMessages[displayMessages.length - 1] && !msg.toolActivity?.length && (
                     <span className="inline-block ml-0.5 animate-pulse">|</span>
                   )}
                   {msg.interrupted && !(isStreaming && msg === displayMessages[displayMessages.length - 1]) && (

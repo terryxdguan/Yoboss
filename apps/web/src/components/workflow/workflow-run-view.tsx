@@ -1461,7 +1461,7 @@ export function WorkflowRunView({
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </ReactMarkdown>
-                      {msg.isStreaming && (
+                      {msg.isStreaming && !msg.toolActivity?.length && (
                         <span className="inline-block ml-0.5 animate-pulse">|</span>
                       )}
                       {msg.interrupted && !msg.isStreaming && (

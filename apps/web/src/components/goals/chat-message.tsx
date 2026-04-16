@@ -35,6 +35,12 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
   const hasActivity = activity.length > 0;
   const latestActivity = hasActivity ? activity[activity.length - 1] : null;
   const showThinkingIndicator = isStreaming && !message.content;
+  // Show the blinking cursor only while text is actively streaming in.
+  // Hide it when: (a) not streaming, (b) a tool is running but text is
+  // paused (the pulsing tool badge already signals activity), or (c)
+  // streaming just finished (no dangling static cursor).
+  const isLatestToolActive = isStreaming && hasActivity;
+  const showCursor = isStreaming && message.content && !isLatestToolActive;
 
   return (
     <div className="flex justify-start gap-3">
@@ -90,7 +96,7 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
           {message.content ? (
             <div className="leading-relaxed whitespace-pre-wrap">
               {message.content}
-              {isStreaming && (
+              {showCursor && (
                 <span className="inline-block ml-0.5 animate-pulse">|</span>
               )}
             </div>
