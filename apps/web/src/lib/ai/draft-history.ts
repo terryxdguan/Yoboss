@@ -148,13 +148,15 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
 
         if (toolUse.name === "create_goal_plan") {
           const candidate = toolUse.data as GoalPlanData;
-          // Only accept plans with a valid phases array — Claude can
-          // emit malformed tool_use on interrupted/resumed conversations.
+          fixDoubleSerializedPlan(candidate);
           if (Array.isArray(candidate?.phases)) {
             latestGoalPlan = candidate;
           }
         } else if (toolUse.name === "create_weekly_plan") {
           const candidate = toolUse.data as WeeklyPlanData;
+          if (typeof candidate?.tasks === "string") {
+            try { (candidate as Record<string, unknown>).tasks = JSON.parse(candidate.tasks as unknown as string); } catch { /* ignore */ }
+          }
           if (Array.isArray(candidate?.tasks)) {
             latestWeeklyPlan = candidate;
           }
@@ -201,6 +203,28 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
     latestToolUseId,
     lastAssistantInterrupted,
   };
+}
+
+/** Fix Claude's double-serialization quirk where nested arrays in
+ *  create_goal_plan tool_use are emitted as JSON strings instead of
+ *  inline arrays. Mutates the candidate in place. */
+export function fixDoubleSerializedPlan(plan: GoalPlanData): void {
+  const p = plan as Record<string, unknown>;
+  if (typeof p.phases === "string") {
+    try { p.phases = JSON.parse(p.phases as string); } catch { /* leave as-is */ }
+  }
+  if (typeof p.goal_todos === "string") {
+    try { p.goal_todos = JSON.parse(p.goal_todos as string); } catch { /* leave as-is */ }
+  }
+  // Also fix nested todos arrays inside each phase — same quirk can
+  // hit one level deeper.
+  if (Array.isArray(p.phases)) {
+    for (const phase of p.phases as Record<string, unknown>[]) {
+      if (typeof phase.todos === "string") {
+        try { phase.todos = JSON.parse(phase.todos as string); } catch { /* leave as-is */ }
+      }
+    }
+  }
 }
 
 /** Returns true if the last API message is an assistant turn containing a

@@ -20,10 +20,11 @@ import {
   markGoalDraftConfirmed,
 } from "@/lib/db/actions";
 import { getWeekStart } from "@/lib/utils/date";
-import type {
-  AnthropicMessage,
-  AnthropicContentBlock,
-  RebuiltHistory,
+import {
+  fixDoubleSerializedPlan,
+  type AnthropicMessage,
+  type AnthropicContentBlock,
+  type RebuiltHistory,
 } from "@/lib/ai/draft-history";
 
 let msgCounter = 0;
@@ -316,16 +317,15 @@ export function useGoalChat(options?: UseGoalChatOptions) {
 
                 if (currentToolName === "create_goal_plan") {
                   const planData = toolInput as GoalPlanData;
-                  // Validate that phases is an array before rendering the
-                  // preview. Claude occasionally emits malformed tool_use
-                  // input (phases as object, missing field, etc.) especially
-                  // when the conversation was interrupted and resumed with
-                  // incomplete context. Without this guard RoadmapPreview
-                  // crashes on plan.phases.reduce.
+                  // Claude occasionally double-serializes nested fields in
+                  // complex tool schemas — phases comes back as a JSON
+                  // string instead of an inline array. Detect and fix.
+                  fixDoubleSerializedPlan(planData);
                   if (!Array.isArray(planData.phases)) {
                     console.error(
-                      "[use-goal-chat] create_goal_plan has non-array phases, skipping preview:",
-                      JSON.stringify(planData).slice(0, 500)
+                      "[use-goal-chat] create_goal_plan: phases still not an array after deserialization fix.",
+                      "type:", typeof planData.phases,
+                      "keys:", Object.keys(planData),
                     );
                   } else {
                     setPlan(planData);
