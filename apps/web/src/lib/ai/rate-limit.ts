@@ -110,22 +110,8 @@ export async function withRateLimit(
     };
   }
 
-  // Check daily request limit (abuse guardrail)
-  if (quota.requests_today >= (quota.daily_request_limit ?? 500)) {
-    return {
-      allowed: false,
-      response: NextResponse.json(
-        { error: "Daily request limit reached. Resets at midnight." },
-        { status: 429 }
-      ),
-    };
-  }
-
-  // Increment request count
-  await supabase
-    .from("user_quotas")
-    .update({ requests_today: quota.requests_today + 1 })
-    .eq("user_id", userId);
+  // Daily request limit removed — monthly allowance + credits is
+  // sufficient. Users can spend their budget however they want.
 
   return { allowed: true };
 }

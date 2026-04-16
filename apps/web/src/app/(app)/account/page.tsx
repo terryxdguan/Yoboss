@@ -180,21 +180,14 @@ export default function AccountPage() {
     }
   }
 
-  // Handle quota staleness — if last_reset_date is not today, show zero
-  const today = new Date().toISOString().slice(0, 10);
+  // Handle quota staleness
   const thisMonth = new Date().toISOString().slice(0, 7) + "-01";
-  const requestsToday = quota && quota.last_reset_date === today ? quota.requests_today : 0;
-  const costToday = quota && quota.last_reset_date === today ? quota.cost_today_cents : 0;
   const costMonth = quota && quota.last_month_reset === thisMonth ? quota.cost_this_month_cents : 0;
 
-  const dailyLimit = quota?.daily_request_limit ?? 50;
-  const dailyCostLimit = quota?.daily_cost_limit_cents ?? 500;
   const monthlyCostLimit = quota?.monthly_cost_limit_cents ?? 2500;
   const tier = quota?.tier ?? "free";
   const tierStyle = TIER_STYLES[tier] || TIER_STYLES.free;
 
-  const requestPct = Math.min(100, Math.round((requestsToday / dailyLimit) * 100));
-  const dailyCostPct = Math.min(100, Math.round((costToday / dailyCostLimit) * 100));
   const monthlyCostPct = Math.min(100, Math.round((costMonth / monthlyCostLimit) * 100));
 
   // Billing-specific derived state
@@ -403,32 +396,6 @@ export default function AccountPage() {
           </div>
           <h2 className="text-sm font-semibold text-[#2B2B2B]">AI Usage</h2>
         </div>
-
-        {/* Today */}
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-[#6F6A64] font-medium">Today&apos;s Requests</span>
-              <span className="text-[#2B2B2B] font-semibold">{requestsToday} / {dailyLimit}</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
-              <div className={`h-full rounded-full transition-all ${progressColor(requestPct)}`} style={{ width: `${requestPct}%` }} />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-[#6F6A64] font-medium">Today&apos;s Cost</span>
-              <span className="text-[#2B2B2B] font-semibold">{formatCost(costToday)} / {formatCost(dailyCostLimit)}</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
-              <div className={`h-full rounded-full transition-all ${progressColor(dailyCostPct)}`} style={{ width: `${dailyCostPct}%` }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-[#E7DED2] my-5" />
 
         {/* This Month */}
         <div className="space-y-4">
