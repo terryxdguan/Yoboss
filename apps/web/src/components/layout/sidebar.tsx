@@ -21,12 +21,20 @@ import { subscribe, getSnapshot, getAgentStatus } from "@/lib/stores/agent-statu
 const FAVORITE_MEMBERS_KEY = "yoboss_favorite_members";
 const allAgentsList = [...DEFAULT_AGENTS, ...ALL_AGENTS];
 
+// Must match the default-seeding behavior in
+// apps/web/src/components/dashboard/favorite-members.tsx so the sidebar
+// and Dashboard Favorite Members card stay visually in sync when the
+// user has never touched the picker.
 function getSidebarAgents() {
   if (typeof window === "undefined") return DEFAULT_AGENTS;
   try {
     const raw = localStorage.getItem(FAVORITE_MEMBERS_KEY);
-    const ids: string[] = raw ? JSON.parse(raw) : ["general_assistant"];
-    if (ids.length === 0) return DEFAULT_AGENTS.slice(0, 1); // At least General Assistant
+    // Never-set key: seed with all 4 defaults. A user-set empty array
+    // (after explicitly unfavoriting everyone) is preserved — we show
+    // nothing in that case rather than forcing a default back.
+    if (raw === null) return DEFAULT_AGENTS;
+    const ids: string[] = JSON.parse(raw);
+    if (!Array.isArray(ids)) return DEFAULT_AGENTS;
     return ids
       .map((id) => allAgentsList.find((a) => a.id === id))
       .filter(Boolean) as typeof DEFAULT_AGENTS;
