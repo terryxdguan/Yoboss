@@ -833,6 +833,9 @@ export function WorkflowRunView({
     const runningIdx = run.step_results.findIndex((s) => s.status === "running");
     if (runningIdx < 0) return false;
 
+    // Guard against double-invocation trampling shared refs.
+    if (resumeActiveRef.current) return false;
+
     resumeActiveRef.current = true;
 
     // Bind refs for the continuation loop — same as executeWorkflow.
@@ -880,7 +883,14 @@ export function WorkflowRunView({
         step_results: updated,
       });
     } catch (err) {
-      if (abort.signal.aborted) return false;
+      if (abort.signal.aborted) {
+        // User-initiated stop during the resumed step. Clear the UI
+        // running flag but leave the step marked "running" in DB so a
+        // future reopen can still resume if the server-side session
+        // actually finished in the meantime.
+        setIsRunning(false);
+        return true;
+      }
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       const updated = [...stepResultsRef.current];
       updated[runningIdx] = {
@@ -903,8 +913,9 @@ export function WorkflowRunView({
     }
 
     // Step 2+: run remaining steps via the existing runStep loop.
+    let abortedDuringLoop = false;
     for (let i = runningIdx + 1; i < workflow.steps.length; i++) {
-      if (abort.signal.aborted) break;
+      if (abort.signal.aborted) { abortedDuringLoop = true; break; }
 
       setCurrentStep(i);
       setToolStatus(null);
@@ -947,7 +958,7 @@ export function WorkflowRunView({
           });
         } catch { /* non-blocking */ }
       } catch (err) {
-        if (abort.signal.aborted) break;
+        if (abort.signal.aborted) { abortedDuringLoop = true; break; }
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
         updatedResults[i] = {
           ...updatedResults[i],
@@ -969,6 +980,13 @@ export function WorkflowRunView({
       }
     }
 
+    // Abort short-circuits the success block — the user stopped the run,
+    // we must not mark it as success.
+    if (abortedDuringLoop) {
+      setIsRunning(false);
+      return true;
+    }
+
     // All done.
     const finalResults = [...stepResultsRef.current];
     setOverallStatus("success");
@@ -986,6 +1004,11 @@ export function WorkflowRunView({
         status: "ready",
       });
     } catch { /* non-blocking */ }
+
+    // Defensive: clear the polling lockout so if onComplete doesn't unmount
+    // the component, the DB polling effect can still kick in for any late
+    // state updates.
+    resumeActiveRef.current = false;
 
     if (outputs.length > 0) generateWorkflowSummary(outputs);
     onComplete();
