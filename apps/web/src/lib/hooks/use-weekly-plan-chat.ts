@@ -1,13 +1,26 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type {
   ChatMessage,
   WeeklyPlanData,
   UserAnswer,
   AskQuestionData,
 } from "@/lib/types/goal-chat";
+import {
+  createWeeklyDraft,
+  saveMessage,
+  upsertAssistantMessage,
+  markWeeklyDraftConfirmed,
+} from "@/lib/db/actions";
 import { createClient } from "@/lib/db/client";
+import {
+  fixDoubleSerializedPlan,
+  type AnthropicMessage,
+  type AnthropicContentBlock,
+  type RebuiltHistory,
+} from "@/lib/ai/draft-history";
+
 export interface WeeklyPlanChatContext {
   goalTitle: string;
   goalDescription: string;
@@ -39,213 +52,351 @@ function genId() {
   return `msg_${Date.now()}_${++msgCounter}`;
 }
 
-interface AnthropicMessage {
-  role: "user" | "assistant";
-  content: string | AnthropicContentBlock[];
-}
-
-interface AnthropicContentBlock {
-  type: "text" | "tool_use" | "tool_result";
-  text?: string;
-  id?: string;
-  name?: string;
-  input?: Record<string, unknown>;
-  tool_use_id?: string;
-  content?: string;
-}
-
 export type WeeklyPlanChatStage = "chatting" | "preview" | "saving" | "done";
 
-export function useWeeklyPlanChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [stage, setStage] = useState<WeeklyPlanChatStage>("chatting");
+export interface UseWeeklyPlanChatInitialDraft {
+  sessionId: string;
+  rebuilt: RebuiltHistory;
+  /** Restore the phase/week context so confirmPlan knows where to write. */
+  phaseId: string;
+  weekStart: string;
+}
+
+export interface UseWeeklyPlanChatOptions {
+  initialDraft?: UseWeeklyPlanChatInitialDraft | null;
+}
+
+export function useWeeklyPlanChat(options?: UseWeeklyPlanChatOptions) {
+  const initialDraft = options?.initialDraft ?? null;
+
+  const initialMessages = useMemo<ChatMessage[]>(() => {
+    if (!initialDraft) return [];
+    const msgs = initialDraft.rebuilt.uiMessages.map((m) => ({ ...m }));
+    if (initialDraft.rebuilt.lastAssistantInterrupted) {
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === "assistant") {
+          msgs[i] = { ...msgs[i], interrupted: true };
+          break;
+        }
+      }
+    }
+    return msgs;
+  }, [initialDraft]);
+
+  const initialStage: WeeklyPlanChatStage = initialDraft
+    ? initialDraft.rebuilt.latestWeeklyPlan
+      ? "preview"
+      : "chatting"
+    : "chatting";
+
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [stage, setStage] = useState<WeeklyPlanChatStage>(initialStage);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [plan, setPlan] = useState<WeeklyPlanData | null>(null);
+  const [plan, setPlan] = useState<WeeklyPlanData | null>(
+    initialDraft?.rebuilt.latestWeeklyPlan ?? null
+  );
   const [error, setError] = useState<string | null>(null);
 
-  const historyRef = useRef<AnthropicMessage[]>([]);
-  const lastToolUseIdRef = useRef<string | null>(null);
-  const contextRef = useRef<{ phaseId: string; weekStart: string } | null>(null);
+  const historyRef = useRef<AnthropicMessage[]>(
+    initialDraft ? [...initialDraft.rebuilt.apiMessages] : []
+  );
+  const lastToolUseIdRef = useRef<string | null>(
+    initialDraft?.rebuilt.latestToolUseId ?? null
+  );
+  const sessionIdRef = useRef<string | null>(initialDraft?.sessionId ?? null);
+  const contextRef = useRef<{ phaseId: string; weekStart: string } | null>(
+    initialDraft
+      ? { phaseId: initialDraft.phaseId, weekStart: initialDraft.weekStart }
+      : null
+  );
 
-  const sendToApi = useCallback(
-    async (apiMessages: AnthropicMessage[]) => {
-      setIsStreaming(true);
-      setError(null);
+  // ------------------------------------------------------------
+  // Streaming turn
+  // ------------------------------------------------------------
 
-      const assistantMsgId = genId();
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantMsgId, role: "assistant", content: "" },
-      ]);
+  const sendToApi = useCallback(async (apiMessages: AnthropicMessage[]) => {
+    setIsStreaming(true);
+    setError(null);
 
+    const assistantMsgId = genId();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantMsgId, role: "assistant", content: "" },
+    ]);
+
+    const sessionId = sessionIdRef.current;
+    let assistantDbId: string | null = null;
+    if (sessionId) {
       try {
-        const res = await fetch("/api/ai/plan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "weekly-chat",
-            messages: apiMessages,
-          }),
+        const placeholder = await upsertAssistantMessage({
+          sessionId,
+          messageId: null,
+          content: "",
+          metadata: { partial: true },
         });
+        assistantDbId = placeholder.id;
+      } catch (err) {
+        console.error("[use-weekly-plan-chat] placeholder failed:", err);
+      }
+    }
 
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status}`);
-        }
+    let textContent = "";
+    let currentToolName = "";
+    let currentToolId = "";
+    let toolInputJson = "";
+    let inToolUse = false;
+    const contentBlocks: AnthropicContentBlock[] = [];
+    let finalToolUse: { id: string; name: string; data: unknown } | null = null;
 
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("No response body");
+    let flushInFlight = false;
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let finalized = false;
 
-        const decoder = new TextDecoder();
-        let textContent = "";
-        let currentToolName = "";
-        let currentToolId = "";
-        let toolInputJson = "";
-        let inToolUse = false;
+    const flushNow = async () => {
+      if (flushInFlight || finalized || !assistantDbId || !sessionId) return;
+      flushInFlight = true;
+      try {
+        await upsertAssistantMessage({
+          sessionId,
+          messageId: assistantDbId,
+          content: textContent,
+          metadata: {
+            partial: true,
+            ...(finalToolUse ? { toolUse: finalToolUse } : {}),
+          },
+        });
+      } catch { /* non-blocking */ }
+      flushInFlight = false;
+    };
 
-        const contentBlocks: AnthropicContentBlock[] = [];
+    const scheduleFlush = () => {
+      if (flushTimer || finalized) return;
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        flushNow();
+      }, 2000);
+    };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+    try {
+      const res = await fetch("/api/ai/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "weekly-chat",
+          messages: apiMessages,
+        }),
+      });
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter((l) => l.trim());
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
 
-          for (const line of lines) {
-            if (line.startsWith("event:")) continue;
-            const jsonStr = line.startsWith("data: ")
-              ? line.slice(6)
-              : line;
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-            let event;
-            try {
-              event = JSON.parse(jsonStr);
-            } catch {
-              continue;
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((l) => l.trim());
+
+        for (const line of lines) {
+          if (line.startsWith("event:")) continue;
+          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line;
+
+          let event;
+          try {
+            event = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
+
+          if (event.type === "content_block_start") {
+            const block = event.content_block;
+            if (block?.type === "tool_use") {
+              inToolUse = true;
+              currentToolName = block.name || "";
+              currentToolId = block.id || "";
+              toolInputJson = "";
             }
+          }
 
-            if (event.type === "content_block_start") {
-              const block = event.content_block;
-              if (block?.type === "tool_use") {
-                inToolUse = true;
-                currentToolName = block.name || "";
-                currentToolId = block.id || "";
-                toolInputJson = "";
-              }
+          if (event.type === "content_block_delta") {
+            const delta = event.delta;
+            if (delta?.type === "text_delta" && delta.text) {
+              textContent += delta.text;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: textContent }
+                    : m
+                )
+              );
+              scheduleFlush();
             }
-
-            if (event.type === "content_block_delta") {
-              const delta = event.delta;
-              if (delta?.type === "text_delta" && delta.text) {
-                textContent += delta.text;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsgId
-                      ? { ...m, content: textContent }
-                      : m
-                  )
-                );
-              }
-              if (delta?.type === "input_json_delta" && delta.partial_json) {
-                toolInputJson += delta.partial_json;
-              }
+            if (delta?.type === "input_json_delta" && delta.partial_json) {
+              toolInputJson += delta.partial_json;
             }
+          }
 
-            if (event.type === "content_block_stop") {
-              if (inToolUse && toolInputJson) {
-                try {
-                  const toolInput = JSON.parse(toolInputJson);
-                  lastToolUseIdRef.current = currentToolId;
+          if (event.type === "content_block_stop") {
+            if (inToolUse && toolInputJson) {
+              try {
+                const toolInput = JSON.parse(toolInputJson);
+                lastToolUseIdRef.current = currentToolId;
 
-                  if (textContent) {
-                    contentBlocks.push({ type: "text", text: textContent });
-                  }
-                  contentBlocks.push({
-                    type: "tool_use",
-                    id: currentToolId,
-                    name: currentToolName,
-                    input: toolInput,
-                  });
+                if (textContent) {
+                  contentBlocks.push({ type: "text", text: textContent });
+                }
+                contentBlocks.push({
+                  type: "tool_use",
+                  id: currentToolId,
+                  name: currentToolName,
+                  input: toolInput,
+                });
 
-                  if (currentToolName === "ask_question") {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === assistantMsgId
-                          ? {
-                              ...m,
-                              content: textContent,
-                              toolUse: {
-                                id: currentToolId,
-                                name: "ask_question",
-                                data: toolInput as AskQuestionData,
-                              },
-                            }
-                          : m
-                      )
-                    );
-                  }
+                finalToolUse = {
+                  id: currentToolId,
+                  name: currentToolName,
+                  data: toolInput,
+                };
 
-                  if (currentToolName === "create_weekly_plan") {
-                    const planData = toolInput as WeeklyPlanData;
-                    setPlan(planData);
-                    setStage("preview");
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === assistantMsgId
-                          ? {
-                              ...m,
-                              content: textContent,
-                              toolUse: {
-                                id: currentToolId,
-                                name: "create_weekly_plan",
-                                data: planData,
-                              },
-                            }
-                          : m
-                      )
-                    );
-                  }
-                } catch {
-                  console.error("Failed to parse tool input:", toolInputJson);
+                if (currentToolName === "ask_question") {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsgId
+                        ? {
+                            ...m,
+                            content: textContent,
+                            toolUse: {
+                              id: currentToolId,
+                              name: "ask_question",
+                              data: toolInput as AskQuestionData,
+                            },
+                          }
+                        : m
+                    )
+                  );
+                  scheduleFlush();
                 }
 
-                inToolUse = false;
-                currentToolName = "";
-                toolInputJson = "";
-              } else if (!inToolUse && textContent) {
-                contentBlocks.push({ type: "text", text: textContent });
+                if (currentToolName === "create_weekly_plan") {
+                  const planData = toolInput as WeeklyPlanData;
+                  // Fix Claude double-serialization quirk
+                  if (typeof planData.tasks === "string") {
+                    try {
+                      (planData as Record<string, unknown>).tasks = JSON.parse(planData.tasks as unknown as string);
+                    } catch { /* guard below catches it */ }
+                  }
+                  if (!Array.isArray(planData.tasks)) {
+                    console.error(
+                      "[use-weekly-plan-chat] create_weekly_plan: tasks not array.",
+                      "type:", typeof planData.tasks,
+                      "keys:", Object.keys(planData),
+                    );
+                  } else {
+                    setPlan(planData);
+                    setStage("preview");
+                  }
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsgId
+                        ? {
+                            ...m,
+                            content: textContent,
+                            toolUse: {
+                              id: currentToolId,
+                              name: "create_weekly_plan",
+                              data: planData,
+                            },
+                          }
+                        : m
+                    )
+                  );
+                  scheduleFlush();
+                }
+              } catch {
+                console.error("Failed to parse tool input:", toolInputJson);
               }
+
+              inToolUse = false;
+              currentToolName = "";
+              toolInputJson = "";
+            } else if (!inToolUse && textContent) {
+              contentBlocks.push({ type: "text", text: textContent });
             }
           }
         }
-
-        historyRef.current.push({
-          role: "assistant",
-          content:
-            contentBlocks.length > 0
-              ? contentBlocks
-              : textContent,
-        });
-      } catch (err) {
-        const errMsg =
-          err instanceof Error ? err.message : "Something went wrong";
-        setError(errMsg);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMsgId
-              ? { ...m, content: "Sorry, something went wrong. Please try again." }
-              : m
-          )
-        );
-      } finally {
-        setIsStreaming(false);
       }
-    },
-    []
-  );
+
+      historyRef.current.push({
+        role: "assistant",
+        content: finalToolUse ? contentBlocks : textContent,
+      });
+
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      finalized = true;
+      if (sessionId && assistantDbId) {
+        try {
+          await upsertAssistantMessage({
+            sessionId,
+            messageId: assistantDbId,
+            content: textContent,
+            metadata: {
+              partial: false,
+              ...(finalToolUse ? { toolUse: finalToolUse } : {}),
+            },
+          });
+        } catch (err) {
+          console.error("[use-weekly-plan-chat] final upsert failed:", err);
+        }
+      } else if (sessionId && textContent) {
+        try {
+          await saveMessage(sessionId, "assistant", textContent, {
+            ...(finalToolUse ? { toolUse: finalToolUse } : {}),
+          });
+        } catch (err) {
+          console.error("[use-weekly-plan-chat] legacy save failed:", err);
+        }
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Something went wrong";
+      setError(errMsg);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? { ...m, content: textContent || "Sorry, something went wrong. Please try again.", interrupted: true }
+            : m
+        )
+      );
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+      finalized = true;
+      if (sessionId && assistantDbId) {
+        try {
+          await upsertAssistantMessage({
+            sessionId,
+            messageId: assistantDbId,
+            content: textContent,
+            metadata: {
+              partial: false,
+              interrupted: true,
+              ...(finalToolUse ? { toolUse: finalToolUse } : {}),
+            },
+          });
+        } catch { /* non-blocking */ }
+      }
+    } finally {
+      setIsStreaming(false);
+    }
+  }, []);
+
+  // ------------------------------------------------------------
+  // Start a fresh chat
+  // ------------------------------------------------------------
 
   const startChat = useCallback(
-    (context: WeeklyPlanChatContext, phaseId: string, weekStart: string) => {
+    async (context: WeeklyPlanChatContext, phaseId: string, weekStart: string) => {
       contextRef.current = { phaseId, weekStart };
       setStage("chatting");
       setMessages([]);
@@ -253,7 +404,6 @@ export function useWeeklyPlanChat() {
       setError(null);
 
       const initialText = buildInitialMessage(context);
-
       const userMsg: ChatMessage = {
         id: genId(),
         role: "user",
@@ -263,13 +413,49 @@ export function useWeeklyPlanChat() {
 
       const apiMsg: AnthropicMessage = { role: "user", content: initialText };
       historyRef.current = [apiMsg];
+
+      if (!sessionIdRef.current) {
+        try {
+          const session = await createWeeklyDraft({
+            weeklyContext: {
+              phaseId,
+              weekStart,
+              goalTitle: context.goalTitle,
+              goalDescription: context.goalDescription,
+              phaseTitle: context.phaseTitle,
+              phaseDescription: context.phaseDescription,
+              weekNumber: context.weekNumber,
+              estimatedWeeks: context.estimatedWeeks,
+              isMidWeekStart: context.isMidWeekStart,
+              startDayOfWeek: context.startDayOfWeek,
+            },
+            title: `Week ${context.weekNumber}: ${context.phaseTitle}`.slice(0, 60),
+          });
+          sessionIdRef.current = session.id;
+        } catch (err) {
+          console.error("[use-weekly-plan-chat] createWeeklyDraft failed:", err);
+        }
+      }
+
+      if (sessionIdRef.current) {
+        try {
+          await saveMessage(sessionIdRef.current, "user", initialText);
+        } catch (err) {
+          console.error("[use-weekly-plan-chat] saveMessage (initial) failed:", err);
+        }
+      }
+
       sendToApi([apiMsg]);
     },
     [sendToApi]
   );
 
+  // ------------------------------------------------------------
+  // Free-form user message (with tool_result auto-injection)
+  // ------------------------------------------------------------
+
   const sendMessage = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const userMsg: ChatMessage = {
         id: genId(),
         role: "user",
@@ -277,15 +463,58 @@ export function useWeeklyPlanChat() {
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      const apiMsg: AnthropicMessage = { role: "user", content: text };
-      historyRef.current.push(apiMsg);
+      const lastEntry = historyRef.current[historyRef.current.length - 1];
+      const needsToolResult =
+        lastEntry?.role === "assistant" &&
+        Array.isArray(lastEntry.content) &&
+        lastEntry.content.some(
+          (b: AnthropicContentBlock) => b.type === "tool_use"
+        );
+
+      if (needsToolResult && lastToolUseIdRef.current) {
+        const syntheticResult: AnthropicMessage = {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: lastToolUseIdRef.current,
+              content: text,
+            },
+          ],
+        };
+        historyRef.current.push(syntheticResult);
+        if (sessionIdRef.current) {
+          try {
+            await saveMessage(sessionIdRef.current, "user", text, {
+              toolResultFor: lastToolUseIdRef.current,
+            });
+          } catch (err) {
+            console.error("[use-weekly-plan-chat] saveMessage failed:", err);
+          }
+        }
+      } else {
+        const apiMsg: AnthropicMessage = { role: "user", content: text };
+        historyRef.current.push(apiMsg);
+        if (sessionIdRef.current) {
+          try {
+            await saveMessage(sessionIdRef.current, "user", text);
+          } catch (err) {
+            console.error("[use-weekly-plan-chat] saveMessage failed:", err);
+          }
+        }
+      }
+
       sendToApi([...historyRef.current]);
     },
     [sendToApi]
   );
 
+  // ------------------------------------------------------------
+  // Answer an ask_question
+  // ------------------------------------------------------------
+
   const answerQuestion = useCallback(
-    (answer: UserAnswer) => {
+    async (answer: UserAnswer) => {
       setMessages((prev) =>
         prev.map((m) =>
           m.toolUse?.name === "ask_question" && !m.answered
@@ -305,21 +534,37 @@ export function useWeeklyPlanChat() {
       };
       setMessages((prev) => [...prev, userMsg]);
 
+      const toolUseId = lastToolUseIdRef.current || "";
       const toolResultMsg: AnthropicMessage = {
         role: "user",
         content: [
           {
             type: "tool_result",
-            tool_use_id: lastToolUseIdRef.current || "",
+            tool_use_id: toolUseId,
             content: JSON.stringify(answer),
           },
         ],
       };
       historyRef.current.push(toolResultMsg);
+
+      if (sessionIdRef.current) {
+        try {
+          await saveMessage(sessionIdRef.current, "user", answerText, {
+            toolResultFor: toolUseId,
+          });
+        } catch (err) {
+          console.error("[use-weekly-plan-chat] saveMessage (answer) failed:", err);
+        }
+      }
+
       sendToApi([...historyRef.current]);
     },
     [sendToApi]
   );
+
+  // ------------------------------------------------------------
+  // Confirm
+  // ------------------------------------------------------------
 
   const confirmPlan = useCallback(async () => {
     if (!plan || !contextRef.current) return;
@@ -372,6 +617,14 @@ export function useWeeklyPlanChat() {
         .insert(tasksToInsert);
       if (taskErr) throw taskErr;
 
+      if (sessionIdRef.current) {
+        try {
+          await markWeeklyDraftConfirmed(sessionIdRef.current, weeklyPlanRecord.id);
+        } catch (err) {
+          console.error("[use-weekly-plan-chat] markWeeklyDraftConfirmed failed:", err);
+        }
+      }
+
       setStage("done");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -381,34 +634,53 @@ export function useWeeklyPlanChat() {
     }
   }, [plan]);
 
-  const editPlan = useCallback(() => {
+  // ------------------------------------------------------------
+  // Edit plan
+  // ------------------------------------------------------------
+
+  const editPlan = useCallback(async () => {
     setStage("chatting");
+    const editText = "I'd like to adjust the plan. What would you change?";
     const userMsg: ChatMessage = {
       id: genId(),
       role: "user",
-      content: "I'd like to adjust the plan. What would you change?",
+      content: editText,
     };
     setMessages((prev) => [...prev, userMsg]);
 
+    const toolUseId = lastToolUseIdRef.current || "";
     const toolResultMsg: AnthropicMessage = {
       role: "user",
       content: [
         {
           type: "tool_result",
-          tool_use_id: lastToolUseIdRef.current || "",
+          tool_use_id: toolUseId,
           content: "User wants to edit the plan",
         },
       ],
     };
     historyRef.current.push(toolResultMsg);
 
-    const editMsg: AnthropicMessage = {
-      role: "user",
-      content: "I'd like to adjust the plan. What would you change?",
-    };
+    const editMsg: AnthropicMessage = { role: "user", content: editText };
     historyRef.current.push(editMsg);
+
+    if (sessionIdRef.current) {
+      try {
+        await saveMessage(sessionIdRef.current, "user", "User wants to edit the plan", {
+          toolResultFor: toolUseId,
+        });
+        await saveMessage(sessionIdRef.current, "user", editText);
+      } catch (err) {
+        console.error("[use-weekly-plan-chat] editPlan persist failed:", err);
+      }
+    }
+
     sendToApi([...historyRef.current]);
   }, [sendToApi]);
+
+  // ------------------------------------------------------------
+  // Reset
+  // ------------------------------------------------------------
 
   const reset = useCallback(() => {
     setMessages([]);
@@ -418,6 +690,7 @@ export function useWeeklyPlanChat() {
     historyRef.current = [];
     lastToolUseIdRef.current = null;
     contextRef.current = null;
+    sessionIdRef.current = null;
   }, []);
 
   return {
@@ -426,6 +699,7 @@ export function useWeeklyPlanChat() {
     isStreaming,
     plan,
     error,
+    draftSessionId: sessionIdRef.current,
     startChat,
     sendMessage,
     answerQuestion,

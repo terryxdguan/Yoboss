@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, Send, Check, Calendar, Pencil, Sparkles } from "lucide-react";
-import { useWeeklyPlanChat, type WeeklyPlanChatContext } from "@/lib/hooks/use-weekly-plan-chat";
+import { useWeeklyPlanChat, type WeeklyPlanChatContext, type UseWeeklyPlanChatInitialDraft } from "@/lib/hooks/use-weekly-plan-chat";
 import { ChatMessage } from "./chat-message";
 import type { WeeklyPlanData } from "@/lib/types/goal-chat";
 
@@ -23,6 +23,8 @@ interface WeeklyPlanChatPanelProps {
   weekStart: string;
   onPlanSaved: () => void;
   taskContext?: TaskContext | null;
+  /** Pass a rehydrated draft to resume an interrupted weekly plan chat. */
+  initialDraft?: UseWeeklyPlanChatInitialDraft | null;
 }
 
 function PlanPreviewModal({
@@ -36,14 +38,15 @@ function PlanPreviewModal({
   onEdit: () => void;
   isSaving: boolean;
 }) {
+  const tasks = Array.isArray(plan.tasks) ? plan.tasks : [];
   const tasksByDay: Record<number, WeeklyPlanData["tasks"]> = {};
-  for (const task of plan.tasks) {
+  for (const task of tasks) {
     if (!tasksByDay[task.day_of_week]) tasksByDay[task.day_of_week] = [];
     tasksByDay[task.day_of_week].push(task);
   }
 
-  const totalTasks = plan.tasks.length;
-  const totalMinutes = plan.tasks.reduce((sum, t) => sum + (t.time_estimate_minutes || 0), 0);
+  const totalTasks = tasks.length;
+  const totalMinutes = tasks.reduce((sum, t) => sum + (t.time_estimate_minutes || 0), 0);
   const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
 
   return (
@@ -127,6 +130,7 @@ export function WeeklyPlanChatPanel({
   weekStart,
   onPlanSaved,
   taskContext,
+  initialDraft,
 }: WeeklyPlanChatPanelProps) {
   const {
     messages,
@@ -140,7 +144,7 @@ export function WeeklyPlanChatPanel({
     confirmPlan,
     editPlan,
     reset,
-  } = useWeeklyPlanChat();
+  } = useWeeklyPlanChat({ initialDraft });
 
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -148,19 +152,23 @@ export function WeeklyPlanChatPanel({
   const startedRef = useRef(false);
 
   useEffect(() => {
+    // Skip startChat when resuming a draft — the hook already hydrated
+    // state from initialDraft.
+    if (initialDraft) {
+      startedRef.current = true;
+      return;
+    }
     if (open && !startedRef.current) {
       startedRef.current = true;
       if (taskContext) {
-        // Task-focused chat: send a message about the specific task
         const taskMsg = `Help me with this task: "${taskContext.title}"${taskContext.time_slot ? ` (scheduled at ${taskContext.time_slot})` : ""}. I'd like to break it down, get tips, or brainstorm how to approach it.`;
         startChat(context, phaseId, weekStart);
-        // Wait briefly for initial chat to start, then inject the task message
         setTimeout(() => sendMessage(taskMsg), 500);
       } else {
         startChat(context, phaseId, weekStart);
       }
     }
-  }, [open, context, phaseId, weekStart, startChat, taskContext, sendMessage]);
+  }, [open, context, phaseId, weekStart, startChat, taskContext, sendMessage, initialDraft]);
 
   useEffect(() => {
     if (!open) {
