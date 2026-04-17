@@ -440,29 +440,45 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
   }, [goalContext, sessionId, sessionSummary]);
 
   // --- Start conversation (only if no history loaded) ---
+  //
+  // With unified goal sessions (Phase 2 refactor), this session row now
+  // carries the full goal-creation + weekly-planning history, so
+  // `messages.length > 0` is the common case — the auto-greet path
+  // below almost never fires for goals created post-refactor. It still
+  // handles legacy goals that pre-date the refactor and have an empty
+  // coach history.
+  //
+  // taskContext handling moved to its own effect below: instead of
+  // auto-sending "Help me with this task…", we now pre-fill the input
+  // so the user can edit before sending. Auto-sending would have
+  // silently dropped on sessions with prior history (the common case).
   useEffect(() => {
     if (startedRef.current || loadingHistory) return;
-    // If we loaded history from DB, don't auto-start
     if (messages.length > 0) {
       startedRef.current = true;
       return;
     }
     startedRef.current = true;
 
-    if (taskContext) {
-      const msg = `Help me with this task: "${taskContext.title}"${taskContext.time_slot ? ` (scheduled at ${taskContext.time_slot})` : ""}`;
-      setMessages([{ id: genId(), role: "user", content: msg }]);
-      if (sessionId) saveMessage(sessionId, "user", msg).catch(console.error);
-      const apiMsg: ApiMessage = { role: "user", content: msg };
-      historyRef.current = [apiMsg];
-      sendToApi([apiMsg]);
-    } else if (messages.length === 0) {
-      // Only greet if empty session and no task context
+    if (!taskContext) {
       const greeting: ApiMessage = { role: "user", content: "Hi! I'd like to discuss my goal." };
       historyRef.current = [greeting];
       sendToApi([greeting]);
     }
-  }, [taskContext, sendToApi, loadingHistory, messages.length, sessionId]);
+  }, [taskContext, sendToApi, loadingHistory, messages.length]);
+
+  // --- Pre-fill input when the panel is opened via "send to bot" ---
+  //
+  // Works regardless of session-history state, unlike the pre-refactor
+  // auto-send which bailed when the session was non-empty. User can
+  // still edit the draft before hitting send.
+  useEffect(() => {
+    if (loadingHistory) return;
+    if (!taskContext) return;
+    const draft = `Help me with this task: "${taskContext.title}"${taskContext.time_slot ? ` (scheduled at ${taskContext.time_slot})` : ""}`;
+    setInputText(draft);
+    textareaRef.current?.focus();
+  }, [taskContext, loadingHistory]);
 
   // --- Auto-scroll ---
   useEffect(() => {
