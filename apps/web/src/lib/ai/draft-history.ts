@@ -1,5 +1,4 @@
-// Draft chat history rebuild — shared between use-goal-session and
-// use-weekly-plan-chat.
+// Draft chat history rebuild — used by use-goal-session.
 //
 // When a draft session is resumed, we need to reconstruct two things from
 // the persisted chat_messages rows:
@@ -12,8 +11,8 @@
 //      off without losing tool state.
 //
 // The reason this is a separate helper rather than inline in the hook:
-// both goal-chat and weekly-plan-chat need identical rehydration logic,
-// and it's easy to test as a pure function of the DB rows.
+// both goal-creation and weekly-planning intents need identical rehydration
+// logic, and it's easy to test as a pure function of the DB rows.
 
 import type { ChatMessage as DBChatMessage } from "@/lib/types/database";
 import type {

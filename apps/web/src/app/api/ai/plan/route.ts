@@ -83,19 +83,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (action === "weekly-chat") {
-      const { messages } = body as { messages: Anthropic.MessageParam[] };
-      const stream = await chatWithWeeklyPlanCoach(messages);
-      // chatWithWeeklyPlanCoach hits MODELS.opus — the previous tag
-      // "claude-sonnet-4-6" was a copy-paste leftover from when this
-      // path used Sonnet, and it caused cost accounting to under-bill
-      // by ~5x for every weekly-plan turn.
-      return new Response(
-        streamWithUsageLog(stream, user.id, "weekly-chat", "claude-opus-4-7"),
-        { headers: SSE_HEADERS }
-      );
-    }
-
     if (action === "goal-detail-chat") {
       const { messages, context } = body as {
         messages: Anthropic.MessageParam[];
