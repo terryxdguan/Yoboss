@@ -948,6 +948,14 @@ export async function markGoalDraftConfirmed(
   if (error) throw error;
 }
 
+/**
+ * @deprecated Phase 1 of the unified-session refactor: weekly planning now
+ * appends to the goal's main session (created/found via
+ * `getOrCreateGoalSession`). Existing `__weekly-draft__` rows in the DB
+ * are still readable via `loadDraftSession`, but no new ones should be
+ * created — the only remaining caller is `useWeeklyPlanChat`, which
+ * Task 1.8 deletes. Will be removed in Phase 3.
+ */
 export async function createWeeklyDraft(params: {
   weeklyContext: NonNullable<ChatSession["metadata"]>["weeklyContext"];
   title?: string;
