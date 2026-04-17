@@ -801,6 +801,12 @@ export async function getSession(sessionId: string): Promise<ChatSession | null>
 //   3. Each user answer / message            → saveMessage(sessionId, "user", ...)
 //      (tool_result user messages set metadata.toolResultFor for rehydration)
 //   4. Confirm successfully writes real rows → markGoalDraftConfirmed(id, goalId)
+//      At this point the draft session's goal_id column is set to the new goal,
+//      promoting it to the canonical chat session for that goal. The
+//      `unique(user_id, goal_id) WHERE goal_id IS NOT NULL` index guarantees
+//      at most one such session per (user, goal). All subsequent
+//      weekly-planning turns — and (Phase 2) coach turns — append to the same
+//      chat_sessions row, so the goal has a single long-running conversation.
 //   5. Unconfirmed drafts show on Continue   → listOpenGoalDrafts()
 //
 // Reserved agent_id literals (also exported from ./draft-constants.ts for
@@ -909,7 +915,11 @@ export async function markGoalDraftConfirmed(
 
   const { error } = await supabase
     .from("chat_sessions")
-    .update({ metadata: merged, updated_at: new Date().toISOString() })
+    .update({
+      metadata: merged,
+      goal_id: goalId, // NEW — promotes draft to the goal's main session
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", sessionId)
     .eq("user_id", user.id);
   if (error) throw error;
