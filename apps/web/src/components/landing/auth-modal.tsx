@@ -45,6 +45,19 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     setEmailError("");
   }, [mode]);
 
+  // Read-only probe — the /goals/create page is responsible for clearing
+  // the key after it consumes it. We just need to know "was a goal typed
+  // before login?" to pick the right redirect destination.
+  const postAuthDestination = (): string => {
+    try {
+      return window.sessionStorage.getItem("pendingGoal")
+        ? "/goals/create"
+        : "/dashboard";
+    } catch {
+      return "/dashboard";
+    }
+  };
+
   if (!open) return null;
 
   const passwordStrength = getPasswordStrength(password);
@@ -65,7 +78,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(postAuthDestination())}`,
       },
     });
   };
@@ -125,7 +138,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
           setError(err.message);
         }
       } else {
-        window.location.href = "/dashboard";
+        window.location.href = postAuthDestination();
         return;
       }
     }
