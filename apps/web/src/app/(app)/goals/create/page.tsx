@@ -88,7 +88,7 @@ export default function CreateGoalPage() {
           <section className="max-w-3xl mx-auto text-center">
             <div className="overflow-hidden h-[140px] md:h-[170px] mb-2">
               <img
-                src="/Goal_Planner.PNG"
+                src="/goal_planner.png"
                 alt="YoBoss — Goal Planner"
                 className="mx-auto max-w-xs w-full h-auto object-cover object-center"
               />
