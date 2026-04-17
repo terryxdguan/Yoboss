@@ -9,11 +9,11 @@ import {
   deleteDraftSession,
 } from "@/lib/db/actions";
 import { rebuildDraftHistory } from "@/lib/ai/draft-history";
-import type { UseGoalChatInitialDraft } from "@/lib/hooks/use-goal-chat";
+import type { UseGoalSessionInitialDraft } from "@/lib/hooks/use-goal-session";
 
 interface GoalDraftListProps {
-  /** Called with the rehydrated draft ready to hand to useGoalChat. */
-  onResume: (draft: UseGoalChatInitialDraft) => void;
+  /** Called with the rehydrated draft ready to hand to useGoalSession. */
+  onResume: (draft: UseGoalSessionInitialDraft) => void;
   /** Bumped by the parent after a draft is confirmed or cancelled so the
    *  list re-fetches. Simpler than wiring a global store. */
   refreshKey?: number;

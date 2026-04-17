@@ -7,7 +7,7 @@ import { GoalInput } from "@/components/landing/goal-input";
 import { ExampleGoals } from "@/components/landing/example-goals";
 import { GoalChat } from "@/components/goals/goal-chat";
 import { GoalDraftList } from "@/components/goals/goal-draft-list";
-import type { UseGoalChatInitialDraft } from "@/lib/hooks/use-goal-chat";
+import type { UseGoalSessionInitialDraft } from "@/lib/hooks/use-goal-session";
 import { getPendingGoal, clearPendingGoal } from "@/lib/pending-goal";
 
 export default function CreateGoalPage() {
@@ -19,7 +19,7 @@ export default function CreateGoalPage() {
   // Non-null means "resume mode"; GoalChat will skip startChat and rehydrate
   // from the persisted messages instead.
   const [resumeDraft, setResumeDraft] =
-    useState<UseGoalChatInitialDraft | null>(null);
+    useState<UseGoalSessionInitialDraft | null>(null);
   // Bumped on chat exit so GoalDraftList re-fetches and reflects the new
   // state (a just-confirmed or deleted draft should drop off the list).
   const [draftListRefresh, setDraftListRefresh] = useState(0);
@@ -42,7 +42,7 @@ export default function CreateGoalPage() {
     setChatActive(true);
   };
 
-  const handleResumeDraft = (draft: UseGoalChatInitialDraft) => {
+  const handleResumeDraft = (draft: UseGoalSessionInitialDraft) => {
     setResumeDraft(draft);
     // initialGoal is unused in resume mode but we clear it so the
     // component's initialGoal prop doesn't carry stale state from a

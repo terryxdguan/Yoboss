@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useGoalChat, type UseGoalChatInitialDraft } from "@/lib/hooks/use-goal-chat";
+import { useGoalSession, type UseGoalSessionInitialDraft } from "@/lib/hooks/use-goal-session";
 import { ChatMessage } from "./chat-message";
 import { RoadmapPreview } from "./roadmap-preview";
 
@@ -15,7 +15,7 @@ interface GoalChatProps {
   onCancel: () => void;
   /** Pass a rehydrated draft from GoalDraftList to resume an in-progress
    *  conversation instead of starting a fresh one. */
-  initialDraft?: UseGoalChatInitialDraft | null;
+  initialDraft?: UseGoalSessionInitialDraft | null;
 }
 
 export function GoalChat({ initialGoal, onCancel, initialDraft }: GoalChatProps) {
@@ -31,7 +31,7 @@ export function GoalChat({ initialGoal, onCancel, initialDraft }: GoalChatProps)
     answerQuestion,
     confirmPlan,
     editPlan,
-  } = useGoalChat({ initialDraft });
+  } = useGoalSession({ initialDraft });
 
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);

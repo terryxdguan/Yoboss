@@ -7,7 +7,9 @@ import type {
   GoalPlanData,
   UserAnswer,
   AskQuestionData,
+  WeeklyPlanData,
 } from "@/lib/types/goal-chat";
+import type { WeeklyPlanChatContext } from "@/lib/ai/weekly-plan-chat";
 import {
   createGoal,
   createPhases,
@@ -45,17 +47,30 @@ const TOOL_LABELS: Record<string, string> = {
  *  server-calling `loadDraftSession(id)` and running the result through
  *  `rebuildDraftHistory`. When supplied, the hook hydrates its initial
  *  state from the draft instead of starting a blank conversation. */
-export interface UseGoalChatInitialDraft {
+export interface UseGoalSessionInitialDraft {
   sessionId: string;
   rebuilt: RebuiltHistory;
 }
 
-export interface UseGoalChatOptions {
-  initialDraft?: UseGoalChatInitialDraft | null;
+export interface UseGoalSessionOptions {
+  initialDraft?: UseGoalSessionInitialDraft | null;
+  /** Which planning sub-flow this hook instance is driving. Decides
+   *  the system prompt + tool subset the server uses for each turn.
+   *  Defaults to "goal-creation" for backward compat with existing
+   *  /goals/create page. */
+  intent?: "goal-creation" | "weekly-planning";
+  /** Required when intent === "weekly-planning". Snapshot of goal +
+   *  phase + week index — injected into the system prompt server-side. */
+  weeklyContext?: WeeklyPlanChatContext;
+  /** Fires when a `create_weekly_plan` tool finalizes. Goal-creation
+   *  flow uses the existing `plan` state; weekly-planning callers use
+   *  this callback (or read `weeklyPreview` state from the return). */
+  onWeeklyPlanGenerated?: (plan: WeeklyPlanData) => void;
 }
 
-export function useGoalChat(options?: UseGoalChatOptions) {
+export function useGoalSession(options?: UseGoalSessionOptions) {
   const initialDraft = options?.initialDraft ?? null;
+  const intent = options?.intent ?? "goal-creation";
 
   // ------------------------------------------------------------
   // State / refs (hydrated from draft if provided)
@@ -97,6 +112,9 @@ export function useGoalChat(options?: UseGoalChatOptions) {
   const [plan, setPlan] = useState<GoalPlanData | null>(
     initialDraft?.rebuilt.latestGoalPlan ?? null
   );
+  const [weeklyPreview, setWeeklyPreview] = useState<WeeklyPlanData | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Full Anthropic history (with tool_use / tool_result blocks) that the
@@ -109,6 +127,16 @@ export function useGoalChat(options?: UseGoalChatOptions) {
     initialDraft?.rebuilt.latestToolUseId ?? null
   );
   const sessionIdRef = useRef<string | null>(initialDraft?.sessionId ?? null);
+
+  // Keep the latest weekly-planning option values in refs so that
+  // sendToApi (whose useCallback identity is stable) reads fresh values
+  // on every turn without forcing the streaming function to re-create.
+  const intentRef = useRef(intent);
+  intentRef.current = intent;
+  const weeklyContextRef = useRef(options?.weeklyContext);
+  weeklyContextRef.current = options?.weeklyContext;
+  const onWeeklyPlanGeneratedRef = useRef(options?.onWeeklyPlanGenerated);
+  onWeeklyPlanGeneratedRef.current = options?.onWeeklyPlanGenerated;
 
   // ------------------------------------------------------------
   // Streaming turn — the core of draft persistence.
@@ -141,7 +169,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
         });
         assistantDbId = placeholder.id;
       } catch (err) {
-        console.error("[use-goal-chat] Failed to create placeholder:", err);
+        console.error("[use-goal-session] Failed to create placeholder:", err);
       }
     }
 
@@ -189,11 +217,17 @@ export function useGoalChat(options?: UseGoalChatOptions) {
     };
 
     try {
+      const currentIntent = intentRef.current;
       const res = await fetch("/api/ai/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "goal-chat",
+          action: "goal-session",
+          intent: currentIntent,
+          context:
+            currentIntent === "weekly-planning"
+              ? { weekly: weeklyContextRef.current }
+              : undefined,
           messages: apiMessages,
         }),
       });
@@ -344,7 +378,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
                   fixDoubleSerializedPlan(planData);
                   if (!Array.isArray(planData.phases)) {
                     console.error(
-                      "[use-goal-chat] create_goal_plan: phases still not an array after deserialization fix.",
+                      "[use-goal-session] create_goal_plan: phases still not an array after deserialization fix.",
                       "type:", typeof planData.phases,
                       "keys:", Object.keys(planData),
                     );
@@ -362,6 +396,48 @@ export function useGoalChat(options?: UseGoalChatOptions) {
                               id: currentToolId,
                               name: "create_goal_plan",
                               data: planData,
+                            },
+                          }
+                        : m
+                    )
+                  );
+                  scheduleFlush();
+                }
+
+                if (currentToolName === "create_weekly_plan") {
+                  const weeklyData = toolInput as WeeklyPlanData;
+                  // Same double-serialization quirk as create_goal_plan —
+                  // Claude occasionally returns nested arrays as JSON
+                  // strings.
+                  if (typeof weeklyData.tasks === "string") {
+                    try {
+                      (weeklyData as unknown as Record<string, unknown>).tasks =
+                        JSON.parse(weeklyData.tasks as unknown as string);
+                    } catch {
+                      /* guard below catches it */
+                    }
+                  }
+                  if (!Array.isArray(weeklyData.tasks)) {
+                    console.error(
+                      "[use-goal-session] create_weekly_plan: tasks not array.",
+                      "type:", typeof weeklyData.tasks,
+                      "keys:", Object.keys(weeklyData),
+                    );
+                  } else {
+                    setWeeklyPreview(weeklyData);
+                    setStage("preview");
+                    onWeeklyPlanGeneratedRef.current?.(weeklyData);
+                  }
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsgId
+                        ? {
+                            ...m,
+                            content: textContent,
+                            toolUse: {
+                              id: currentToolId,
+                              name: "create_weekly_plan",
+                              data: weeklyData,
                             },
                           }
                         : m
@@ -412,7 +488,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
             },
           });
         } catch (err) {
-          console.error("[use-goal-chat] Final upsert failed:", err);
+          console.error("[use-goal-session] Final upsert failed:", err);
         }
       } else if (sessionId && textContent) {
         // Placeholder was never created — save via legacy path so we at
@@ -422,7 +498,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
             ...(finalToolUse ? { toolUse: finalToolUse } : {}),
           });
         } catch (err) {
-          console.error("[use-goal-chat] Legacy save failed:", err);
+          console.error("[use-goal-session] Legacy save failed:", err);
         }
       }
     } catch (err) {
@@ -503,7 +579,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
           const session = await createGoalDraft({ title });
           sessionIdRef.current = session.id;
         } catch (err) {
-          console.error("[use-goal-chat] createGoalDraft failed:", err);
+          console.error("[use-goal-session] createGoalDraft failed:", err);
         }
       }
 
@@ -511,7 +587,10 @@ export function useGoalChat(options?: UseGoalChatOptions) {
         try {
           await saveMessage(sessionIdRef.current, "user", goalText);
         } catch (err) {
-          console.error("[use-goal-chat] saveMessage (initial) failed:", err);
+          console.error(
+            "[use-goal-session] saveMessage (initial) failed:",
+            err
+          );
         }
       }
 
@@ -576,7 +655,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
               toolResultFor: lastToolUseIdRef.current,
             });
           } catch (err) {
-            console.error("[use-goal-chat] saveMessage failed:", err);
+            console.error("[use-goal-session] saveMessage failed:", err);
           }
         }
       } else {
@@ -587,7 +666,7 @@ export function useGoalChat(options?: UseGoalChatOptions) {
           try {
             await saveMessage(sessionIdRef.current, "user", text);
           } catch (err) {
-            console.error("[use-goal-chat] saveMessage failed:", err);
+            console.error("[use-goal-session] saveMessage failed:", err);
           }
         }
       }
@@ -657,7 +736,10 @@ export function useGoalChat(options?: UseGoalChatOptions) {
             toolResultFor: toolUseId,
           });
         } catch (err) {
-          console.error("[use-goal-chat] saveMessage (answer) failed:", err);
+          console.error(
+            "[use-goal-session] saveMessage (answer) failed:",
+            err
+          );
         }
       }
       // Mark the answered flag on the assistant row in the DB too so the
@@ -759,7 +841,10 @@ export function useGoalChat(options?: UseGoalChatOptions) {
           // Non-fatal — the real goal is already written; worst case
           // the stale draft stays on the Continue list for the user
           // to dismiss manually.
-          console.error("[use-goal-chat] markGoalDraftConfirmed failed:", err);
+          console.error(
+            "[use-goal-session] markGoalDraftConfirmed failed:",
+            err
+          );
         }
       };
 
@@ -827,7 +912,58 @@ export function useGoalChat(options?: UseGoalChatOptions) {
         );
         await saveMessage(sessionIdRef.current, "user", editText);
       } catch (err) {
-        console.error("[use-goal-chat] editPlan persist failed:", err);
+        console.error("[use-goal-session] editPlan persist failed:", err);
+      }
+    }
+
+    sendToApi([...historyRef.current]);
+  }, [sendToApi]);
+
+  // ------------------------------------------------------------
+  // Weekly-planning equivalent of editPlan — clears the weekly preview
+  // and asks the model to revise. No-op for goal-creation intent so
+  // existing /goals/create callers never accidentally hit this path.
+  // ------------------------------------------------------------
+
+  const requestEdit = useCallback(async () => {
+    if (intentRef.current !== "weekly-planning") return;
+    setWeeklyPreview(null);
+    const editText =
+      "I'd like to adjust the weekly plan. What would you change?";
+    const userMsg: ChatMessage = {
+      id: genId(),
+      role: "user",
+      content: editText,
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    const toolUseId = lastToolUseIdRef.current || "";
+    historyRef.current.push({
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: toolUseId,
+          content: "User wants to adjust the plan",
+        },
+      ],
+    });
+    historyRef.current.push({ role: "user", content: editText });
+
+    if (sessionIdRef.current) {
+      try {
+        await saveMessage(
+          sessionIdRef.current,
+          "user",
+          "User wants to adjust the plan",
+          { toolResultFor: toolUseId }
+        );
+        await saveMessage(sessionIdRef.current, "user", editText);
+      } catch (err) {
+        console.error(
+          "[use-goal-session] requestEdit persist failed:",
+          err
+        );
       }
     }
 
@@ -839,6 +975,8 @@ export function useGoalChat(options?: UseGoalChatOptions) {
     stage,
     isStreaming,
     plan,
+    weeklyPreview,
+    clearWeeklyPreview: () => setWeeklyPreview(null),
     error,
     draftSessionId: sessionIdRef.current,
     startChat,
@@ -846,5 +984,6 @@ export function useGoalChat(options?: UseGoalChatOptions) {
     answerQuestion,
     confirmPlan,
     editPlan,
+    requestEdit,
   };
 }

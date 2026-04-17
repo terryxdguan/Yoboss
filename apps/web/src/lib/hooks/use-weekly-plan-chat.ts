@@ -35,7 +35,7 @@ export interface WeeklyPlanChatContext {
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 // Maps Anthropic tool names to the friendly label shown in the streaming
-// "is working on…" indicator. Mirror of the table in use-goal-chat.ts;
+// "is working on…" indicator. Mirror of the table in use-goal-session.ts;
 // kept inline so this hook has no dependency on the other hook's
 // internals. Add new tools here when the weekly-plan prompt grows.
 const TOOL_LABELS: Record<string, string> = {

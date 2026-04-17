@@ -1,4 +1,4 @@
-// Draft chat history rebuild — shared between use-goal-chat and
+// Draft chat history rebuild — shared between use-goal-session and
 // use-weekly-plan-chat.
 //
 // When a draft session is resumed, we need to reconstruct two things from
