@@ -49,7 +49,11 @@ export default async function PlanWeekPage({
         estimatedWeeks: activePhase.estimated_weeks ?? 4,
       }}
       weekStart={getWeekStart()}
-      session={{ id: session.id, rebuilt }}
+      session={{
+        id: session.id,
+        rebuilt,
+        summary: session.summary ?? null,
+      }}
     />
   );
 }

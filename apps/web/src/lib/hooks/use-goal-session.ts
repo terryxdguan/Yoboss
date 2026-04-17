@@ -20,6 +20,7 @@ import {
   createGoalDraft,
   saveMessage,
   upsertAssistantMessage,
+  updateSessionSummary,
   markGoalDraftConfirmed,
 } from "@/lib/db/actions";
 import { getWeekStart } from "@/lib/utils/date";
@@ -29,6 +30,10 @@ import {
   type AnthropicContentBlock,
   type RebuiltHistory,
 } from "@/lib/ai/draft-history";
+import {
+  buildMessagesWithMemory,
+  MAX_RECENT_MESSAGES,
+} from "@/lib/ai/session-memory";
 
 let msgCounter = 0;
 function genId() {
@@ -61,6 +66,12 @@ const SERVER_TOOL_LABELS: Record<string, string> = {
 export interface UseGoalSessionInitialDraft {
   sessionId: string;
   rebuilt: RebuiltHistory;
+  /** Prior rolling Haiku summary stored on chat_sessions.summary. Pass
+   *  the raw column value through; the hook uses it to seed its
+   *  `sessionSummary` state so the very first post-resume turn already
+   *  ships a compressed context to the model. Null for fresh sessions
+   *  that never got summarized. */
+  sessionSummary?: string | null;
 }
 
 export interface UseGoalSessionOptions {
@@ -130,6 +141,14 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  // Rolling Haiku summary of turns older than the last 5. Hydrated from
+  // chat_sessions.summary on resume; updated client-side every 5 new
+  // turns via /api/ai/summarize (same pattern as GoalChatPanel and the
+  // team agent chat). The hook sends `summary + last 5 messages` to
+  // the model each turn instead of the full history.
+  const [sessionSummary, setSessionSummary] = useState<string | null>(
+    initialDraft?.sessionSummary ?? null
+  );
 
   // Full Anthropic history (with tool_use / tool_result blocks) that the
   // hook sends to /api/ai/plan on each turn. Hydrated from the draft if
@@ -153,6 +172,8 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
   coachContextRef.current = options?.coachContext;
   const onWeeklyPlanGeneratedRef = useRef(options?.onWeeklyPlanGenerated);
   onWeeklyPlanGeneratedRef.current = options?.onWeeklyPlanGenerated;
+  const sessionSummaryRef = useRef(sessionSummary);
+  sessionSummaryRef.current = sessionSummary;
 
   // ------------------------------------------------------------
   // Streaming turn — the core of draft persistence.
@@ -240,16 +261,21 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
         body: JSON.stringify({
           action: "goal-session",
           intent: currentIntent,
-          // Phase 3: included so the dispatcher can read+write session
-          // metadata.summary for long-conversation compression.
-          sessionId: sessionIdRef.current,
           context:
             currentIntent === "weekly-planning" && weeklyContextRef.current
               ? { weekly: weeklyContextRef.current }
               : currentIntent === "coach" && coachContextRef.current
               ? { coach: coachContextRef.current }
               : undefined,
-          messages: apiMessages,
+          // Client-side context compression — send summary + last 5
+          // instead of the full history. The rolling summary itself is
+          // refreshed in the background every 5 turns below; until the
+          // first refresh lands, a session that never hit the threshold
+          // just sends `last 5` with no summary note.
+          messages: buildMessagesWithMemory(
+            sessionSummaryRef.current,
+            apiMessages as unknown as { role: string; content: string | object[] }[],
+          ) as unknown as AnthropicMessage[],
         }),
       });
 
@@ -544,6 +570,54 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
           });
         } catch (err) {
           console.error("[use-goal-session] Legacy save failed:", err);
+        }
+      }
+
+      // Rolling summary refresh — mirrors the pattern in GoalChatPanel
+      // and the team agent chat. Every MAX_RECENT_MESSAGES new turns,
+      // regenerate the summary in the background via /api/ai/summarize
+      // and persist to chat_sessions.summary. The model sees an updated
+      // summary starting from the next turn; the current turn is
+      // already sent. Fire-and-forget — no await so the UI isn't
+      // blocked while Haiku runs.
+      if (sessionId) {
+        const totalTurns = historyRef.current.length;
+        if (
+          totalTurns > MAX_RECENT_MESSAGES &&
+          totalTurns % MAX_RECENT_MESSAGES === 1
+        ) {
+          const messagesToCompress = historyRef.current
+            .slice(0, -MAX_RECENT_MESSAGES)
+            .map((m) => ({
+              role: m.role,
+              content:
+                typeof m.content === "string" ? m.content : "[media content]",
+            }));
+          fetch("/api/ai/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              oldSummary: sessionSummaryRef.current,
+              messages: messagesToCompress,
+            }),
+          })
+            .then((r) => r.json())
+            .then(async (data: { summary?: string }) => {
+              if (data.summary) {
+                setSessionSummary(data.summary);
+                try {
+                  await updateSessionSummary(sessionId, data.summary);
+                } catch (err) {
+                  console.error(
+                    "[use-goal-session] updateSessionSummary failed:",
+                    err,
+                  );
+                }
+              }
+            })
+            .catch((err) =>
+              console.error("[use-goal-session] summarize failed:", err),
+            );
         }
       }
     } catch (err) {

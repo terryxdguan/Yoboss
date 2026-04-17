@@ -59,7 +59,11 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
         return;
       }
       const rebuilt = rebuildDraftHistory(loaded.messages);
-      onResume({ sessionId, rebuilt });
+      onResume({
+        sessionId,
+        rebuilt,
+        sessionSummary: loaded.session.summary ?? null,
+      });
     } catch (err) {
       console.error("[GoalDraftList] resume failed:", err);
       setError(err instanceof Error ? err.message : "Failed to load draft");

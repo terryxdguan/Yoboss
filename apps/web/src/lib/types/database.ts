@@ -137,17 +137,6 @@ export interface ChatSessionMetadata {
     isMidWeekStart: boolean;
     startDayOfWeek?: number;
   };
-  /** Phase 3: rolling summary of the oldest turns in the session. When
-   *  a session passes the turn threshold the dispatcher summarizes
-   *  `messages[0..summarizedThrough]` and stores the result here so
-   *  subsequent turns can reuse it without re-summarizing. */
-  summary?: string;
-  /** Number of the earliest messages already covered by `summary`. The
-   *  dispatcher sends `summary` + `messages.slice(summarizedThrough)`
-   *  to the model instead of the full history. */
-  summarizedThrough?: number;
-  /** ISO timestamp of the last summarization pass. */
-  summarizedAt?: string;
 }
 
 export interface ChatSession {

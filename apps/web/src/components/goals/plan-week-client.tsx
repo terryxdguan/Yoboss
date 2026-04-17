@@ -15,7 +15,11 @@ interface PlanWeekClientProps {
   goal: { title: string; description: string };
   phase: { id: string; title: string; description: string; estimatedWeeks: number };
   weekStart: string;
-  session: { id: string; rebuilt: RebuiltHistory | null };
+  session: {
+    id: string;
+    rebuilt: RebuiltHistory | null;
+    summary: string | null;
+  };
 }
 
 export function PlanWeekClient({ goalId, goal, phase, weekStart, session }: PlanWeekClientProps) {
@@ -25,7 +29,11 @@ export function PlanWeekClient({ goalId, goal, phase, weekStart, session }: Plan
 
   const sessionHook = useGoalSession({
     initialDraft: session.rebuilt
-      ? { sessionId: session.id, rebuilt: session.rebuilt }
+      ? {
+          sessionId: session.id,
+          rebuilt: session.rebuilt,
+          sessionSummary: session.summary,
+        }
       : null,
     intent: "weekly-planning",
     weeklyContext: {
