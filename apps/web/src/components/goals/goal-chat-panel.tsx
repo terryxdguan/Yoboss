@@ -223,9 +223,10 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       // HTTP request with its own Vercel timeout budget.
       const MAX_CONTINUATIONS = 10;
       const body = {
-        action: "goal-detail-chat",
+        action: "goal-session",
+        intent: "coach",
+        context: { coach: goalContext },
         messages: buildMessagesWithMemory(sessionSummary, apiMessages),
-        context: goalContext,
       };
 
       for (let turn = 0; turn < MAX_CONTINUATIONS; turn++) {
