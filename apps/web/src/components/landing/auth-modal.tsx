@@ -106,7 +106,11 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/dashboard`,
+          // NOTE: the email-confirmation link opens in a possibly-new tab
+          // where sessionStorage.pendingGoal is unavailable. We always
+          // send these users to /dashboard; the pending goal is lost for
+          // this auth path. Moving pendingGoal to a cookie would fix it.
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
         },
       });
 

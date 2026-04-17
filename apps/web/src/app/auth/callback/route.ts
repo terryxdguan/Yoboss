@@ -8,7 +8,15 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/dashboard";
+  // Only accept same-origin paths in `next` to prevent open-redirect abuse.
+  // `new URL(next, request.url)` would happily resolve absolute URLs to the
+  // supplied origin, so an attacker crafting ?next=https://evil.com would
+  // bounce the user off-site after a valid code exchange.
+  const rawNext = searchParams.get("next") || "/dashboard";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/dashboard";
 
   if (code) {
     const cookieStore = await cookies();

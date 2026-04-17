@@ -19,7 +19,18 @@ export function LandingPage() {
   }, []);
 
   const handleSubmitGoal = (text: string) => {
-    sessionStorage.setItem("pendingGoal", text);
+    try {
+      sessionStorage.setItem("pendingGoal", text);
+    } catch {
+      // Storage unavailable; the create page will just render an empty input.
+    }
+    if (loggedIn) {
+      // Already authenticated — no need for the auth modal; drop them
+      // straight into the goal-creation flow and let /goals/create
+      // consume pendingGoal on mount.
+      window.location.href = "/goals/create";
+      return;
+    }
     setAuthOpen(true);
   };
 
