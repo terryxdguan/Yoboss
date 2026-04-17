@@ -4,7 +4,7 @@ import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { chatWithCoach } from "@/lib/ai/decompose";
 import { chatWithGoalCoach } from "@/lib/ai/goal-chat-prompt";
 import { generateWeeklyPlan } from "@/lib/ai/weekly-plan";
-import { chatWithWeeklyPlanCoach } from "@/lib/ai/weekly-plan-chat";
+import { chatWithWeeklyPlanCoach, type WeeklyPlanChatContext } from "@/lib/ai/weekly-plan-chat";
 import { streamGoalDetailChat, type GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import { generateWeeklyReview } from "@/lib/ai/review";
 import type { ConversationMessage } from "@/lib/ai/decompose";
@@ -113,6 +113,37 @@ export async function POST(request: NextRequest) {
       const stream = await chatWithGoalCoach(messages);
       return new Response(
         streamWithUsageLog(stream, user.id, "goal-chat", "claude-opus-4-6"),
+        { headers: SSE_HEADERS }
+      );
+    }
+
+    if (action === "goal-session") {
+      const { messages, intent, context } = body as {
+        messages: Anthropic.MessageParam[];
+        intent: "goal-creation" | "weekly-planning";
+        context?: {
+          weekly?: WeeklyPlanChatContext;
+        };
+      };
+
+      let stream;
+      let logRoute: string;
+      if (intent === "weekly-planning") {
+        if (!context?.weekly) {
+          return NextResponse.json(
+            { error: "weekly intent requires context.weekly" },
+            { status: 400 }
+          );
+        }
+        stream = await chatWithWeeklyPlanCoach(messages, context.weekly);
+        logRoute = "goal-session-weekly";
+      } else {
+        stream = await chatWithGoalCoach(messages);
+        logRoute = "goal-session-creation";
+      }
+
+      return new Response(
+        streamWithUsageLog(stream, user.id, logRoute, "claude-opus-4-7"),
         { headers: SSE_HEADERS }
       );
     }

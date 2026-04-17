@@ -200,19 +200,29 @@ Week ${context.weekNumber} of estimated ${context.estimatedWeeks} weeks${midWeek
 }
 
 export async function chatWithWeeklyPlanCoach(
-  messages: Anthropic.MessageParam[]
+  messages: Anthropic.MessageParam[],
+  weeklyContext?: WeeklyPlanChatContext
 ) {
   const client = getAnthropicClient();
+  const systemPrompt = weeklyContext
+    ? `${SYSTEM_PROMPT}\n\nCURRENT CONTEXT:\n${buildContextBlock(weeklyContext)}`
+    : SYSTEM_PROMPT;
 
   const stream = await client.messages.stream({
     // Opus 4.7 — weekly plan conversations benefit from stronger
     // reasoning when deciding which clarifying questions to ask.
     model: MODELS.opus,
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     tools: [ASK_QUESTION_TOOL, CREATE_WEEKLY_PLAN_TOOL],
     messages,
   });
 
   return stream;
+}
+
+function buildContextBlock(c: WeeklyPlanChatContext): string {
+  return `Goal: ${c.goalTitle}
+${c.goalDescription ? `Description: ${c.goalDescription}\n` : ""}Current Phase: ${c.phaseTitle} — ${c.phaseDescription}
+Week ${c.weekNumber} of estimated ${c.estimatedWeeks} weeks${c.isMidWeekStart ? `\nNote: It's already ${["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][c.startDayOfWeek!]}, so only plan from that day through Sunday.` : ""}`;
 }
