@@ -83,22 +83,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (action === "goal-detail-chat") {
-      const { messages, context } = body as {
-        messages: Anthropic.MessageParam[];
-        context: GoalDetailChatContext;
-      };
-      const readableStream = streamGoalDetailChat(messages, context, (inputTokens, outputTokens) => {
-        // Task 2.1 switched streamGoalDetailChat to Opus; this legacy
-        // action still forwards here during the Phase-2 transition
-        // window (removed in Task 2.4). Keep the cost tag truthful so
-        // accounting doesn't under-bill by ~5x.
-        logUsage(user.id, "goal-detail-chat", "claude-opus-4-7", inputTokens, outputTokens).catch(() => {});
-      });
-
-      return new Response(readableStream, { headers: SSE_HEADERS });
-    }
-
     if (action === "goal-chat") {
       const { messages } = body as { messages: Anthropic.MessageParam[] };
       const stream = await chatWithGoalCoach(messages);

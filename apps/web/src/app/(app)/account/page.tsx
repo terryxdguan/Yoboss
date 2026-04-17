@@ -45,7 +45,12 @@ const ROUTE_LABELS: Record<string, string> = {
   "agent-chat": "Agent Chat",
   summarize: "Summarize",
   "workflow-execute": "Workflow",
+  // Legacy tag kept so historical usage records show a friendly label.
+  // Replaced by the three "goal-session-*" tags below as of Phase 2.
   "goal-detail-chat": "Goal Chat",
+  "goal-session-creation": "Goal Creation",
+  "goal-session-weekly": "Weekly Planning",
+  "goal-session-coach": "AI Coach",
 };
 
 function progressColor(pct: number): string {
