@@ -20,14 +20,13 @@ import { createClient } from "@/lib/db/client";
 import type { Goal, Phase, WeeklyPlan, DailyTask, TodoItem } from "@/lib/types/database";
 import { getGoalTodos, addTodo, updateTodo, deleteTodo, updateGoal, updatePhase } from "@/lib/db/actions";
 import { EditableText } from "@/components/ui/editable-text";
-import { WeeklyPlanChatPanel } from "@/components/goals/weekly-plan-chat";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 import { DeliverablesPanel } from "@/components/goals/deliverables-panel";
 import { NotesPanel } from "@/components/goals/notes-panel";
 import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
 
-type RightPanel = "none" | "ai" | "plan-chat" | "deliverables" | "notes";
+type RightPanel = "none" | "ai" | "deliverables" | "notes";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -478,7 +477,7 @@ export default function GoalDetailPage() {
               so it's impossible to miss as the obvious next step. */}
           {hasTasks && (
             <button
-              onClick={() => setRightPanel("plan-chat")}
+              onClick={() => router.push(`/goals/${id}/plan-week`)}
               className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -495,7 +494,7 @@ export default function GoalDetailPage() {
               Generate a personalized weekly plan with AI — it&apos;s your next step
             </p>
             <button
-              onClick={() => setRightPanel("plan-chat")}
+              onClick={() => router.push(`/goals/${id}/plan-week`)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
             >
               <Sparkles className="h-4 w-4" />
@@ -579,25 +578,6 @@ export default function GoalDetailPage() {
           }}
           taskContext={pendingAITask}
           onClose={() => { setRightPanel("none"); setPendingAITask(null); }}
-        />
-      )}
-      {rightPanel === "plan-chat" && activePhase && (
-        <WeeklyPlanChatPanel
-          open={true}
-          onClose={() => setRightPanel("none")}
-          context={{
-            goalTitle: goal.title,
-            goalDescription: goal.description || "",
-            phaseTitle: activePhase.title,
-            phaseDescription: activePhase.description || "",
-            weekNumber: 1,
-            estimatedWeeks: activePhase.estimated_weeks || 4,
-            isMidWeekStart: getTodayDayOfWeek() > 0,
-            startDayOfWeek: getTodayDayOfWeek(),
-          }}
-          phaseId={activePhase.id}
-          weekStart={getWeekStart()}
-          onPlanSaved={loadData}
         />
       )}
       {rightPanel === "deliverables" && (
