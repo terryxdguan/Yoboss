@@ -7,6 +7,11 @@ import { createClient } from "@/lib/db/client";
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
+  initialMode?: "login" | "signup";
+  // Fires once signup succeeds and the confirmation email is on its way.
+  // Parent surfaces the "check your email" toast — the modal closes
+  // immediately so the user isn't staring at a stale form.
+  onSignupConfirmationSent?: (email: string) => void;
 }
 
 interface PasswordStrength {
@@ -29,21 +34,38 @@ function getPasswordStrength(password: string): PasswordStrength {
   return { score, label: labels[score], color: colors[score], checks };
 }
 
-export function AuthModal({ open, onClose }: AuthModalProps) {
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+export function AuthModal({
+  open,
+  onClose,
+  initialMode = "signup",
+  onSignupConfirmationSent,
+}: AuthModalProps) {
+  const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     setError("");
-    setSuccess("");
     setEmailError("");
   }, [mode]);
+
+  // Reset to a clean form whenever the modal (re)opens, so clicking "Login"
+  // never shows leftover signup state — and vice versa. Reads initialMode
+  // at the moment of open; in our flow the parent sets it before opening.
+  useEffect(() => {
+    if (!open) return;
+    setMode(initialMode);
+    setEmail("");
+    setPassword("");
+    setError("");
+    setEmailError("");
+    setShowPassword(false);
+    setLoading(false);
+  }, [open, initialMode]);
 
   // Read-only probe — the /goals/create page is responsible for clearing
   // the key after it consumes it. We just need to know "was a goal typed
@@ -92,7 +114,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setSuccess("");
 
     const supabase = createClient();
 
@@ -120,11 +141,15 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
         } else {
           setError(err.message);
         }
-      } else {
-        setSuccess(
-          "Check your email for a confirmation link! You can close this dialog."
-        );
+        setLoading(false);
+        return;
       }
+
+      // Hand off to the parent which shows the "check your email" toast,
+      // then close immediately so the user isn't staring at a stale form.
+      onSignupConfirmationSent?.(email);
+      onClose();
+      return;
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({
         email,
@@ -308,12 +333,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
               <div className="flex items-start gap-2 p-3 bg-[#D5847A]/5 rounded-lg">
                 <AlertCircle className="h-4 w-4 text-[#D5847A] mt-0.5 shrink-0" />
                 <p className="text-sm text-[#D5847A]">{error}</p>
-              </div>
-            )}
-            {success && (
-              <div className="flex items-start gap-2 p-3 bg-[#7FB38A]/5 rounded-lg">
-                <Check className="h-4 w-4 text-[#7FB38A] mt-0.5 shrink-0" />
-                <p className="text-sm text-[#7FB38A]">{success}</p>
               </div>
             )}
 

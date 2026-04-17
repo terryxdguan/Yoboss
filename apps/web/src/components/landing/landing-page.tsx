@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Check, X } from "lucide-react";
 import { GoalInput } from "./goal-input";
 import { ExampleGoals } from "./example-goals";
 import { AuthModal } from "./auth-modal";
@@ -9,6 +10,11 @@ import { createClient } from "@/lib/db/client";
 export function LandingPage() {
   const [goalText, setGoalText] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
+  // Tracks which mode the modal should open in — set BEFORE setAuthOpen(true)
+  // so the modal's open-time reset effect picks up the right initial mode.
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  // Holds the email of the just-signed-up user. Non-null = toast visible.
+  const [signupToastEmail, setSignupToastEmail] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -17,6 +23,19 @@ export function LandingPage() {
       if (user) setLoggedIn(true);
     });
   }, []);
+
+  // Auto-dismiss the signup toast after 8s. Owned by the parent because
+  // the modal unmounts immediately on signup success.
+  useEffect(() => {
+    if (!signupToastEmail) return;
+    const t = setTimeout(() => setSignupToastEmail(null), 8000);
+    return () => clearTimeout(t);
+  }, [signupToastEmail]);
+
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthMode(mode);
+    setAuthOpen(true);
+  };
 
   const handleSubmitGoal = (text: string) => {
     try {
@@ -31,11 +50,7 @@ export function LandingPage() {
       window.location.href = "/goals/create";
       return;
     }
-    setAuthOpen(true);
-  };
-
-  const handleLogin = () => {
-    setAuthOpen(true);
+    openAuth("signup");
   };
 
   return (
@@ -79,13 +94,13 @@ export function LandingPage() {
             ) : (
               <>
                 <button
-                  onClick={handleLogin}
+                  onClick={() => openAuth("login")}
                   className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200 active:scale-95 px-4 py-2"
                 >
                   Login
                 </button>
                 <button
-                  onClick={handleLogin}
+                  onClick={() => openAuth("signup")}
                   className="bg-[#7FAEE6] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all"
                 >
                   Sign Up
@@ -136,7 +151,37 @@ export function LandingPage() {
         </footer>
       </main>
 
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthModal
+        open={authOpen}
+        initialMode={authMode}
+        onClose={() => setAuthOpen(false)}
+        onSignupConfirmationSent={(email) => setSignupToastEmail(email)}
+      />
+
+      {signupToastEmail && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-6 right-6 z-[60] flex items-start gap-3 bg-[#FFFDF9] border border-[#7FB38A]/40 rounded-lg shadow-[0_8px_24px_rgba(30,34,39,0.12)] p-4 max-w-md"
+        >
+          <Check className="h-5 w-5 text-[#7FB38A] mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[#2B2B2B] mb-0.5">
+              Check your email
+            </p>
+            <p className="text-sm text-[#6F6A64] break-all">
+              We sent a confirmation link to {signupToastEmail}.
+            </p>
+          </div>
+          <button
+            onClick={() => setSignupToastEmail(null)}
+            className="p-1 rounded text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
