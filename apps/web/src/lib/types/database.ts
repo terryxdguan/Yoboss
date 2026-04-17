@@ -115,7 +115,7 @@ export interface GoalDeliverable {
  *  interrupted or backgrounded draft can be resumed, and so Confirm can be
  *  an idempotent "write real rows + stamp confirmedAt" operation. */
 export interface ChatSessionMetadata {
-  intent?: "goal-creation" | "weekly-plan-creation";
+  intent?: "goal-creation" | "weekly-plan-creation" | "goal-active";
   /** ISO timestamp. Set only after confirmPlan successfully wrote real
    *  goals/phases/weekly_plans rows. Drafts with confirmedAt are hidden
    *  from the Continue draft list. */
