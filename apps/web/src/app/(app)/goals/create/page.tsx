@@ -8,6 +8,7 @@ import { ExampleGoals } from "@/components/landing/example-goals";
 import { GoalChat } from "@/components/goals/goal-chat";
 import { GoalDraftList } from "@/components/goals/goal-draft-list";
 import type { UseGoalChatInitialDraft } from "@/lib/hooks/use-goal-chat";
+import { getPendingGoal, clearPendingGoal } from "@/lib/pending-goal";
 
 export default function CreateGoalPage() {
   const router = useRouter();
@@ -24,19 +25,14 @@ export default function CreateGoalPage() {
   const [draftListRefresh, setDraftListRefresh] = useState(0);
 
   // One-shot handoff from the marketing landing page: if the visitor
-  // typed a goal before signing in, sessionStorage.pendingGoal holds it.
-  // Read + clear it on first render so the input below renders
-  // pre-filled. Wrapped in try/catch because sessionStorage throws on
-  // some incognito / privacy configurations.
+  // typed a goal before signing in, the pending-goal helper holds it
+  // (cookie + sessionStorage so it survives the email round-trip).
+  // Read + clear on first render so the input below renders pre-filled.
   useEffect(() => {
-    try {
-      const pending = window.sessionStorage.getItem("pendingGoal");
-      if (pending) {
-        setGoalText(pending);
-        window.sessionStorage.removeItem("pendingGoal");
-      }
-    } catch {
-      // Storage unavailable — nothing to do, user starts with an empty input.
+    const pending = getPendingGoal();
+    if (pending) {
+      setGoalText(pending);
+      clearPendingGoal();
     }
   }, []);
 

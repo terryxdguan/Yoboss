@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Eye, EyeOff, Check, AlertCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
+import { hasPendingGoal } from "@/lib/pending-goal";
 
 interface AuthModalProps {
   open: boolean;
@@ -69,16 +70,11 @@ export function AuthModal({
 
   // Read-only probe — the /goals/create page is responsible for clearing
   // the key after it consumes it. We just need to know "was a goal typed
-  // before login?" to pick the right redirect destination.
-  const postAuthDestination = (): string => {
-    try {
-      return window.sessionStorage.getItem("pendingGoal")
-        ? "/goals/create"
-        : "/dashboard";
-    } catch {
-      return "/dashboard";
-    }
-  };
+  // before login?" to pick the right redirect destination. Cookie-backed
+  // so the email-confirmation round-trip (possibly in a different tab)
+  // can still see it.
+  const postAuthDestination = (): string =>
+    hasPendingGoal() ? "/goals/create" : "/dashboard";
 
   if (!open) return null;
 
@@ -127,11 +123,11 @@ export function AuthModal({
         email,
         password,
         options: {
-          // NOTE: the email-confirmation link opens in a possibly-new tab
-          // where sessionStorage.pendingGoal is unavailable. We always
-          // send these users to /dashboard; the pending goal is lost for
-          // this auth path. Moving pendingGoal to a cookie would fix it.
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          // pendingGoal is now cookie-backed, so the email round-trip
+          // can carry it across tabs. The Supabase email template wraps
+          // this URL into the {{ .RedirectTo }} slot, and /auth/confirm
+          // forwards to it after verifyOtp completes client-side.
+          emailRedirectTo: `${window.location.origin}${postAuthDestination()}`,
         },
       });
 
