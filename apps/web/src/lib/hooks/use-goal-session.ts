@@ -10,6 +10,7 @@ import type {
   WeeklyPlanData,
 } from "@/lib/types/goal-chat";
 import type { WeeklyPlanChatContext } from "@/lib/ai/weekly-plan-chat";
+import type { GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import {
   createGoal,
   createPhases,
@@ -43,6 +44,16 @@ const TOOL_LABELS: Record<string, string> = {
   create_weekly_plan: "Creating your weekly schedule",
 };
 
+// Labels for Anthropic's server-side tools used in the coach intent.
+// Unlike client-side tool_use (ask_question / create_goal_plan), these
+// are executed by Anthropic's backend — the client just surfaces a
+// "working on…" badge while they run.
+const SERVER_TOOL_LABELS: Record<string, string> = {
+  web_search: "Searching the web",
+  web_fetch: "Fetching a page",
+  code_execution: "Running code",
+};
+
 /** Data loaded from a persisted draft session. Callers can get this by
  *  server-calling `loadDraftSession(id)` and running the result through
  *  `rebuildDraftHistory`. When supplied, the hook hydrates its initial
@@ -58,10 +69,13 @@ export interface UseGoalSessionOptions {
    *  the system prompt + tool subset the server uses for each turn.
    *  Defaults to "goal-creation" for backward compat with existing
    *  /goals/create page. */
-  intent?: "goal-creation" | "weekly-planning";
+  intent?: "goal-creation" | "weekly-planning" | "coach";
   /** Required when intent === "weekly-planning". Snapshot of goal +
    *  phase + week index — injected into the system prompt server-side. */
   weeklyContext?: WeeklyPlanChatContext;
+  /** Required when intent === "coach". Snapshot of goal/phases/week
+   *  tasks used to inject context into the system prompt server-side. */
+  coachContext?: GoalDetailChatContext;
   /** Fires when a `create_weekly_plan` tool finalizes. Goal-creation
    *  flow uses the existing `plan` state; weekly-planning callers use
    *  this callback (or read `weeklyPreview` state from the return). */
@@ -135,6 +149,8 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
   intentRef.current = intent;
   const weeklyContextRef = useRef(options?.weeklyContext);
   weeklyContextRef.current = options?.weeklyContext;
+  const coachContextRef = useRef(options?.coachContext);
+  coachContextRef.current = options?.coachContext;
   const onWeeklyPlanGeneratedRef = useRef(options?.onWeeklyPlanGenerated);
   onWeeklyPlanGeneratedRef.current = options?.onWeeklyPlanGenerated;
 
@@ -225,8 +241,10 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
           action: "goal-session",
           intent: currentIntent,
           context:
-            currentIntent === "weekly-planning"
+            currentIntent === "weekly-planning" && weeklyContextRef.current
               ? { weekly: weeklyContextRef.current }
+              : currentIntent === "coach" && coachContextRef.current
+              ? { coach: coachContextRef.current }
               : undefined,
           messages: apiMessages,
         }),
@@ -279,6 +297,30 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
                         toolActivity: [
                           ...(m.toolActivity || []),
                           { type: currentToolName, label },
+                        ],
+                      }
+                    : m
+                )
+              );
+            }
+            if (block?.type === "server_tool_use") {
+              // Anthropic server-side tools (web_search / web_fetch /
+              // code_execution). Unlike client-side tool_use, these have
+              // no input_json_delta stream we need to consume — Anthropic
+              // runs them and emits the result block directly. We just
+              // surface them as toolActivity badges so the user sees
+              // "Searching…" etc.
+              const name = block.name || "";
+              const label =
+                SERVER_TOOL_LABELS[name] || `Running ${name}`;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        toolActivity: [
+                          ...(m.toolActivity || []),
+                          { type: name, label },
                         ],
                       }
                     : m
