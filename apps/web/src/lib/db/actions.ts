@@ -577,6 +577,24 @@ export async function deleteSession(sessionId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Find the canonical chat session for a goal, or create an empty stub if
+ *  this goal pre-dates the unified-session refactor.
+ *
+ *  After Task 1.1 of the unified-session plan, new goals get their session
+ *  bound at confirm time (markGoalDraftConfirmed sets goal_id on the draft
+ *  row). This helper covers two cases:
+ *
+ *    UUID goalId (real goals): look up by goal_id. The unique partial index
+ *    `unique(user_id, goal_id) WHERE goal_id IS NOT NULL` guarantees at most
+ *    one row exists. For legacy goals confirmed BEFORE the refactor, no
+ *    bound row exists; we lazily create a stub. The stub has no message
+ *    history, so the model starts that goal's conversation cold but with
+ *    goal+phase context injected via the system prompt at request time.
+ *
+ *    Non-UUID goalId (e.g. "__dashboard__", "__todo__"): treated as a
+ *    virtual session for the dashboard / todos task-assistant flows. Looked
+ *    up by a derived agent_id with goal_id=null. Out of scope of the
+ *    unified-goal-session refactor; existing behavior preserved. */
 export async function getOrCreateGoalSession(goalId: string): Promise<ChatSession> {
   const supabase = await createClient();
   const {
@@ -594,7 +612,7 @@ export async function getOrCreateGoalSession(goalId: string): Promise<ChatSessio
       .select("*")
       .eq("user_id", user.id)
       .eq("goal_id", goalId)
-      .single();
+      .maybeSingle();
 
     if (existing) return existing;
 
@@ -602,9 +620,14 @@ export async function getOrCreateGoalSession(goalId: string): Promise<ChatSessio
       .from("chat_sessions")
       .insert({
         user_id: user.id,
-        agent_id: "general_assistant",
+        agent_id: "__goal-draft__",
         goal_id: goalId,
-        title: "Goal Chat",
+        title: "Goal session",
+        metadata: {
+          intent: "goal-active",
+          confirmedAt: new Date().toISOString(),
+          resultGoalId: goalId,
+        },
       })
       .select()
       .single();
