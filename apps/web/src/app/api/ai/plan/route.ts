@@ -89,7 +89,11 @@ export async function POST(request: NextRequest) {
         context: GoalDetailChatContext;
       };
       const readableStream = streamGoalDetailChat(messages, context, (inputTokens, outputTokens) => {
-        logUsage(user.id, "goal-detail-chat", "claude-sonnet-4-6", inputTokens, outputTokens).catch(() => {});
+        // Task 2.1 switched streamGoalDetailChat to Opus; this legacy
+        // action still forwards here during the Phase-2 transition
+        // window (removed in Task 2.4). Keep the cost tag truthful so
+        // accounting doesn't under-bill by ~5x.
+        logUsage(user.id, "goal-detail-chat", "claude-opus-4-7", inputTokens, outputTokens).catch(() => {});
       });
 
       return new Response(readableStream, { headers: SSE_HEADERS });
