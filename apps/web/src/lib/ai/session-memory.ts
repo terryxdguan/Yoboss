@@ -1,7 +1,11 @@
 import { getAnthropicClient } from "./client";
 
 const SUMMARY_MODEL = "claude-haiku-4-5";
-const MAX_RECENT_MESSAGES = 5;
+// Keep the last N turns in-flight to the model. Older turns get folded
+// into a rolling Haiku summary every N turns. Shared across
+// useGoalSession (goal-creation + weekly-planning), GoalChatPanel
+// (coach), and the team agent chat — bumping this bumps all three.
+const MAX_RECENT_MESSAGES = 10;
 
 /**
  * Generate a rolling summary of conversation history.
