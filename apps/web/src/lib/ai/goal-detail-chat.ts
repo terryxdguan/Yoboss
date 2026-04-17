@@ -96,7 +96,7 @@ export function streamGoalDetailChat(
     async start(controller) {
       try {
         const stream = client.messages.stream({
-          model: MODELS.sonnet,
+          model: MODELS.opus,
           max_tokens: 16000,
           system: systemPrompt,
           tools: SERVER_TOOLS,

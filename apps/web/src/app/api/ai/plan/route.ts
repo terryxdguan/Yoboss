@@ -107,11 +107,31 @@ export async function POST(request: NextRequest) {
     if (action === "goal-session") {
       const { messages, intent, context } = body as {
         messages: Anthropic.MessageParam[];
-        intent: "goal-creation" | "weekly-planning";
+        intent: "goal-creation" | "weekly-planning" | "coach";
         context?: {
           weekly?: WeeklyPlanChatContext;
+          coach?: GoalDetailChatContext;
         };
       };
+
+      if (intent === "coach") {
+        if (!context?.coach) {
+          return NextResponse.json(
+            { error: "coach intent requires context.coach" },
+            { status: 400 }
+          );
+        }
+        // streamGoalDetailChat takes its own usage logger callback; it
+        // doesn't slot into streamWithUsageLog's .on("message") pattern.
+        const readableStream = streamGoalDetailChat(
+          messages,
+          context.coach,
+          (inputTokens, outputTokens) => {
+            logUsage(user.id, "goal-session-coach", "claude-opus-4-7", inputTokens, outputTokens).catch(() => {});
+          }
+        );
+        return new Response(readableStream, { headers: SSE_HEADERS });
+      }
 
       let stream;
       let logRoute: string;
