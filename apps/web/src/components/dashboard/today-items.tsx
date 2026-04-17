@@ -126,6 +126,22 @@ export function DashboardTodayItems({
   };
 
   const [tab, setTab] = useState<"pending" | "done">("pending");
+  // Category filter toggles — start with everything visible. Clicking a
+  // legend button adds/removes the category here; the visibleItems
+  // pipeline below excludes filtered-out categories. Uses the same
+  // variant-assignment rule as TodoItemCard below (high priority wins
+  // over schedule wins over plain to-do).
+  const [hiddenCategories, setHiddenCategories] = useState<
+    Set<"schedule" | "todo" | "high">
+  >(new Set());
+  const toggleCategory = (cat: "schedule" | "todo" | "high") => {
+    setHiddenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
 
   // Filter high priority: only show if no deadline OR deadline is today
   const todayStr = new Date().toISOString().split("T")[0];
@@ -139,7 +155,13 @@ export function DashboardTodayItems({
   const allItems = [...items, ...filteredHighPriority.filter(i => !items.some(t => t.id === i.id))];
   const pendingItems = allItems.filter(i => !i.completed);
   const doneItems = allItems.filter(i => i.completed);
-  const visibleItems = tab === "pending" ? pendingItems : doneItems;
+  const tabItems = tab === "pending" ? pendingItems : doneItems;
+  const visibleItems = tabItems.filter((item) => {
+    const isSchedule = item.sourceType === "daily_task";
+    const isHigh = item.priority === "high";
+    const variant = isHigh ? "high" : isSchedule ? "schedule" : "todo";
+    return !hiddenCategories.has(variant);
+  });
 
   // Unique tag list for category dropdown
   const defaultTags = ["Work", "Life", "Other"];
@@ -201,16 +223,35 @@ export function DashboardTodayItems({
             {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
           </h3>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-[11px] text-[#9B948B]">
-            <span className="w-3 h-3 rounded border-2 border-[#7FAEE6]/50" /> Schedule
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-[#9B948B]">
-            <span className="w-3 h-3 rounded border-2 border-[#7FB38A]/50" /> To-Do
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-[#9B948B]">
-            <span className="w-3 h-3 rounded border-2 border-[#D5847A]/60" /> High Priority
-          </span>
+        <div className="flex items-center gap-1">
+          {(
+            [
+              { key: "schedule", label: "Schedule", border: "border-[#7FAEE6]/50" },
+              { key: "todo", label: "To-Do", border: "border-[#7FB38A]/50" },
+              { key: "high", label: "High Priority", border: "border-[#D5847A]/60" },
+            ] as const
+          ).map(({ key, label, border }) => {
+            const hidden = hiddenCategories.has(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleCategory(key)}
+                aria-pressed={!hidden}
+                title={hidden ? `Show ${label} items` : `Hide ${label} items`}
+                className={`flex items-center gap-1.5 text-[11px] rounded-md px-2 py-1 transition-colors hover:bg-[#F1ECE4] ${
+                  hidden
+                    ? "text-[#9B948B] line-through opacity-60"
+                    : "text-[#6F6A64]"
+                }`}
+              >
+                <span
+                  className={`w-3 h-3 rounded border-2 ${border} ${hidden ? "opacity-30" : ""}`}
+                />
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
