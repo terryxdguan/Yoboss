@@ -225,6 +225,10 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       const body = {
         action: "goal-session",
         intent: "coach",
+        // Phase 3: the dispatcher reads session metadata to apply rolling
+        // summarization. Safe to include even when sessionId is null —
+        // the summarizer no-ops without it.
+        sessionId,
         context: { coach: goalContext },
         messages: buildMessagesWithMemory(sessionSummary, apiMessages),
       };

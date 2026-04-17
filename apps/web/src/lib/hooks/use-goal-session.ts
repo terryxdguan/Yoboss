@@ -240,6 +240,9 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
         body: JSON.stringify({
           action: "goal-session",
           intent: currentIntent,
+          // Phase 3: included so the dispatcher can read+write session
+          // metadata.summary for long-conversation compression.
+          sessionId: sessionIdRef.current,
           context:
             currentIntent === "weekly-planning" && weeklyContextRef.current
               ? { weekly: weeklyContextRef.current }

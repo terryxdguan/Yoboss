@@ -948,6 +948,45 @@ export async function markGoalDraftConfirmed(
   if (error) throw error;
 }
 
+/** Phase 3: persist a rolling summary of the oldest turns on a session
+ *  so long conversations stay within the model's context budget.
+ *  `throughMessageIndex` is the count of earliest messages the summary
+ *  covers — subsequent dispatch reads `metadata.summary` + messages
+ *  past that index instead of the full history. */
+export async function setSessionSummary(
+  sessionId: string,
+  summary: string,
+  throughMessageIndex: number
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Fetch-then-merge because supabase-js has no partial jsonb update.
+  const { data: existing } = await supabase
+    .from("chat_sessions")
+    .select("metadata")
+    .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .single();
+
+  const merged = {
+    ...((existing?.metadata as ChatSession["metadata"]) || {}),
+    summary,
+    summarizedThrough: throughMessageIndex,
+    summarizedAt: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ metadata: merged })
+    .eq("id", sessionId)
+    .eq("user_id", user.id);
+  if (error) throw error;
+}
+
 /**
  * @deprecated Phase 1 of the unified-session refactor: weekly planning now
  * appends to the goal's main session (created/found via
