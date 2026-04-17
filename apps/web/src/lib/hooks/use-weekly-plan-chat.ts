@@ -34,6 +34,15 @@ export interface WeeklyPlanChatContext {
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+// Maps Anthropic tool names to the friendly label shown in the streaming
+// "is working on…" indicator. Mirror of the table in use-goal-chat.ts;
+// kept inline so this hook has no dependency on the other hook's
+// internals. Add new tools here when the weekly-plan prompt grows.
+const TOOL_LABELS: Record<string, string> = {
+  ask_question: "Asking a clarifying question",
+  create_weekly_plan: "Creating your weekly schedule",
+};
+
 function buildInitialMessage(context: WeeklyPlanChatContext): string {
   const midWeekNote = context.isMidWeekStart
     ? `\nNote: It's already ${DAY_NAMES[context.startDayOfWeek!]}, so only plan from ${DAY_NAMES[context.startDayOfWeek!]} through Sunday.`
@@ -222,6 +231,25 @@ export function useWeeklyPlanChat(options?: UseWeeklyPlanChatOptions) {
               currentToolName = block.name || "";
               currentToolId = block.id || "";
               toolInputJson = "";
+
+              // Surface a "working on…" badge in the bubble. Without
+              // this the user sees a static empty message during the
+              // long silent JSON streaming for create_weekly_plan.
+              const label =
+                TOOL_LABELS[currentToolName] || `Running ${currentToolName}`;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        toolActivity: [
+                          ...(m.toolActivity || []),
+                          { type: currentToolName, label },
+                        ],
+                      }
+                    : m
+                )
+              );
             }
           }
 
@@ -240,6 +268,21 @@ export function useWeeklyPlanChat(options?: UseWeeklyPlanChatOptions) {
             }
             if (delta?.type === "input_json_delta" && delta.partial_json) {
               toolInputJson += delta.partial_json;
+              // Bump live char count so the "Drafting your plan…" card
+              // has something to count during the silent JSON stream.
+              const chunkLen = delta.partial_json.length;
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.id !== assistantMsgId || !m.toolActivity?.length) return m;
+                  const updated = m.toolActivity.slice();
+                  const last = updated[updated.length - 1];
+                  updated[updated.length - 1] = {
+                    ...last,
+                    draftingChars: (last.draftingChars ?? 0) + chunkLen,
+                  };
+                  return { ...m, toolActivity: updated };
+                })
+              );
             }
           }
 

@@ -268,6 +268,24 @@ export function useGoalChat(options?: UseGoalChatOptions) {
             }
             if (delta?.type === "input_json_delta" && delta.partial_json) {
               toolInputJson += delta.partial_json;
+              // Bump live char count on the active tool badge so the
+              // "Drafting your plan…" card has something to count
+              // while the JSON streams silently. partial_json arrives
+              // in moderate (50-200 char) chunks so this drives ~10-20
+              // re-renders/sec, which is fine.
+              const chunkLen = delta.partial_json.length;
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (m.id !== assistantMsgId || !m.toolActivity?.length) return m;
+                  const updated = m.toolActivity.slice();
+                  const last = updated[updated.length - 1];
+                  updated[updated.length - 1] = {
+                    ...last,
+                    draftingChars: (last.draftingChars ?? 0) + chunkLen,
+                  };
+                  return { ...m, toolActivity: updated };
+                })
+              );
             }
           }
 
@@ -674,59 +692,82 @@ export function useGoalChat(options?: UseGoalChatOptions) {
     setError(null);
 
     try {
+      // Step 1: createGoal must come first — everything below needs goal.id.
       const goal = await createGoal({
         title: plan.goal_title,
         description: plan.goal_description,
       });
 
-      const phases = await createPhases(
-        goal.id,
-        plan.phases.map((p) => ({
-          title: p.title,
-          description: p.description,
-          estimated_weeks: p.estimated_weeks,
-        }))
-      );
+      // Step 2: kick off everything that only needs goal.id IN PARALLEL.
+      // Was previously: phases → weekly_plan → daily_tasks → N×addTodo
+      // → markDraftConfirmed strung as five sequential await chains
+      // (~5 round-trips). Now they fan out and total wall time is
+      // dominated by the longest branch (the phases→weekly→tasks chain
+      // for plans with a weekly_schedule, otherwise just phases).
+      //
+      // The weekly-schedule branch still has internal ordering because
+      // createWeeklyPlan needs phases[0].id and createDailyTasks needs
+      // weeklyPlan.id — those stay serial inside the branch but the
+      // branch itself races against the todo + draft-mark branches.
 
-      // For short goals: save the direct weekly schedule
-      if (plan.weekly_schedule && phases.length > 0) {
-        const firstPhase = phases[0];
-        const weeklyPlan = await createWeeklyPlan({
-          phase_id: firstPhase.id,
-          week_start: getWeekStart(),
-          ai_summary: plan.weekly_schedule.ai_summary,
-        });
-        await createDailyTasks(
-          weeklyPlan.id,
-          plan.weekly_schedule.tasks.map((t) => ({
-            day_of_week: t.day_of_week,
-            title: t.title,
-            description: t.description,
-            time_estimate_minutes: t.time_estimate_minutes,
-            time_slot: t.time_slot,
-            sort_order: t.sort_order,
+      const writeWeeklySchedule = async () => {
+        const phases = await createPhases(
+          goal.id,
+          plan.phases.map((p) => ({
+            title: p.title,
+            description: p.description,
+            estimated_weeks: p.estimated_weeks,
           }))
         );
-      }
-
-      // Save auto-generated goal todos
-      if (plan.goal_todos && plan.goal_todos.length > 0) {
-        for (const todo of plan.goal_todos) {
-          await addTodo(todo.title, "Goal", todo.priority, null, goal.id);
+        if (plan.weekly_schedule && phases.length > 0) {
+          const firstPhase = phases[0];
+          const weeklyPlan = await createWeeklyPlan({
+            phase_id: firstPhase.id,
+            week_start: getWeekStart(),
+            ai_summary: plan.weekly_schedule.ai_summary,
+          });
+          await createDailyTasks(
+            weeklyPlan.id,
+            plan.weekly_schedule.tasks.map((t) => ({
+              day_of_week: t.day_of_week,
+              title: t.title,
+              description: t.description,
+              time_estimate_minutes: t.time_estimate_minutes,
+              time_slot: t.time_slot,
+              sort_order: t.sort_order,
+            }))
+          );
         }
-      }
+      };
 
-      // Mark the draft session as confirmed so it no longer shows up in
-      // the Continue draft list. Non-fatal — the real goal is already
-      // written at this point, so a failure here just leaves a stale
-      // entry in the list that the user can dismiss.
-      if (sessionIdRef.current) {
+      const writeGoalTodos = async () => {
+        if (!plan.goal_todos?.length) return;
+        // Inserts are independent — fire all together instead of looping
+        // serial awaits.
+        await Promise.all(
+          plan.goal_todos.map((todo) =>
+            addTodo(todo.title, "Goal", todo.priority, null, goal.id)
+          )
+        );
+      };
+
+      const markDraftConfirmed = async () => {
+        if (!sessionIdRef.current) return;
         try {
           await markGoalDraftConfirmed(sessionIdRef.current, goal.id);
         } catch (err) {
+          // Non-fatal — the real goal is already written; worst case
+          // the stale draft stays on the Continue list for the user
+          // to dismiss manually.
           console.error("[use-goal-chat] markGoalDraftConfirmed failed:", err);
         }
-      }
+      };
+
+      await Promise.all([
+        writeWeeklySchedule(),
+        writeGoalTodos(),
+        markDraftConfirmed(),
+      ]);
 
       setStage("done");
       return goal.id;

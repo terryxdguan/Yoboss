@@ -57,6 +57,12 @@ export interface UserAnswer {
 export interface ToolActivity {
   type: string;   // machine name, e.g. "ask_question"
   label: string;  // user-facing, e.g. "Asking a clarifying question"
+  /** Live count of characters streamed into this tool's input JSON.
+   *  Bumped on every input_json_delta so the "Drafting your plan…"
+   *  card can show concrete progress instead of a static spinner
+   *  during the long silent stretch when the model is emitting the
+   *  create_goal_plan / create_weekly_plan tool body. */
+  draftingChars?: number;
 }
 
 // A message in the goal chat

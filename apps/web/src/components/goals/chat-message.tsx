@@ -1,9 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { AskQuestionCard } from "./ask-question-card";
 import { LiveTimer } from "@/components/ui/live-timer";
 import type { ChatMessage as ChatMessageType, AskQuestionData, UserAnswer } from "@/lib/types/goal-chat";
+
+// Tool calls whose input JSON streams silently for many seconds — these
+// get the dedicated "Drafting your plan…" progress card instead of just
+// the pulsing badge, so users see something concrete advancing.
+const PLAN_DRAFTING_TOOLS = new Set(["create_goal_plan", "create_weekly_plan"]);
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -42,6 +48,15 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
   // streaming just finished (no dangling static cursor).
   const isLatestToolActive = isStreaming && hasActivity;
   const showCursor = isStreaming && message.content && !isLatestToolActive;
+  // Show the rich "Drafting your plan…" progress card when the latest
+  // tool is a plan-generating one AND the toolUse hasn't been finalized
+  // yet (toolUse is set on content_block_stop, so its presence means
+  // the JSON has been parsed and the preview modal is already opening).
+  const showDraftingCard =
+    isStreaming &&
+    latestActivity !== null &&
+    PLAN_DRAFTING_TOOLS.has(latestActivity.type) &&
+    !message.toolUse;
 
   return (
     <div className="flex justify-start gap-3">
@@ -91,6 +106,24 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
                   </span>
                 );
               })}
+            </div>
+          )}
+
+          {/* Drafting-plan progress card — shown while the model is
+              streaming the create_*_plan tool body, which is otherwise
+              silent for many seconds. Live char count so users see
+              concrete progress instead of a frozen-looking spinner. */}
+          {showDraftingCard && (
+            <div className="mt-1 mb-2 flex items-center gap-3 rounded-lg bg-[#7FAEE6]/8 border border-[#7FAEE6]/25 px-3.5 py-2.5">
+              <Loader2 className="h-4 w-4 text-[#7FAEE6] animate-spin shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[#2B2B2B]">
+                  Drafting your plan…
+                </p>
+                <p className="text-xs text-[#6F6A64] tabular-nums">
+                  {(latestActivity?.draftingChars ?? 0).toLocaleString()} characters generated
+                </p>
+              </div>
             </div>
           )}
 
