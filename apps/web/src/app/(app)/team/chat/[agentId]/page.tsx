@@ -258,7 +258,7 @@ export default function AgentChatPage() {
             throw new Error(
               (event.error as { message?: string })?.message ||
               (event.message as string) ||
-              "AI service error"
+              "Something went wrong. Please try again."
             );
           }
 
@@ -525,7 +525,7 @@ export default function AgentChatPage() {
   if (!agent) {
     return (
       <div className="text-center py-24">
-        <p className="text-[#6F6A64]">Agent not found</p>
+        <p className="text-[#6F6A64]">Employee not found</p>
         <button onClick={() => router.push("/team")} className="text-sm text-[#7FAEE6] mt-2 hover:underline">
           Back to Team
         </button>

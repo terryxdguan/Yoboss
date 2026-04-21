@@ -139,7 +139,7 @@ export function WorkflowRunView({
         type: "step",
         stepIndex: i,
         agentId: step?.agentId,
-        agentLabel: agent?.label || "Agent",
+        agentLabel: agent?.label || "Employee",
         agentAvatar: agent?.avatar,
         durationMs: result.durationMs,
         generatedFiles: result.files as GeneratedFile[] | undefined,
@@ -373,7 +373,7 @@ export function WorkflowRunView({
           }
 
           if (event.type === "error") {
-            throw new Error((event.message as string) || "AI service error");
+            throw new Error((event.message as string) || "Something went wrong. Please try again.");
           }
 
           if (event.type === "session_created") {
@@ -1075,7 +1075,7 @@ export function WorkflowRunView({
               type: "step",
               stepIndex: i,
               agentId: step?.agentId,
-              agentLabel: agent?.label || "Agent",
+              agentLabel: agent?.label || "Employee",
               agentAvatar: agent?.avatar,
               durationMs: result.durationMs,
               generatedFiles: result.files as GeneratedFile[] | undefined,
@@ -1308,7 +1308,7 @@ export function WorkflowRunView({
             }
 
             if (event.type === "error") {
-              throw new Error((event.message as string) || "AI service error");
+              throw new Error((event.message as string) || "Something went wrong. Please try again.");
             }
 
             if (event.type === "tool_use") {
@@ -1408,7 +1408,7 @@ export function WorkflowRunView({
               throw new Error(
                 (event.error as { message?: string })?.message ||
                 (event.message as string) ||
-                "AI service error"
+                "Something went wrong. Please try again."
               );
             }
 
@@ -1638,7 +1638,7 @@ export function WorkflowRunView({
                     style={{ backgroundColor: dotColor, borderColor: dotColor }}
                   />
                   <span className="text-[10px] text-[#9B948B] mt-1 max-w-[80px] truncate text-center">
-                    {agent?.label || "Agent"}
+                    {agent?.label || "Employee"}
                   </span>
                 </div>
                 {idx < workflow.steps.length - 1 && (
@@ -1689,7 +1689,7 @@ export function WorkflowRunView({
               <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
                 <Image
                   src={msg.agentAvatar || DEFAULT_AGENT_AVATAR}
-                  alt={msg.agentLabel || "Agent"}
+                  alt={msg.agentLabel || "Employee"}
                   width={32}
                   height={32}
                   className="w-full h-full object-cover"
@@ -1774,7 +1774,7 @@ export function WorkflowRunView({
                       <span className="text-sm text-[#7FAEE6] font-medium animate-pulse">
                         {msg.toolActivity && msg.toolActivity.length > 0
                           ? msg.toolActivity[msg.toolActivity.length - 1].label
-                          : "AI is working..."}
+                          : "Working..."}
                       </span>
                     </div>
                   ) : null}

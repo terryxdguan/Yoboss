@@ -324,10 +324,10 @@ export default function GoalDetailPage() {
                     ? "bg-[#7FAEE6] text-white"
                     : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
                 }`}
-                title="AI Coach"
+                title="Team"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
-                AI
+                Team
               </button>
               <button
                 onClick={() => togglePanel("deliverables")}
@@ -491,14 +491,14 @@ export default function GoalDetailPage() {
             <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
             <p className="text-sm font-medium text-[#2B2B2B]">No weekly plan yet</p>
             <p className="text-xs text-[#9B948B] mt-1 mb-5">
-              Generate a personalized weekly plan with AI — it&apos;s your next step
+              Generate a personalized weekly plan with your team — it&apos;s your next step
             </p>
             <button
               onClick={() => router.push(`/goals/${id}/plan-week`)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
             >
               <Sparkles className="h-4 w-4" />
-              Generate with AI
+              Generate with Team
             </button>
           </div>
         )}
@@ -997,7 +997,7 @@ function TaskItem({
         <button
           onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
           className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 rounded hover:bg-[#7FAEE6]/10"
-          title="Ask AI Coach"
+          title="Ask Team"
         >
           <MessageSquare className="h-3.5 w-3.5 text-[#7FAEE6]" />
         </button>

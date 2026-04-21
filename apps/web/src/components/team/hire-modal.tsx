@@ -59,9 +59,9 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div>
-            <h2 className="text-lg font-semibold text-[#2B2B2B]">Agent Market</h2>
+            <h2 className="text-lg font-semibold text-[#2B2B2B]">Hire Employees</h2>
             <p className="text-sm text-[#6F6A64] mt-0.5">
-              Hire AI specialists to join your team
+              Hire specialists to join your team
             </p>
           </div>
           <button

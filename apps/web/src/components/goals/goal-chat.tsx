@@ -95,7 +95,7 @@ export function GoalChat({ initialGoal, onCancel, initialDraft }: GoalChatProps)
         </button>
         <div className="h-4 w-px bg-[#E7DED2]" />
         <h2 className="text-lg font-semibold text-[#2B2B2B]">
-          Goal Coach
+          Plan with Team
         </h2>
       </div>
 

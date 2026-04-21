@@ -83,7 +83,7 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
           <div className="text-center py-8">
             <Paperclip className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
             <p className="text-sm text-[#9B948B]">No deliverables yet</p>
-            <p className="text-xs text-[#9B948B] mt-1">Add files, links, or AI-generated outputs</p>
+            <p className="text-xs text-[#9B948B] mt-1">Add files, links, or generated outputs</p>
           </div>
         ) : (
           <ul className="space-y-2">
@@ -108,7 +108,7 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
                   )}
                   <div className="flex items-center gap-2 mt-1">
                     {d.source === "ai_generated" && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7FAEE6]/10 text-[#7FAEE6]">AI</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7FAEE6]/10 text-[#7FAEE6]">Generated</span>
                     )}
                     <span className="text-[10px] text-[#9B948B]">
                       {new Date(d.created_at).toLocaleDateString()}

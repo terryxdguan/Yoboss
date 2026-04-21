@@ -142,7 +142,7 @@ function TodoCard({
         <button
           onClick={onSendToAI}
           className="text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
-          title="Send to AI"
+          title="Send to Team"
         >
           ▶
         </button>

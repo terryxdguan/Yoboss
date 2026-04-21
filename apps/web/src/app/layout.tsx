@@ -11,7 +11,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "YoBoss — Your Intentional Roadmap",
   description:
-    "Describe your goal and your AI coach plans, coaches, and executes alongside you.",
+    "Describe your goal and your team plans, schedules, and executes alongside you.",
 };
 
 export default function RootLayout({

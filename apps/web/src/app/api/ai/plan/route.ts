@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error(`AI plan error (${action}):`, error);
     return NextResponse.json(
-      { error: "AI service error. Please try again." },
+      { error: "Something went wrong. Please try again." },
       { status: 500 }
     );
   }

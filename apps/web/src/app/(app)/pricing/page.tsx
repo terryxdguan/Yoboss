@@ -25,7 +25,7 @@ const TIERS_DISPLAY: Array<{
       "All core features",
       "Goal planning & weekly schedules",
       "Personal to-do list",
-      "Basic AI agents",
+      "Basic team members",
     ],
   },
   {
@@ -36,7 +36,7 @@ const TIERS_DISPLAY: Array<{
     allowance: "$15 / month",
     features: [
       "Everything in Free",
-      "3× AI usage allowance",
+      "3× usage allowance",
       "Priority support",
     ],
   },
@@ -48,7 +48,7 @@ const TIERS_DISPLAY: Array<{
     allowance: "$40 / month",
     features: [
       "Everything in Basic",
-      "8× AI usage allowance",
+      "8× usage allowance",
       "Unlimited workflows",
       "Advanced agent templates",
     ],
@@ -170,7 +170,7 @@ export default function PricingPage() {
     <div className="max-w-6xl mx-auto px-6 py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-[#2B2B2B] mb-3">Simple, transparent pricing</h1>
-        <p className="text-lg text-[#6F6A64]">Start free. Upgrade when you need more AI power.</p>
+        <p className="text-lg text-[#6F6A64]">Start free. Upgrade when you need more capacity.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">

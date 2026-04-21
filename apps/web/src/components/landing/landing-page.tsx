@@ -152,7 +152,7 @@ export function LandingPage() {
           <div className="overflow-hidden max-h-[280px] md:max-h-[340px]">
             <img
               src="/hero-illustration.png"
-              alt="YoBoss — Your AI team planning and executing together"
+              alt="YoBoss — Your team planning and executing together"
               className="mx-auto max-w-2xl w-full h-auto object-cover object-top"
             />
           </div>

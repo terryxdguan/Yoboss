@@ -20,7 +20,7 @@ interface ChatMessageProps {
 // Goal Coach is always General Assistant. Keep the label/avatar inline (rather
 // than importing from agent-registry) so this file has no runtime dep on the
 // agent catalogue — it's a presentational component.
-const AGENT_LABEL = "General Assistant";
+const AGENT_LABEL = "Assistant";
 const AGENT_AVATAR = "/pink.png";
 
 export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps) {

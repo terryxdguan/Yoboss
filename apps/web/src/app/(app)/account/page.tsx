@@ -41,8 +41,8 @@ const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> =
 
 const ROUTE_LABELS: Record<string, string> = {
   plan: "Goal Planning",
-  coach: "AI Coach",
-  "agent-chat": "Agent Chat",
+  coach: "Team",
+  "agent-chat": "Employee Chat",
   summarize: "Summarize",
   "workflow-execute": "Workflow",
   // Legacy tag kept so historical usage records show a friendly label.
@@ -50,7 +50,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "goal-detail-chat": "Goal Chat",
   "goal-session-creation": "Goal Creation",
   "goal-session-weekly": "Weekly Planning",
-  "goal-session-coach": "AI Coach",
+  "goal-session-coach": "Team",
 };
 
 function progressColor(pct: number): string {
@@ -211,7 +211,7 @@ export default function AccountPage() {
       <div className="space-y-8">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">Account</h1>
-          <p className="mt-1 text-sm text-[#6F6A64]">Your profile and AI usage</p>
+          <p className="mt-1 text-sm text-[#6F6A64]">Your profile and usage</p>
         </div>
         <div className="flex items-center justify-center py-20">
           <div className="h-6 w-6 border-2 border-[#7FAEE6] border-t-transparent rounded-full animate-spin" />
@@ -225,7 +225,7 @@ export default function AccountPage() {
       {/* Header */}
       <div>
         <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">Account</h1>
-        <p className="mt-1 text-sm text-[#6F6A64]">Your profile and AI usage</p>
+        <p className="mt-1 text-sm text-[#6F6A64]">Your profile and usage</p>
       </div>
 
       {/* Section 1: Profile Card */}
@@ -399,7 +399,7 @@ export default function AccountPage() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7FAEE6]/10">
             <Zap className="h-4 w-4 text-[#7FAEE6]" />
           </div>
-          <h2 className="text-sm font-semibold text-[#2B2B2B]">AI Usage</h2>
+          <h2 className="text-sm font-semibold text-[#2B2B2B]">Usage</h2>
         </div>
 
         {/* This Month */}
@@ -432,8 +432,8 @@ export default function AccountPage() {
 
         {usage.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-sm text-[#6F6A64]">No AI usage recorded yet.</p>
-            <p className="text-xs text-[#9B948B] mt-1">Usage will appear here after your first AI interaction.</p>
+            <p className="text-sm text-[#6F6A64]">No usage recorded yet.</p>
+            <p className="text-xs text-[#9B948B] mt-1">Usage will appear here after your first conversation.</p>
           </div>
         ) : (
           <>

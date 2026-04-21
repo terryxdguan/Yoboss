@@ -122,11 +122,11 @@ export default function AgentMarketPage() {
           className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Team
+          Back to Employees
         </button>
-        <h1 className="text-2xl font-bold text-[#2B2B2B]">Agent Market</h1>
+        <h1 className="text-2xl font-bold text-[#2B2B2B]">Hire Employees</h1>
         <p className="text-sm text-[#6F6A64] mt-1">
-          Hire AI specialists to join your team
+          Hire specialists to join your team
         </p>
       </div>
 

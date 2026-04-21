@@ -150,7 +150,7 @@ export function useContinuationStream(
               const msg =
                 (event.error as { message?: string })?.message ||
                 (event.message as string) ||
-                "AI service error";
+                "Something went wrong. Please try again.";
               throw new Error(msg);
             }
 

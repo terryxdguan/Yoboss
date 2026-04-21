@@ -48,7 +48,7 @@ const NAV_ITEMS = [
   { href: "/goals", icon: Flag, label: "Goal" },
   { href: "/todos", icon: ListChecks, label: "Personal To-Dos" },
   { href: "/workflows", icon: GitBranch, label: "Workflows" },
-  { href: "/team", icon: Users, label: "Team" },
+  { href: "/team", icon: Users, label: "Employees" },
 ];
 
 export function Sidebar() {

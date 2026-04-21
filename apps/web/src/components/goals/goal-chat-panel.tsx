@@ -260,7 +260,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             throw new Error(
               (event.error as { message?: string })?.message ||
               (event.message as string) ||
-              "AI service error"
+              "Something went wrong. Please try again."
             );
           }
 

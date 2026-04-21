@@ -161,7 +161,7 @@ export default function WorkflowEditPage() {
       return;
     }
     if (!description.trim()) {
-      setErrors({ description: "Enter a description so AI can generate steps" });
+      setErrors({ description: "Enter a description so we can generate steps" });
       return;
     }
     setAiLoading(true);
@@ -383,7 +383,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
               setErrors((p) => ({ ...p, description: "" }));
           }}
           rows={3}
-          placeholder="Describe what this workflow does, its goals, and expected outputs. The more detail you provide, the better AI can generate steps for you."
+          placeholder="Describe what this workflow does, its goals, and expected outputs. The more detail you provide, the better we can generate steps for you."
           className={`w-full px-3.5 py-2.5 rounded-xl border bg-[#FFFDF9] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 transition-colors resize-y min-h-[80px] ${errors.description ? "border-[#D5847A] focus:border-[#D5847A] focus:ring-[#D5847A]/20" : "border-[#DDD3C7] focus:border-[#7FAEE6] focus:ring-[#7FAEE6]/20"}`}
         />
         {errors.description && (
@@ -417,7 +417,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          {aiLoading ? "Generating..." : "AI Generate Steps"}
+          {aiLoading ? "Generating..." : "Generate Steps"}
         </button>
         {errors.steps && (
           <p className="text-xs text-[#D5847A]">{errors.steps}</p>
@@ -453,7 +453,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
                   }
                   className="w-48 px-3 py-1.5 rounded-lg border border-[#DDD3C7] bg-white text-sm text-[#2B2B2B] focus:outline-none focus:border-[#7FAEE6] transition-colors shrink-0"
                 >
-                  <option value="">Select Agent...</option>
+                  <option value="">Select Employee...</option>
                   {uniqueAgents.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.label}
@@ -475,7 +475,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
                   onClick={() => handleEnhanceStep(idx)}
                   disabled={isEnhancing || enhancingStep !== null}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#7FAEE6] bg-[#EAF3FD] hover:bg-[#7FAEE6] hover:text-white transition-colors disabled:opacity-40 shrink-0"
-                  title="AI enhance this prompt"
+                  title="Enhance this prompt"
                 >
                   {isEnhancing ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />

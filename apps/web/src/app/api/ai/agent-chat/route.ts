@@ -143,7 +143,7 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
     console.error("Agent chat error:", error);
     const msg = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: `AI service error: ${msg}` },
+      { error: `Something went wrong: ${msg}` },
       { status: 500 }
     );
   }

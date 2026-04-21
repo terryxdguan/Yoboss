@@ -56,7 +56,7 @@ export default function GoalsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-[#2B2B2B]">Goals</h1>
-            <p className="text-sm text-[#6F6A64] mt-1">Set goals and let AI help you plan and execute</p>
+            <p className="text-sm text-[#6F6A64] mt-1">Set goals and let your team execute</p>
           </div>
           <div className="flex items-center gap-2">
             {archivedGoals.length > 0 && (
