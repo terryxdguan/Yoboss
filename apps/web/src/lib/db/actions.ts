@@ -1465,12 +1465,29 @@ export async function getRecentAiUsage(limit = 30, offset = 0): Promise<AiUsageR
 // Dashboard
 // ============================================================
 
+export type DashboardOnboardingStage =
+  | "stage1"   // 0 goals
+  | "stage2"   // 1+ goals, 0 weekly plans
+  | "stage3"   // 1+ goals, 1+ weekly plans, 0 todos
+  | "done";    // all three present
+
+export interface DashboardOnboarding {
+  stage: DashboardOnboardingStage;
+  /** Used by Stage 2's smart CTA — null if 0 or 2+ goals (the smart-route
+   *  logic falls back to /goals list in those cases). When exactly 1 goal,
+   *  this is its id so the banner can route directly to /goals/{id}/plan-week. */
+  singleGoalId: string | null;
+  /** Goal count for Stage 2 routing decision (1 → plan-week direct, 2+ → /goals list). */
+  goalCount: number;
+}
+
 export async function getDashboardData(): Promise<{
   stats: DashboardStats;
   todayItems: DashboardTodayItem[];
   highPriorityItems: DashboardTodayItem[];
   workflows: WorkflowSummary[];
   goalsWithPhases: GoalWithPhases[];
+  onboarding: DashboardOnboarding;
 }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -1484,6 +1501,7 @@ export async function getDashboardData(): Promise<{
       highPriorityItems: [],
       workflows: [],
       goalsWithPhases: [],
+      onboarding: { stage: "stage1", goalCount: 0, singleGoalId: null },
     };
   }
 
@@ -1625,6 +1643,27 @@ export async function getDashboardData(): Promise<{
     totalTeamMembers: 0, // Computed client-side from localStorage
   };
 
+  // --- Onboarding stage ---
+  //
+  // Drives the WelcomeBanner. Pure derivation from the same data we
+  // already loaded — no extra round-trips. Stage progression assumes the
+  // user follows the natural Goal → Weekly Plan → To-Do path.
+  const goalCount = goals.length;
+  const weeklyPlanCount = plans.length;
+  const todoCount = todos.length;
+
+  let stage: DashboardOnboardingStage;
+  if (goalCount === 0) stage = "stage1";
+  else if (weeklyPlanCount === 0) stage = "stage2";
+  else if (todoCount === 0) stage = "stage3";
+  else stage = "done";
+
+  const onboarding: DashboardOnboarding = {
+    stage,
+    goalCount,
+    singleGoalId: goalCount === 1 ? goals[0].id : null,
+  };
+
   // --- Today Items ---
 
   // Build planId → goalTitle map
@@ -1730,7 +1769,7 @@ export async function getDashboardData(): Promise<{
       tag: t.tag || "Personal",
     }));
 
-  return { stats, todayItems, highPriorityItems, workflows: workflowSummaries, goalsWithPhases };
+  return { stats, todayItems, highPriorityItems, workflows: workflowSummaries, goalsWithPhases, onboarding };
 }
 
 // ============================================================
