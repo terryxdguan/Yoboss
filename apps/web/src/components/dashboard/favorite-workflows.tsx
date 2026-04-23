@@ -130,12 +130,22 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
           <h2 className="text-xl font-semibold text-[#2B2B2B]">Favorite Workflows</h2>
           <p className="text-sm text-[#9B948B]">Quick access to your most-used automations.</p>
         </div>
-        <button
-          onClick={() => setShowPicker(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFDF9] text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push("/workflows/edit/new")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7FAEE6] text-white text-xs font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all shadow-[0_2px_8px_rgba(127,174,230,0.25)]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Create new
+          </button>
+          <button
+            onClick={() => setShowPicker(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFDF9] text-[#7FAEE6] border border-[#7FAEE6]/40 text-xs font-semibold hover:bg-[#EAF3FD] active:scale-95 transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add existing
+          </button>
+        </div>
       </div>
 
       <div className="border-b border-dashed border-[#E7DED2] mb-4" />
@@ -147,11 +157,11 @@ export function DashboardFavoriteWorkflows({ workflows, allWorkflows }: Props) {
           </div>
           <p className="text-sm text-[#6F6A64]">Add your most-used workflows here</p>
           <button
-            onClick={() => setShowPicker(true)}
-            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#7FAEE6] bg-[#EAF3FD] hover:bg-[#7FAEE6]/20 transition-colors"
+            onClick={() => router.push("/workflows/edit/new")}
+            className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add Workflow
+            <Plus className="h-4 w-4" />
+            Create new workflow
           </button>
         </div>
       ) : (
