@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Search, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Search, Check, Plus } from "lucide-react";
 import type { GoalWithPhases } from "@/lib/types/database";
 
 interface GoalPickerModalProps {
@@ -12,6 +13,7 @@ interface GoalPickerModalProps {
 }
 
 export function GoalPickerModal({ goals, selectedIds, onSave, onClose }: GoalPickerModalProps) {
+  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
   const [search, setSearch] = useState("");
 
@@ -57,7 +59,19 @@ export function GoalPickerModal({ goals, selectedIds, onSave, onClose }: GoalPic
         {/* Goal list */}
         <div className="flex-1 overflow-y-auto px-6 pb-3">
           {filtered.length === 0 ? (
-            <p className="text-sm text-[#9B948B] text-center py-8">No active goals found</p>
+            <div className="py-10 flex flex-col items-center gap-3">
+              <p className="text-sm text-[#9B948B]">No goals yet — create one?</p>
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push("/goals/create");
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Create a new goal
+              </button>
+            </div>
           ) : (
             <div className="space-y-2">
               {filtered.map(goal => {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Search, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Search, Check, Plus } from "lucide-react";
 import Image from "next/image";
 import type { AgentConfig } from "@/lib/types/agent";
 import { DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
@@ -14,6 +15,7 @@ interface MemberPickerModalProps {
 }
 
 export function MemberPickerModal({ availableAgents, selectedIds, onSave, onClose }: MemberPickerModalProps) {
+  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
   const [search, setSearch] = useState("");
 
@@ -61,7 +63,23 @@ export function MemberPickerModal({ availableAgents, selectedIds, onSave, onClos
           {/* List */}
           <div className="max-h-[320px] overflow-y-auto px-5 py-3">
             {filtered.length === 0 ? (
-              <p className="text-sm text-[#9B948B] text-center py-8">No matching members</p>
+              availableAgents.length === 0 ? (
+                <div className="py-10 flex flex-col items-center gap-3">
+                  <p className="text-sm text-[#9B948B]">No employees yet — hire one?</p>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      router.push("/team/market");
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Hire your first employee
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-[#9B948B] text-center py-8">No matching members</p>
+              )
             ) : (
               <div className="space-y-1.5">
                 {filtered.map(agent => {

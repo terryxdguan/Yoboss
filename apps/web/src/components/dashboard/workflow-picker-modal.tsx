@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Search, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Search, Check, Plus } from "lucide-react";
 import type { WorkflowSummary } from "@/lib/types/database";
 
 interface WorkflowPickerModalProps {
@@ -12,6 +13,7 @@ interface WorkflowPickerModalProps {
 }
 
 export function WorkflowPickerModal({ workflows, selectedIds, onSave, onClose }: WorkflowPickerModalProps) {
+  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
   const [search, setSearch] = useState("");
 
@@ -58,9 +60,23 @@ export function WorkflowPickerModal({ workflows, selectedIds, onSave, onClose }:
           {/* List */}
           <div className="max-h-[320px] overflow-y-auto px-5 py-3">
             {filtered.length === 0 ? (
-              <p className="text-sm text-[#9B948B] text-center py-8">
-                {workflows.length === 0 ? "No workflows created yet" : "No matching workflows"}
-              </p>
+              workflows.length === 0 ? (
+                <div className="py-10 flex flex-col items-center gap-3">
+                  <p className="text-sm text-[#9B948B]">No workflows yet — create one?</p>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      router.push("/workflows/edit/new");
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create a new workflow
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-[#9B948B] text-center py-8">No matching workflows</p>
+              )
             ) : (
               <div className="space-y-1.5">
                 {filtered.map(wf => {
