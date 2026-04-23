@@ -46,13 +46,18 @@ function buildTaskContext(item: DashboardTodayItem): DailyTask {
 
 export function DashboardShell({ children, allItems, highPriorityItems }: DashboardShellProps) {
   const [chatItem, setChatItem] = useState<DashboardTodayItem | null>(null);
+  const [addTodoOpener, setAddTodoOpener] = useState<(() => void) | null>(null);
 
   return (
     <div className="flex -mx-6 md:-mx-8 -mb-12">
       {/* Main content */}
       <div className="flex-1 min-w-0 px-6 md:px-8 pb-12">
         <DashboardChatContext.Provider value={setChatItem}>
-          {children}
+          <DashboardAddTodoRegisterContext.Provider value={setAddTodoOpener}>
+            <DashboardAddTodoContext.Provider value={addTodoOpener}>
+              {children}
+            </DashboardAddTodoContext.Provider>
+          </DashboardAddTodoRegisterContext.Provider>
         </DashboardChatContext.Provider>
       </div>
 
@@ -77,4 +82,23 @@ export const DashboardChatContext = createContext<((item: DashboardTodayItem) =>
 
 export function useDashboardChat() {
   return useContext(DashboardChatContext);
+}
+
+// Open the Add To-Do modal hosted in DashboardTodayItems. Publisher is
+// today-items.tsx; consumers are e.g. WelcomeBanner's Stage 3 CTA.
+export const DashboardAddTodoContext = createContext<(() => void) | null>(null);
+
+export function useDashboardAddTodo() {
+  return useContext(DashboardAddTodoContext);
+}
+
+// Channel used by today-items.tsx to register its modal-opener with the
+// shell. Separate from DashboardAddTodoContext so consumers and producers
+// don't clash on the same context.
+export const DashboardAddTodoRegisterContext = createContext<
+  ((opener: () => void) => void) | null
+>(null);
+
+export function useRegisterAddTodoOpener() {
+  return useContext(DashboardAddTodoRegisterContext);
 }

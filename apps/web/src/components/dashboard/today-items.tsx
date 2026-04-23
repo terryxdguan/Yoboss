@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Plus, X, ListChecks } from "lucide-react";
 import { toggleTask, updateTodo, addTodo, deleteTodo, deleteTask } from "@/lib/db/actions";
 import { TodoItemCard } from "@/components/todo/todo-item-card";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
-import { useDashboardChat } from "@/components/dashboard/dashboard-shell";
+import { useDashboardChat, useRegisterAddTodoOpener } from "@/components/dashboard/dashboard-shell";
 import type { DashboardTodayItem } from "@/lib/types/database";
 import type { GoalWithPhases } from "@/lib/types/database";
 
@@ -36,6 +36,15 @@ export function DashboardTodayItems({
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T23:59`;
   };
   const [showAdd, setShowAdd] = useState(false);
+  const registerAddTodoOpener = useRegisterAddTodoOpener();
+  useEffect(() => {
+    if (!registerAddTodoOpener) return;
+    // setAddTodoOpener is a React setState; passing a function arg makes
+    // React treat it as an updater. Wrap the actual opener in another
+    // function so it gets stored as the value, not invoked.
+    registerAddTodoOpener(() => () => setShowAdd(true));
+    return () => registerAddTodoOpener(() => () => {});
+  }, [registerAddTodoOpener]);
   const [newText, setNewText] = useState("");
   const [newDeadline, setNewDeadline] = useState(getTodayEndOfDay);
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("medium");

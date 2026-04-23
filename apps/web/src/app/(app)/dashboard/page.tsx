@@ -7,6 +7,7 @@ import { DashboardImportantGoals } from "@/components/dashboard/important-goals"
 import { DashboardFavoriteWorkflows } from "@/components/dashboard/favorite-workflows";
 import { DashboardFavoriteMembers } from "@/components/dashboard/favorite-members";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { WelcomeBannerHost } from "@/components/dashboard/welcome-banner-host";
 
 // Opt out of Next.js router cache and static generation. Every visit to
 // /dashboard re-runs getDashboardData() / getWorkflows() / getTodoTags() on
@@ -41,6 +42,8 @@ export default async function TodayPage() {
             Overview of today&apos;s progress, tasks, and team activity
           </p>
         </div>
+
+        <WelcomeBannerHost onboarding={data.onboarding} />
 
         <DashboardStats stats={data.stats} workflows={allWorkflows} />
         <DashboardTodayItems
