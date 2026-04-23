@@ -89,12 +89,22 @@ export function DashboardFavoriteMembers() {
           <h2 className="text-xl font-semibold text-[#2B2B2B]">Favorite Members</h2>
           <p className="text-sm text-[#9B948B]">Your go-to team members.</p>
         </div>
-        <button
-          onClick={() => setShowPicker(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFDF9] text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push("/team/market")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7FAEE6] text-white text-xs font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all shadow-[0_2px_8px_rgba(127,174,230,0.25)]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Hire new
+          </button>
+          <button
+            onClick={() => setShowPicker(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFDF9] text-[#7FAEE6] border border-[#7FAEE6]/40 text-xs font-semibold hover:bg-[#EAF3FD] active:scale-95 transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add existing
+          </button>
+        </div>
       </div>
 
       <div className="border-b border-dashed border-[#E7DED2] mb-4" />
@@ -106,11 +116,11 @@ export function DashboardFavoriteMembers() {
           </div>
           <p className="text-sm text-[#6F6A64]">Add your favorite team members here</p>
           <button
-            onClick={() => setShowPicker(true)}
-            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#7FAEE6] bg-[#EAF3FD] hover:bg-[#7FAEE6]/20 transition-colors"
+            onClick={() => router.push("/team/market")}
+            className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add Member
+            <Plus className="h-4 w-4" />
+            Hire your first employee
           </button>
         </div>
       ) : (
