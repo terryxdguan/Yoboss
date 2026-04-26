@@ -16,7 +16,6 @@ import {
   createPhases,
   createWeeklyPlan,
   createDailyTasks,
-  addTodo,
   createGoalDraft,
   saveMessage,
   upsertAssistantMessage,
@@ -912,12 +911,15 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
       // branch itself races against the todo + draft-mark branches.
 
       const writeWeeklySchedule = async () => {
+        // createPhases now also bulk-inserts each phase's todos as
+        // phase_tasks rows — pass the AI-generated todos through.
         const phases = await createPhases(
           goal.id,
           plan.phases.map((p) => ({
             title: p.title,
             description: p.description,
             estimated_weeks: p.estimated_weeks,
+            todos: p.todos ?? [],
           }))
         );
         if (plan.weekly_schedule && phases.length > 0) {
@@ -941,17 +943,6 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
         }
       };
 
-      const writeGoalTodos = async () => {
-        if (!plan.goal_todos?.length) return;
-        // Inserts are independent — fire all together instead of looping
-        // serial awaits.
-        await Promise.all(
-          plan.goal_todos.map((todo) =>
-            addTodo(todo.title, "Goal", todo.priority, null, goal.id)
-          )
-        );
-      };
-
       const markDraftConfirmed = async () => {
         if (!sessionIdRef.current) return;
         try {
@@ -969,7 +960,6 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
 
       await Promise.all([
         writeWeeklySchedule(),
-        writeGoalTodos(),
         markDraftConfirmed(),
       ]);
 

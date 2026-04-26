@@ -3,20 +3,30 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   getTodos, addTodo, updateTodo, deleteTodo, reorderTodos,
-  getTodoTags, addTodoTag, updateTodoTag, deleteTodoTag,
+  getTodoTags, addTodoTag, updateTodoTag, deleteTodoTag, reorderTodoTags,
 } from "@/lib/db/actions";
 import type { TodoItem, TodoTag } from "@/lib/types/database";
 import { DateTimePicker } from "@/components/todo/date-time-picker";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
+import { GripVertical, Plus } from "lucide-react";
 
 const PRIORITY_DOT: Record<string, string> = { high: "bg-[#D5847A]", medium: "bg-[#D4B06A]", low: "bg-[#7FB38A]" };
+const PRIORITY_PILL_ACTIVE: Record<string, string> = {
+  high: "bg-[#FFF5F3] text-[#9A615B]",
+  medium: "bg-[#FFF8E8] text-[#8E6B2E]",
+  low: "bg-[#F1FAF3] text-[#3F7C4A]",
+};
+// Soft pastel band per category column. Cycles by index so adding columns
+// just reuses the palette (no per-name hard-coding).
 const COLUMN_COLORS = [
-  { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", border: "border-[#7FB38A]/30" },
-  { bg: "bg-[#D4B06A]/10", text: "text-[#D4B06A]", border: "border-[#D4B06A]/30" },
-  { bg: "bg-[#6F6A64]/10", text: "text-[#6F6A64]", border: "border-[#6F6A64]/30" },
-  { bg: "bg-[#7FAEE6]/10", text: "text-[#7FAEE6]", border: "border-[#7FAEE6]/30" },
-  { bg: "bg-[#8CB8E8]/10", text: "text-[#8CB8E8]", border: "border-[#8CB8E8]/30" },
-  { bg: "bg-[#D5847A]/10", text: "text-[#D5847A]", border: "border-[#D5847A]/30" },
+  { band: "border-[#BFDCC5] bg-[#F4FBF5]", text: "text-[#3F7C4A]" }, // green
+  { band: "border-[#E8D5A4] bg-[#FFF9EA]", text: "text-[#8E6B2E]" }, // yellow
+  { band: "border-[#B9D4E8] bg-[#F2F8FC]", text: "text-[#5E8FCE]" }, // blue
+  { band: "border-[#BFD9CF] bg-[#F2FAF6]", text: "text-[#4F8A77]" }, // teal-green
+  { band: "border-[#D9CFA9] bg-[#FFF9E8]", text: "text-[#7B6A2E]" }, // tan
+  { band: "border-[#D5C8BD] bg-[#F9F5F1]", text: "text-[#7B6A60]" }, // warm beige
+  { band: "border-[#E0B7B4] bg-[#FFF3F1]", text: "text-[#9A615B]" }, // rose
+  { band: "border-[#D8D0C6] bg-[#F8F5EF]", text: "text-[#6F6A64]" }, // stone
 ];
 
 function formatDeadline(d: string): string {
@@ -35,6 +45,18 @@ function formatDeadline(d: string): string {
 function isOverdue(item: TodoItem): boolean {
   if (!item.deadline || item.completed) return false;
   return new Date(item.deadline) < new Date();
+}
+
+function formatDeadlineShort(d: string): string {
+  const date = new Date(d);
+  const month = date.toLocaleString("en", { month: "short" });
+  const day = date.getDate();
+  const h = date.getHours();
+  const mins = date.getMinutes();
+  if (h === 0 && mins === 0) return `${month} ${day}`;
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const ap = h >= 12 ? "PM" : "AM";
+  return `${month} ${day} ${h12}:${String(mins).padStart(2, "0")}${ap}`;
 }
 
 /* ── TodoCard ── */
@@ -213,13 +235,19 @@ function TodoCard({
 function ColumnHeader({
   tag,
   color,
+  count,
   onRename,
   onDelete,
+  onDragStart,
+  onDragEnd,
 }: {
   tag: { id: string; name: string };
-  color: { bg: string; text: string; border: string };
+  color: { band: string; text: string };
+  count: number;
   onRename: (name: string) => void;
   onDelete: () => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(tag.name);
@@ -231,36 +259,61 @@ function ColumnHeader({
     setEditing(false);
   };
 
+  const isDraggable = tag.id !== "__other__" && !!onDragStart;
+
   return (
-    <div className={`flex items-center justify-between px-3 py-1.5 rounded-t-lg border ${color.border} ${color.bg} group`}>
-      {editing ? (
-        <input
-          autoFocus
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") { setEditName(tag.name); setEditing(false); }
-          }}
-          className={`text-xs font-semibold ${color.text} bg-transparent border-b border-current outline-none w-full`}
-        />
-      ) : (
-        <span
-          onDoubleClick={() => { if (tag.id !== "__other__") { setEditName(tag.name); setEditing(true); } }}
-          className={`text-xs font-semibold ${color.text} ${tag.id !== "__other__" ? "cursor-text" : ""}`}
-        >
-          {tag.name}
+    <div className={`group flex items-center justify-between rounded-lg border px-3 py-2 ${color.band}`}>
+      <div className="flex min-w-0 items-center gap-2">
+        {isDraggable && (
+          <button
+            draggable
+            aria-label={`Drag ${tag.name} category`}
+            title="Drag to reorder"
+            onDragStart={(e) => {
+              e.dataTransfer.setData("application/x-todo-tag-id", tag.id);
+              e.dataTransfer.effectAllowed = "move";
+              requestAnimationFrame(() => onDragStart?.());
+            }}
+            onDragEnd={() => onDragEnd?.()}
+            className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded-md text-[#9B948B] hover:bg-[#FFFDF9] active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
+        {editing ? (
+          <input
+            autoFocus
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") { setEditName(tag.name); setEditing(false); }
+            }}
+            className={`min-w-0 flex-1 border-b border-current bg-transparent text-sm font-semibold outline-none ${color.text}`}
+          />
+        ) : (
+          <span
+            onDoubleClick={() => { if (tag.id !== "__other__") { setEditName(tag.name); setEditing(true); } }}
+            className={`text-sm font-semibold ${color.text} ${tag.id !== "__other__" ? "cursor-text" : ""}`}
+          >
+            {tag.name}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="rounded-full bg-[#FFFDF9]/70 px-2 py-0.5 text-[11px] font-semibold text-[#6F6A64]">
+          {count}
         </span>
-      )}
-      {tag.id !== "__other__" && (
-        <button
-          onClick={onDelete}
-          className="text-[#9B948B] hover:text-[#D5847A] text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0"
-        >
-          ✕
-        </button>
-      )}
+        {tag.id !== "__other__" && (
+          <button
+            onClick={onDelete}
+            className="text-[10px] text-[#9B948B] opacity-0 transition-opacity hover:text-[#D5847A] group-hover:opacity-100"
+          >
+            ✕
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -275,11 +328,16 @@ export default function TodosPage() {
   const [activeStatus, setActiveStatus] = useState<"pending" | "done">("pending");
   const [newText, setNewText] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("medium");
+  const [newDeadline, setNewDeadline] = useState<string | null>(null);
+  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedDone, setSelectedDone] = useState<Set<string>>(new Set());
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [cardInsert, setCardInsert] = useState<{ id: string; position: "before" | "after" } | null>(null);
+  const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
+  const [tagInsert, setTagInsert] = useState<{ tagId: string; position: "before" | "after" } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -297,9 +355,12 @@ export default function TodosPage() {
   const handleAdd = async () => {
     const text = newText.trim();
     if (!text) return;
-    const item = await addTodo(text, newTag || "Work", "medium");
+    const item = await addTodo(text, newTag || "Work", newPriority, newDeadline);
     setItems((prev) => [...prev, item]);
     setNewText("");
+    setNewPriority("medium");
+    setNewDeadline(null);
+    setShowDeadlinePicker(false);
     inputRef.current?.focus();
   };
 
@@ -381,12 +442,40 @@ export default function TodosPage() {
     setShowChat(true);
   };
 
-  // Build columns by tag
-  const columnsByTag = tags.map((tag) => ({
+  const handleColumnReorder = (draggedTagId: string, targetTagId: string, position: "before" | "after") => {
+    if (!draggedTagId || draggedTagId === targetTagId) return;
+    setTagInsert(null);
+    setDraggingTagId(null);
+
+    const sorted = [...tags].sort((a, b) => a.sort_order - b.sort_order);
+    const without = sorted.filter((t) => t.id !== draggedTagId);
+    const targetIdx = without.findIndex((t) => t.id === targetTagId);
+    if (targetIdx < 0) return;
+    const dragged = sorted.find((t) => t.id === draggedTagId);
+    if (!dragged) return;
+
+    const insertIdx = position === "before" ? targetIdx : targetIdx + 1;
+    without.splice(insertIdx, 0, dragged);
+    const orderedIds = without.map((t) => t.id);
+
+    // Optimistic local sort_order update; persist in background.
+    setTags((prev) =>
+      prev.map((t) => {
+        const newIdx = orderedIds.indexOf(t.id);
+        return newIdx >= 0 ? { ...t, sort_order: newIdx } : t;
+      }),
+    );
+    reorderTodoTags(orderedIds).catch(console.error);
+  };
+
+  // Build columns by tag, ordered by sort_order so column drag-to-reorder
+  // is reflected in the render.
+  const sortedTags = [...tags].sort((a, b) => a.sort_order - b.sort_order);
+  const columnsByTag = sortedTags.map((tag) => ({
     tag,
     items: pendingItems.filter((i) => i.tag === tag.name).sort((a, b) => a.sort_order - b.sort_order),
   }));
-  const knownTagNames = new Set(tags.map((t) => t.name));
+  const knownTagNames = new Set(sortedTags.map((t) => t.name));
   const untaggedItems = pendingItems.filter((i) => !knownTagNames.has(i.tag)).sort((a, b) => a.sort_order - b.sort_order);
   if (untaggedItems.length > 0) {
     columnsByTag.push({
@@ -404,89 +493,175 @@ export default function TodosPage() {
         <h1 className="text-2xl font-semibold text-[#2B2B2B]">Personal To-Dos</h1>
       </div>
 
-      {/* Task bar */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
-        {/* Pending/Done tabs */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setActiveStatus("pending")}
-            className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-              activeStatus === "pending"
-                ? "bg-[#7FAEE6] text-white"
-                : "text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
-            }`}
-          >
-            Pending ({pendingItems.length})
-          </button>
-          <button
-            onClick={() => setActiveStatus("done")}
-            className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-              activeStatus === "done"
-                ? "bg-[#7FAEE6] text-white"
-                : "text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4]"
-            }`}
-          >
-            Done ({doneItems.length})
-          </button>
+      {/* Section 1: Quick Add — labeled grid, 5 columns at xl, wraps below */}
+      <section className="mb-6 rounded-lg border border-[#D7CABB] bg-[#FFFDF9] p-4 shadow-[0_8px_24px_rgba(43,43,43,0.04)]">
+        <div className="mb-3">
+          <h2 className="text-lg font-semibold text-[#2B2B2B]">Add a new to-do item</h2>
         </div>
 
-        {/* Add input (pending only) */}
-        {activeStatus === "pending" && (
-          <>
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(320px,1fr)_150px_220px_180px_auto]">
+          {/* Task */}
+          <div className="rounded-lg border border-[#DDD3C7] bg-[#F6F3EE] px-3 py-2">
+            <label
+              htmlFor="quick-add-task"
+              className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]"
+            >
+              Task
+            </label>
             <input
+              id="quick-add-task"
               ref={inputRef}
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              placeholder="Add a new task..."
-              className="flex-1 text-sm px-3 py-1.5 rounded-lg bg-[#FFFDF9] border border-[#DDD3C7] text-[#2B2B2B] placeholder-[#9B948B] outline-none focus:border-[#7FAEE6] focus:ring-1 focus:ring-[#7FAEE6]/30"
+              placeholder="What needs to be done?"
+              className="mt-0.5 w-full bg-transparent text-sm text-[#2B2B2B] outline-none placeholder:text-[#9B948B]"
             />
+          </div>
+
+          {/* Category */}
+          <div className="rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-3 py-2">
+            <label
+              htmlFor="quick-add-category"
+              className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]"
+            >
+              Category
+            </label>
             <select
+              id="quick-add-category"
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
-              className="text-xs px-2 py-1.5 rounded-lg bg-[#FFFDF9] border border-[#DDD3C7] text-[#6F6A64] outline-none"
+              className="mt-0.5 w-full bg-transparent text-sm font-medium text-[#2B2B2B] outline-none"
             >
-              {tags.map((t) => (
+              {sortedTags.map((t) => (
                 <option key={t.id} value={t.name}>{t.name}</option>
               ))}
             </select>
-            <button
-              onClick={handleAdd}
-              disabled={!newText.trim()}
-              className="text-sm px-6 py-1.5 rounded-lg bg-[#7FAEE6] hover:bg-[#6A9DDA] text-white font-medium transition-colors disabled:opacity-40"
-            >
-              Add
-            </button>
-          </>
-        )}
+          </div>
 
-        {/* New Category */}
-        {activeStatus === "pending" && (
-          addingTag ? (
-            <div className="flex items-center gap-1 shrink-0">
-              <input
-                autoFocus
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddTag();
-                  if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); }
-                }}
-                placeholder="Category name"
-                className="text-xs px-2 py-1 rounded-lg bg-[#FFFDF9] border border-[#DDD3C7] text-[#2B2B2B] w-28 outline-none focus:border-[#7FAEE6]"
-              />
-              <button onClick={handleAddTag} className="text-xs text-[#7FAEE6]">✓</button>
-              <button onClick={() => { setAddingTag(false); setNewTagName(""); }} className="text-xs text-[#9B948B]">✕</button>
+          {/* Priority pills */}
+          <div className="rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
+              Priority
+            </p>
+            <div className="mt-1.5 grid grid-cols-3 gap-1">
+              {(["high", "medium", "low"] as const).map((p) => {
+                const active = newPriority === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setNewPriority(p)}
+                    className={`flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                      active ? PRIORITY_PILL_ACTIVE[p] : "bg-[#F6F3EE] text-[#6F6A64] hover:bg-[#EFEAE2]"
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${PRIORITY_DOT[p]}`} />
+                    {p[0].toUpperCase() + p.slice(1)}
+                  </button>
+                );
+              })}
             </div>
-          ) : (
+          </div>
+
+          {/* Deadline */}
+          <div className="relative rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
+              Deadline
+            </p>
+            <div className="mt-0.5 flex items-center justify-between gap-2">
+              <button
+                onClick={() => setShowDeadlinePicker((v) => !v)}
+                className={`min-w-0 flex-1 truncate text-left text-sm font-medium outline-none ${
+                  newDeadline ? "text-[#2B2B2B]" : "text-[#9B948B]"
+                }`}
+              >
+                {newDeadline ? formatDeadlineShort(newDeadline) : "Set deadline"}
+              </button>
+              {newDeadline && (
+                <button
+                  onClick={() => setNewDeadline(null)}
+                  className="shrink-0 text-[#9B948B] hover:text-[#D5847A]"
+                  aria-label="Clear deadline"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {showDeadlinePicker && (
+              <DateTimePicker
+                value={newDeadline}
+                onChange={(iso) => { setNewDeadline(iso); setShowDeadlinePicker(false); }}
+                onClose={() => setShowDeadlinePicker(false)}
+              />
+            )}
+          </div>
+
+          {/* Add Task */}
+          <button
+            onClick={handleAdd}
+            disabled={!newText.trim()}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7FAEE6] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6A9DDA] disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+            Add Task
+          </button>
+        </div>
+      </section>
+
+      {/* Section 2 header: title (left) + Add Category + Pending/Done (right) */}
+      <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h2 className="text-base font-semibold text-[#2B2B2B]">ToDos Board</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {activeStatus === "pending" && (
+            addingTag ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddTag();
+                    if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); }
+                  }}
+                  placeholder="Category name"
+                  className="w-32 rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-2 py-1 text-xs text-[#2B2B2B] outline-none focus:border-[#7FAEE6]"
+                />
+                <button onClick={handleAddTag} className="px-1 text-xs text-[#7FAEE6]">✓</button>
+                <button onClick={() => { setAddingTag(false); setNewTagName(""); }} className="px-1 text-xs text-[#9B948B]">✕</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAddingTag(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#7FAEE6] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6A9DDA]"
+              >
+                <Plus className="h-4 w-4" />
+                Add category
+              </button>
+            )
+          )}
+          <div className="flex rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-1">
             <button
-              onClick={() => setAddingTag(true)}
-              className="text-xs px-3 py-1 rounded-lg border border-dashed border-[#DDD3C7] text-[#9B948B] hover:text-[#7FAEE6] hover:border-[#7FAEE6] transition-colors shrink-0"
+              onClick={() => setActiveStatus("pending")}
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+                activeStatus === "pending"
+                  ? "bg-[#FFFDF9] text-[#2B2B2B] shadow-sm"
+                  : "text-[#6F6A64]"
+              }`}
             >
-              + New Category
+              Pending {pendingItems.length}
             </button>
-          )
-        )}
+            <button
+              onClick={() => setActiveStatus("done")}
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+                activeStatus === "done"
+                  ? "bg-[#FFFDF9] text-[#2B2B2B] shadow-sm"
+                  : "text-[#6F6A64]"
+              }`}
+            >
+              Done {doneItems.length}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -496,19 +671,43 @@ export default function TodosPage() {
 
       {/* PENDING: Kanban columns */}
       {!loading && activeStatus === "pending" && (
-        <div className="flex gap-4 items-start flex-wrap">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {columnsByTag.map(({ tag, items: colItems }, idx) => {
             const color = COLUMN_COLORS[idx % COLUMN_COLORS.length];
+            const isTagDropTarget = tagInsert?.tagId === tag.id;
             return (
               <div
                 key={tag.id}
-                className="w-[300px] shrink-0"
+                className={`relative rounded-lg border bg-[#FFFDF9] p-3 ${
+                  isTagDropTarget ? "border-[#7FAEE6] ring-2 ring-[#7FAEE6]/20" : "border-[#E7DED2]"
+                }`}
                 onDragOver={(e) => {
+                  // Tag drag-over: highlight whole column as drop target.
+                  // For card drag-over, the inner area handles position-aware drop.
+                  if (draggingTagId && draggingTagId !== tag.id && tag.id !== "__other__") {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const position = e.clientX < rect.left + rect.width / 2 ? "before" : "after";
+                    setTagInsert({ tagId: tag.id, position });
+                    return;
+                  }
                   e.preventDefault();
                   e.dataTransfer.dropEffect = "move";
                 }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    if (tagInsert?.tagId === tag.id) setTagInsert(null);
+                  }
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
+                  const draggedTagId = e.dataTransfer.getData("application/x-todo-tag-id");
+                  if (draggedTagId && tag.id !== "__other__") {
+                    const position = tagInsert?.tagId === tag.id ? tagInsert.position : "after";
+                    handleColumnReorder(draggedTagId, tag.id, position);
+                    return;
+                  }
                   const draggedId = e.dataTransfer.getData("application/x-todo-id") || e.dataTransfer.getData("text/plain");
                   if (draggedId) {
                     if (cardInsert) {
@@ -522,6 +721,7 @@ export default function TodosPage() {
                 <ColumnHeader
                   tag={tag}
                   color={color}
+                  count={colItems.length}
                   onRename={(name) => {
                     updateTodoTag(tag.id, { name });
                     setTags((prev) => prev.map((t) => (t.id === tag.id ? { ...t, name } : t)));
@@ -532,10 +732,14 @@ export default function TodosPage() {
                     setTags((prev) => prev.filter((t) => t.id !== tag.id));
                     setItems((prev) => prev.map((i) => (i.tag === tag.name ? { ...i, tag: "Other" } : i)));
                   }}
+                  onDragStart={() => setDraggingTagId(tag.id)}
+                  onDragEnd={() => { setDraggingTagId(null); setTagInsert(null); }}
                 />
-                <div className="space-y-2 mt-2 min-h-[60px]">
+                <div className="mt-3 min-h-[60px] space-y-2">
                   {colItems.length === 0 && (
-                    <div className="text-xs text-[#DDD3C7] text-center py-6">No items</div>
+                    <div className="rounded-lg border border-dashed border-[#DDD3C7] bg-[#F6F3EE] px-3 py-8 text-center text-sm text-[#B1A79B]">
+                      No items yet
+                    </div>
                   )}
                   {colItems.map((item) => (
                     <TodoCard

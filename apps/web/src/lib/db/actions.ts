@@ -122,12 +122,21 @@ export async function updateGoal(
 
 export async function createPhases(
   goalId: string,
-  phases: { title: string; description: string; estimated_weeks: number }[]
+  phases: {
+    title: string;
+    description: string;
+    estimated_weeks: number;
+    /** Per-phase sub-tasks. Inserted into phase_tasks after the phase row
+     *  itself is created. Empty array → no tasks for that phase. */
+    todos?: { title: string; priority: "high" | "medium" | "low" }[];
+  }[]
 ): Promise<Phase[]> {
   const supabase = await createClient();
 
   const phasesWithMeta = phases.map((p, i) => ({
-    ...p,
+    title: p.title,
+    description: p.description,
+    estimated_weeks: p.estimated_weeks,
     goal_id: goalId,
     sort_order: i,
     status: i === 0 ? "active" : ("upcoming" as const),
@@ -140,6 +149,26 @@ export async function createPhases(
     .select();
 
   if (error) throw error;
+  if (!data) return [];
+
+  // Bulk-insert phase_tasks for each phase that has todos. data is
+  // returned in insert order so phases[i] aligns with the ith input.
+  const taskRows = data.flatMap((phase, i) => {
+    const todos = phases[i]?.todos ?? [];
+    return todos.map((t, j) => ({
+      phase_id: phase.id,
+      title: t.title,
+      priority: t.priority,
+      sort_order: j,
+    }));
+  });
+  if (taskRows.length > 0) {
+    const { error: tasksErr } = await supabase
+      .from("phase_tasks")
+      .insert(taskRows);
+    if (tasksErr) throw tasksErr;
+  }
+
   return data;
 }
 
@@ -177,6 +206,82 @@ export async function updatePhase(
 }
 
 // ============================================================
+// Phase Tasks (per-phase sub-tasks: the 1.1 / 1.2 / ... checklist)
+// ============================================================
+
+export async function getPhaseTasksByGoalId(
+  goalId: string,
+): Promise<import("@/lib/types/database").PhaseTask[]> {
+  const supabase = await createClient();
+  // Pull all phase_tasks for phases under this goal in a single query.
+  // We use a join filter through phases.goal_id.
+  const { data, error } = await supabase
+    .from("phase_tasks")
+    .select("*, phases!inner(goal_id)")
+    .eq("phases.goal_id", goalId)
+    .order("phase_id", { ascending: true })
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  // Strip the joined phases column from the returned shape — callers only
+  // want the task fields.
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const { phases: _phases, ...task } = row;
+    return task as unknown as import("@/lib/types/database").PhaseTask;
+  });
+}
+
+export async function togglePhaseTask(
+  taskId: string,
+  completed: boolean,
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("phase_tasks")
+    .update({
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
+    })
+    .eq("id", taskId);
+  if (error) throw error;
+}
+
+export async function addPhaseTask(input: {
+  phase_id: string;
+  title: string;
+  priority?: "high" | "medium" | "low";
+}): Promise<import("@/lib/types/database").PhaseTask> {
+  const supabase = await createClient();
+  // Pick next sort_order at the end of the phase's task list.
+  const { data: existing, error: countErr } = await supabase
+    .from("phase_tasks")
+    .select("sort_order")
+    .eq("phase_id", input.phase_id)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  if (countErr) throw countErr;
+  const nextSort = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
+
+  const { data, error } = await supabase
+    .from("phase_tasks")
+    .insert({
+      phase_id: input.phase_id,
+      title: input.title,
+      priority: input.priority ?? "medium",
+      sort_order: nextSort,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePhaseTask(taskId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("phase_tasks").delete().eq("id", taskId);
+  if (error) throw error;
+}
+
+// ============================================================
 // Weekly Plans
 // ============================================================
 
@@ -190,6 +295,21 @@ export async function createWeeklyPlan(data: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
+
+  // Purge any existing weekly_plan for the same (phase_id, week_start)
+  // before inserting. There's no UNIQUE constraint on those columns, so
+  // repeated "Generate with Team" attempts (or an interrupted save that
+  // wrote the header but not the tasks) silently accumulate duplicate
+  // rows. The goal page then picks whichever one Postgres happens to
+  // return first — often a stale empty row — and shows "No weekly plan
+  // yet" even though the user just saved a plan. daily_tasks cascades
+  // via ON DELETE CASCADE.
+  await supabase
+    .from("weekly_plans")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("phase_id", data.phase_id)
+    .eq("week_start", data.week_start);
 
   const { data: plan, error } = await supabase
     .from("weekly_plans")
@@ -1192,6 +1312,13 @@ export async function deleteTodoTag(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function reorderTodoTags(orderedIds: string[]): Promise<void> {
+  const supabase = await createClient();
+  for (let i = 0; i < orderedIds.length; i++) {
+    await supabase.from("todo_tags").update({ sort_order: i }).eq("id", orderedIds[i]);
+  }
+}
+
 // ============================================================
 // Workflows
 // ============================================================
@@ -1479,6 +1606,12 @@ export interface DashboardOnboarding {
   singleGoalId: string | null;
   /** Goal count for Stage 2 routing decision (1 → plan-week direct, 2+ → /goals list). */
   goalCount: number;
+  /** Number of weekly plans the user has. Drives Step 2's done indicator
+   *  independently of the sequential `stage`. */
+  weeklyPlanCount: number;
+  /** Number of personal (non-goal) to-dos. Drives Step 3's done indicator
+   *  independently of the sequential `stage`. */
+  personalTodoCount: number;
 }
 
 export async function getDashboardData(): Promise<{
@@ -1501,7 +1634,7 @@ export async function getDashboardData(): Promise<{
       highPriorityItems: [],
       workflows: [],
       goalsWithPhases: [],
-      onboarding: { stage: "stage1", goalCount: 0, singleGoalId: null },
+      onboarding: { stage: "stage1", goalCount: 0, singleGoalId: null, weeklyPlanCount: 0, personalTodoCount: 0 },
     };
   }
 
@@ -1647,21 +1780,26 @@ export async function getDashboardData(): Promise<{
   //
   // Drives the WelcomeBanner. Pure derivation from the same data we
   // already loaded — no extra round-trips. Stage progression assumes the
-  // user follows the natural Goal → Weekly Plan → To-Do path.
+  // user follows the natural Goal → Weekly Plan → Personal To-Do path.
+  // Step 3 only counts Personal to-dos (goal_id IS NULL); todos created
+  // from a Goal don't fulfill the "create your first to-do" step because
+  // those are auto-generated from the weekly plan.
   const goalCount = goals.length;
   const weeklyPlanCount = plans.length;
-  const todoCount = todos.length;
+  const personalTodoCount = todos.filter((t) => !t.goal_id).length;
 
   let stage: DashboardOnboardingStage;
   if (goalCount === 0) stage = "stage1";
   else if (weeklyPlanCount === 0) stage = "stage2";
-  else if (todoCount === 0) stage = "stage3";
+  else if (personalTodoCount === 0) stage = "stage3";
   else stage = "done";
 
   const onboarding: DashboardOnboarding = {
     stage,
     goalCount,
     singleGoalId: goalCount === 1 ? goals[0].id : null,
+    weeklyPlanCount,
+    personalTodoCount,
   };
 
   // --- Today Items ---

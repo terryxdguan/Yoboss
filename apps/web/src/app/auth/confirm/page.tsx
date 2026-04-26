@@ -21,7 +21,7 @@ function pickDestination(rawNext: string | null): string {
   // Cookie wins: it's the deliberate "the user typed a goal before
   // signing up" signal we set on the landing page, and it survives the
   // email round-trip across tabs in the same browser.
-  if (hasPendingGoal()) return "/goals/create";
+  if (hasPendingGoal()) return "/goals";
 
   if (rawNext) {
     // Same-origin path → use as-is. Block protocol-relative ("//evil")

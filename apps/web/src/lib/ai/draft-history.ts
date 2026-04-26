@@ -78,6 +78,18 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
   let latestToolUseId: string | null = null;
   let lastAssistantInterrupted = false;
 
+  // Pre-pass: collect every tool_use_id that already has a matching
+  // tool_result in history. `metadata.answered` was never persisted on
+  // the assistant row, so without this the resumed UI renders every
+  // past ask_question as still-interactive — the user can misclick an
+  // old goal-creation question and fire a stale tool_result.
+  const answeredToolUseIds = new Set<string>();
+  for (const row of messages) {
+    if (row.role === "user" && row.metadata?.toolResultFor) {
+      answeredToolUseIds.add(row.metadata.toolResultFor);
+    }
+  }
+
   for (const row of messages) {
     if (row.role === "user") {
       const toolResultFor = row.metadata?.toolResultFor;
@@ -167,7 +179,9 @@ export function rebuildDraftHistory(messages: DBChatMessage[]): RebuiltHistory {
         role: "assistant",
         content: row.content,
         toolUse: uiToolUse,
-        answered: row.metadata?.answered === true,
+        answered:
+          row.metadata?.answered === true ||
+          (uiToolUse ? answeredToolUseIds.has(uiToolUse.id) : false),
       });
 
       // API side: emit text block + optional tool_use block. If the assistant
@@ -211,9 +225,6 @@ export function fixDoubleSerializedPlan(plan: GoalPlanData): void {
   const p = plan as unknown as Record<string, unknown>;
   if (typeof p.phases === "string") {
     try { p.phases = JSON.parse(p.phases as string); } catch { /* leave as-is */ }
-  }
-  if (typeof p.goal_todos === "string") {
-    try { p.goal_todos = JSON.parse(p.goal_todos as string); } catch { /* leave as-is */ }
   }
   // Also fix nested todos arrays inside each phase — same quirk can
   // hit one level deeper.

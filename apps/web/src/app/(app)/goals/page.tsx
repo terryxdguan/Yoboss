@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus, Flag, Clock, X, Trash2, Archive, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/db/client";
 import type { Goal, Phase } from "@/lib/types/database";
+import { GoalWizardPanel } from "@/components/goals/goal-wizard-panel";
+import { clearPendingGoal, getPendingGoal } from "@/lib/pending-goal";
 
 interface GoalWithPhases extends Goal {
   phases: Phase[];
@@ -16,6 +18,10 @@ export default function GoalsPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [wizardState, setWizardState] = useState<
+    | { open: false }
+    | { open: true; autoStart: boolean; initialGoalText?: string }
+  >({ open: false });
 
   const loadGoals = useCallback(async () => {
     const supabase = createClient();
@@ -28,6 +34,18 @@ export default function GoalsPage() {
   }, []);
 
   useEffect(() => { setMounted(true); loadGoals(); }, [loadGoals]);
+
+  // One-shot handoff from the marketing landing page: if the visitor typed
+  // a goal before signing in, the pending-goal helper holds it (cookie +
+  // sessionStorage so it survives the email round-trip). Auto-open the
+  // wizard with their text so they don't have to re-type.
+  useEffect(() => {
+    const pending = getPendingGoal();
+    if (pending) {
+      clearPendingGoal();
+      setWizardState({ open: true, autoStart: true, initialGoalText: pending });
+    }
+  }, []);
 
   const handleArchive = async (goal: GoalWithPhases, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,7 +87,7 @@ export default function GoalsPage() {
               </button>
             )}
             <button
-              onClick={() => router.push("/goals/create")}
+              onClick={() => setWizardState({ open: true, autoStart: false })}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -118,6 +136,19 @@ export default function GoalsPage() {
             loadGoals();
           }}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {wizardState.open && (
+        <GoalWizardPanel
+          intent="goal-creation"
+          initialGoalText={wizardState.autoStart ? wizardState.initialGoalText : undefined}
+          autoStart={wizardState.autoStart}
+          onClose={() => setWizardState({ open: false })}
+          onGoalCreated={(goalId) => {
+            setWizardState({ open: false });
+            router.push(`/goals/${goalId}`);
+          }}
         />
       )}
     </div>

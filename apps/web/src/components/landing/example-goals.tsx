@@ -13,7 +13,7 @@ interface ExampleGoalsProps {
   compact?: boolean;
 }
 
-const EXAMPLES: {
+export const EXAMPLES: {
   icon: LucideIcon;
   color: string;
   title: string;

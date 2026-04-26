@@ -63,6 +63,17 @@ export interface DailyTask {
   sort_order: number;
 }
 
+export interface PhaseTask {
+  id: string;
+  phase_id: string;
+  title: string;
+  priority: "high" | "medium" | "low";
+  completed: boolean;
+  completed_at: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface CoachingMessage {
   id: string;
   user_id: string;

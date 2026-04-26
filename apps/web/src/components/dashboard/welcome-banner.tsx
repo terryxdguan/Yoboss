@@ -32,7 +32,7 @@ export function WelcomeBanner({ onboarding, onOpenAddTodo }: WelcomeBannerProps)
           subtitle:
             "Let's set up your first goal — describe what you want to achieve and your team takes it from there.",
           ctaLabel: "Create your first goal",
-          onClick: () => router.push("/goals/create"),
+          onClick: () => router.push("/goals"),
         };
       case "stage2":
         return {
@@ -41,10 +41,11 @@ export function WelcomeBanner({ onboarding, onOpenAddTodo }: WelcomeBannerProps)
             "Turn your goal into a concrete weekly schedule your team can execute alongside you.",
           ctaLabel: "Plan your first week",
           onClick: () => {
-            // Smart route: 1 goal → that goal's plan-week directly;
-            // 2+ goals → /goals list so user picks which one to plan.
+            // Smart route: 1 goal → that goal's detail page (where the
+            // weekly-planning wizard button lives); 2+ goals → /goals
+            // list so user picks which one to plan.
             if (onboarding.singleGoalId) {
-              router.push(`/goals/${onboarding.singleGoalId}/plan-week`);
+              router.push(`/goals/${onboarding.singleGoalId}`);
             } else {
               router.push("/goals");
             }

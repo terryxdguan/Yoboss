@@ -14,6 +14,9 @@ export interface GoalPlanData {
     title: string;
     description: string;
     estimated_weeks: number;
+    // All actionable work for the goal lives under a phase. Cross-cutting
+    // setup / cadence items the AI used to put in a separate "goal_todos"
+    // list now belong in the earliest phase's todos.
     todos: { title: string; priority: "high" | "medium" | "low" }[];
   }[];
   // For short goals: direct weekly schedule (skips manual "Generate with AI")
@@ -28,8 +31,6 @@ export interface GoalPlanData {
       sort_order: number;
     }[];
   };
-  // Auto-generated goal todos (prep tasks, admin, etc.)
-  goal_todos?: { title: string; priority: "high" | "medium" | "low" }[];
 }
 
 // create_weekly_plan tool output

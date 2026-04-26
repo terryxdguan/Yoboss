@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Loader2, Calendar, CheckSquare, Clock } from "lucide-react";
+import { X, Loader2, Calendar, Clock } from "lucide-react";
 import type { GoalPlanData } from "@/lib/types/goal-chat";
 
 interface RoadmapPreviewProps {
@@ -32,7 +32,6 @@ export function RoadmapPreview({
   const phases = Array.isArray(plan.phases) ? plan.phases : [];
   const totalTodos = phases.reduce((sum, p) => sum + (p.todos?.length ?? 0), 0);
   const hasSchedule = !!plan.weekly_schedule;
-  const hasGoalTodos = plan.goal_todos && plan.goal_todos.length > 0;
   const scheduleTasks = plan.weekly_schedule?.tasks || [];
 
   // Group schedule tasks by day
@@ -43,10 +42,9 @@ export function RoadmapPreview({
     tasksByDay.set(t.day_of_week, day);
   }
 
-  const summaryParts: string[] = [];
-  if (hasSchedule) summaryParts.push(`${scheduleTasks.length} scheduled tasks`);
-  else summaryParts.push(`${phases.length} phases, ${totalTodos} tasks`);
-  if (hasGoalTodos) summaryParts.push(`${plan.goal_todos!.length} to-dos`);
+  const summaryParts: string[] = [`${phases.length} phase${phases.length === 1 ? "" : "s"}`];
+  if (totalTodos > 0) summaryParts.push(`${totalTodos} task${totalTodos === 1 ? "" : "s"}`);
+  if (hasSchedule) summaryParts.push(`${scheduleTasks.length} scheduled`);
 
   return (
     <>
@@ -107,27 +105,6 @@ export function RoadmapPreview({
                         </div>
                       </div>
                     ))}
-                </div>
-              </div>
-            )}
-
-            {/* Goal To-Dos */}
-            {hasGoalTodos && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckSquare className="h-4 w-4 text-[#7FAEE6]" />
-                  <h3 className="text-sm font-semibold text-[#2B2B2B]">To-Do List</h3>
-                </div>
-                <div className="space-y-1">
-                  {plan.goal_todos!.map((todo, i) => (
-                    <div key={i} className="flex items-center gap-2 py-1">
-                      <span
-                        className="shrink-0 w-2 h-2 rounded-full"
-                        style={{ backgroundColor: PRIORITY_COLORS[todo.priority] }}
-                      />
-                      <span className="text-sm text-[#2B2B2B]">{todo.title}</span>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}

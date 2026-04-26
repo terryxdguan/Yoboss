@@ -55,7 +55,7 @@ export function DashboardImportantGoals({ goals }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.push("/goals/create")}
+            onClick={() => router.push("/goals")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7FAEE6] text-white text-xs font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all shadow-[0_2px_8px_rgba(127,174,230,0.25)]"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -80,7 +80,7 @@ export function DashboardImportantGoals({ goals }: Props) {
           </div>
           <p className="text-sm text-[#6F6A64]">Pin important goals here for quick tracking</p>
           <button
-            onClick={() => router.push("/goals/create")}
+            onClick={() => router.push("/goals")}
             className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
           >
             <Plus className="h-4 w-4" />

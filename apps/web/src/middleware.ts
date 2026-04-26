@@ -38,6 +38,9 @@ export async function middleware(request: NextRequest) {
   // that authenticate via their own mechanism (Stripe signatures, CRON secret, etc.)
   const isPublicRoute =
     request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname === "/dashboard-preview" ||
+    request.nextUrl.pathname === "/dashboard-main-preview" ||
+    request.nextUrl.pathname === "/todos-layout-preview" ||
     request.nextUrl.pathname.startsWith("/auth/") ||
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||

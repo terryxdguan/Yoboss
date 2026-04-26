@@ -25,8 +25,15 @@ export function AppShell({ children, userAvatar, userName }: AppShellProps) {
         setChatOpen((prev) => !prev);
       }
     };
+    // Programmatic open from anywhere in the tree (e.g. the dashboard
+    // Employee card's "Ask Team" button) without prop drilling.
+    const handleOpenChat = () => setChatOpen(true);
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("yoboss:open-chat", handleOpenChat);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("yoboss:open-chat", handleOpenChat);
+    };
   }, []);
 
   return (

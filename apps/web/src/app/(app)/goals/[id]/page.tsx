@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -17,14 +17,21 @@ import {
   Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
-import type { Goal, Phase, WeeklyPlan, DailyTask, TodoItem } from "@/lib/types/database";
-import { getGoalTodos, addTodo, updateTodo, deleteTodo, updateGoal, updatePhase } from "@/lib/db/actions";
+import type { Goal, Phase, WeeklyPlan, DailyTask, PhaseTask } from "@/lib/types/database";
+import {
+  updateGoal,
+  updatePhase,
+  getPhaseTasksByGoalId,
+  addPhaseTask,
+  togglePhaseTask,
+  deletePhaseTask,
+} from "@/lib/db/actions";
 import { EditableText } from "@/components/ui/editable-text";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
+import { GoalWizardPanel } from "@/components/goals/goal-wizard-panel";
 import { DeliverablesPanel } from "@/components/goals/deliverables-panel";
 import { NotesPanel } from "@/components/goals/notes-panel";
 import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
-import { DateTimePicker } from "@/components/todo/date-time-picker";
 
 type RightPanel = "none" | "ai" | "deliverables" | "notes";
 
@@ -48,13 +55,42 @@ export default function GoalDetailPage() {
   const [weeklyPlan, setWeeklyPlan] = useState<(WeeklyPlan & { daily_tasks: DailyTask[] }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [rightPanel, setRightPanel] = useState<RightPanel>("none");
+  const [showWeeklyWizard, setShowWeeklyWizard] = useState(false);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [pendingAITask, setPendingAITask] = useState<DailyTask | null>(null);
-  const [goalTodos, setGoalTodos] = useState<TodoItem[]>([]);
-  const [showAddTodo, setShowAddTodo] = useState(false);
-  const [newTodoText, setNewTodoText] = useState("");
-  const [newTodoDeadline, setNewTodoDeadline] = useState("");
-  const [newTodoPriority, setNewTodoPriority] = useState<"high" | "medium" | "low">("medium");
+  // Phase tasks (the per-phase 1.1, 1.2 ... checklist persisted in phase_tasks).
+  // We hold them flat; UI filters by selectedPhaseId.
+  const [phaseTasks, setPhaseTasks] = useState<PhaseTask[]>([]);
+  const [newPhaseTaskText, setNewPhaseTaskText] = useState("");
+  const [newPhaseTaskPriority, setNewPhaseTaskPriority] = useState<
+    "high" | "medium" | "low"
+  >("medium");
+  const [showAddPhaseTask, setShowAddPhaseTask] = useState(false);
+
+  // Tail pointer on the right roadmap card tracks the selected phase's
+  // vertical center so it visually "points back" to the source card on
+  // the left rail. Only meaningful at lg+ widths (where the layout is
+  // side-by-side); below that the rail stacks above the pane.
+  const phaseRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const railRef = useRef<HTMLDivElement>(null);
+  const [tailTop, setTailTop] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!selectedPhaseId) return;
+    const compute = () => {
+      const card = phaseRefs.current.get(selectedPhaseId);
+      const rail = railRef.current;
+      if (!card || !rail) return;
+      const railTop = rail.getBoundingClientRect().top;
+      const cardRect = card.getBoundingClientRect();
+      // Position relative to the rail's top edge (= right card's top edge,
+      // since both panes top-align in the grid).
+      setTailTop(cardRect.top - railTop + cardRect.height / 2);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [selectedPhaseId, phases, phaseTasks.length]);
 
   const togglePanel = (panel: RightPanel) => {
     setRightPanel((prev) => (prev === panel ? "none" : panel));
@@ -89,6 +125,7 @@ export default function GoalDetailPage() {
       .select("*, daily_tasks(*)")
       .in("phase_id", phaseIds)
       .order("week_start", { ascending: false })
+      .order("created_at", { ascending: false })
       .order("sort_order", { referencedTable: "daily_tasks" })
       .limit(1);
 
@@ -98,12 +135,13 @@ export default function GoalDetailPage() {
 
     setWeeklyPlan(matchingPlan || null);
 
-    // Load goal-specific todos
+    // Load all phase tasks for this goal (flat list — UI filters by phase).
     try {
-      const todos = await getGoalTodos(id);
-      setGoalTodos(todos);
-    } catch {
-      // Non-blocking
+      const tasks = await getPhaseTasksByGoalId(id);
+      setPhaseTasks(tasks);
+    } catch (err) {
+      // Non-blocking — old goals predate phase_tasks; empty list is fine.
+      console.error("Failed to load phase tasks:", err);
     }
 
     setLoading(false);
@@ -113,53 +151,50 @@ export default function GoalDetailPage() {
     loadData();
   }, [loadData]);
 
-  // Goal todo handlers
-  const handleAddGoalTodo = async () => {
-    if (!newTodoText.trim()) return;
+  // Phase task handlers
+  const handleAddPhaseTask = async () => {
+    if (!newPhaseTaskText.trim() || !selectedPhaseId) return;
     try {
-      const todo = await addTodo(
-        newTodoText.trim(),
-        "Goal",
-        newTodoPriority,
-        newTodoDeadline || null,
-        id
-      );
-      setGoalTodos(prev => [...prev, todo]);
-      setNewTodoText("");
-      setNewTodoDeadline("");
-      setNewTodoPriority("medium");
-      setShowAddTodo(false);
+      const task = await addPhaseTask({
+        phase_id: selectedPhaseId,
+        title: newPhaseTaskText.trim(),
+        priority: newPhaseTaskPriority,
+      });
+      setPhaseTasks((prev) => [...prev, task]);
+      setNewPhaseTaskText("");
+      setNewPhaseTaskPriority("medium");
+      setShowAddPhaseTask(false);
     } catch (err) {
-      console.error("Failed to add goal todo:", err);
+      console.error("Failed to add phase task:", err);
     }
   };
 
-  const handleUpdateGoalTodo = async (todoId: string, patch: Partial<Pick<TodoItem, "text" | "deadline" | "priority">>) => {
+  const handleTogglePhaseTask = async (taskId: string, completed: boolean) => {
+    // Optimistic update
+    setPhaseTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              completed: !completed,
+              completed_at: !completed ? new Date().toISOString() : null,
+            }
+          : t,
+      ),
+    );
     try {
-      await updateTodo(todoId, patch);
-      setGoalTodos(prev => prev.map(t => t.id === todoId ? { ...t, ...patch } : t));
+      await togglePhaseTask(taskId, !completed);
     } catch (err) {
-      console.error("Failed to update goal todo:", err);
+      console.error("Failed to toggle phase task:", err);
     }
   };
 
-  const handleToggleGoalTodo = async (todoId: string, completed: boolean) => {
+  const handleDeletePhaseTask = async (taskId: string) => {
+    setPhaseTasks((prev) => prev.filter((t) => t.id !== taskId));
     try {
-      await updateTodo(todoId, { completed: !completed });
-      setGoalTodos(prev =>
-        prev.map(t => t.id === todoId ? { ...t, completed: !completed } : t)
-      );
+      await deletePhaseTask(taskId);
     } catch (err) {
-      console.error("Failed to toggle goal todo:", err);
-    }
-  };
-
-  const handleDeleteGoalTodo = async (todoId: string) => {
-    try {
-      await deleteTodo(todoId);
-      setGoalTodos(prev => prev.filter(t => t.id !== todoId));
-    } catch (err) {
-      console.error("Failed to delete goal todo:", err);
+      console.error("Failed to delete phase task:", err);
     }
   };
 
@@ -378,91 +413,136 @@ export default function GoalDetailPage() {
         </div>
       </div>
 
-      {/* Roadmap */}
+      {/* Roadmap — left rail (phase list) and right pane (selected phase's
+          tasks) are two separate cards; right card has a tail pointer that
+          vertically tracks the selected phase on the left. */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-[#2B2B2B]">Roadmap</h2>
           <span className="text-xs text-[#9B948B]">{phases.length} phases</span>
         </div>
-        <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1">
-          {phases.map((phase, idx) => {
-            const isSelected = phase.id === selectedPhaseId;
-            return (
-              <div key={phase.id} className="flex items-center">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(260px,340px)_1fr]">
+          {/* Left rail card */}
+          <div
+            ref={railRef}
+            className="space-y-2.5 rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-3 shadow-[0_2px_8px_rgba(30,34,39,0.04)]"
+          >
+            {phases.map((phase, idx) => {
+              const color = PHASE_COLORS[idx % PHASE_COLORS.length];
+              const isSelected = phase.id === selectedPhaseId;
+              const isActive = phase.status === "active";
+              const isCompleted = phase.status === "completed";
+              return (
                 <button
+                  key={phase.id}
+                  ref={(el) => {
+                    if (el) phaseRefs.current.set(phase.id, el);
+                    else phaseRefs.current.delete(phase.id);
+                  }}
                   onClick={() => setSelectedPhaseId(phase.id)}
-                  className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[120px] ${
+                  className={`flex w-full gap-3 rounded-xl border p-3 text-left transition-colors ${
                     isSelected
-                      ? "bg-[#7FAEE6]/8 ring-1 ring-[#7FAEE6]/30"
-                      : "hover:bg-[#F1ECE4]"
+                      ? "border-[#7FAEE6] bg-[#F8FBFF] shadow-[0_2px_10px_rgba(127,174,230,0.18)]"
+                      : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#DDD3C7] hover:bg-[#F8F5EF]"
                   }`}
                 >
+                  {/* Colored number badge */}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-                      phase.status === "completed"
-                        ? "bg-[#7FB38A] text-white"
-                        : phase.status === "active"
-                          ? "bg-[#7FAEE6] text-white"
-                          : "bg-[#E7DED2] text-[#9B948B]"
-                    }`}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-semibold text-white"
+                    style={{ backgroundColor: color.bg }}
                   >
-                    {phase.status === "completed" ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      idx + 1
-                    )}
+                    {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : idx + 1}
                   </div>
-                  <span className={`text-[11px] font-medium text-center leading-tight line-clamp-2 ${
-                    isSelected ? "text-[#2B2B2B]" : "text-[#9B948B]"
-                  }`}>
-                    {phase.title.replace(/^Phase \d+:\s*/, "")}
-                  </span>
+                  {/* Body */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-snug text-[#2B2B2B]">
+                      {phase.title.replace(/^Phase \d+:\s*/, "")}
+                    </p>
+                    {phase.description && (
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[#6F6A64]">
+                        {phase.description}
+                      </p>
+                    )}
+                    <div className="mt-1.5 flex items-center gap-2 text-[11px] text-[#9B948B]">
+                      <Clock className="h-3 w-3" />
+                      {phase.estimated_weeks} week{phase.estimated_weeks !== 1 ? "s" : ""}
+                      {isActive && (
+                        <span className="font-semibold text-[#7FAEE6]">· You are here</span>
+                      )}
+                    </div>
+                  </div>
                 </button>
-                {idx < phases.length - 1 && (
-                  <div
-                    className={`w-6 h-0.5 shrink-0 ${
-                      phase.status === "completed" ? "bg-[#7FB38A]" : "bg-[#E7DED2]"
-                    }`}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Selected phase info */}
-        {selectedPhase && (
-          <div className="mt-4 pt-4 border-t border-[#E7DED2]">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-[#2B2B2B]">
-                  <EditableText
-                    value={selectedPhase.title}
-                    onSave={(next) => handleSavePhaseField(selectedPhase.id, "title", next)}
-                    placeholder="Phase title"
-                    className="text-base font-semibold text-[#2B2B2B]"
-                  />
-                </h3>
-                <p className="text-sm text-[#6F6A64] mt-1">
-                  <EditableText
-                    value={selectedPhase.description || ""}
-                    onSave={(next) => handleSavePhaseField(selectedPhase.id, "description", next)}
-                    multiline
-                    placeholder="Describe this phase…"
-                    emptyHint="Double-click to add a description…"
-                    className="text-sm text-[#6F6A64]"
-                  />
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[#9B948B] shrink-0">
-                <Clock className="h-3.5 w-3.5" />
-                {selectedPhase.estimated_weeks} week{selectedPhase.estimated_weeks !== 1 ? "s" : ""}
-              </div>
-            </div>
+              );
+            })}
           </div>
-        )}
-      </div>{/* end white card */}
+
+          {/* Right pane card */}
+          <div className="relative min-w-0 rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+            {/* Tail pointer — diamond rotated 45°, only the bottom-left
+                edges are visible to form a left-pointing triangle that
+                "punches through" the card's left border at the same Y as
+                the selected phase. lg+ only. */}
+            {tailTop !== null && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute hidden lg:block"
+                style={{ top: `${tailTop - 8}px`, left: "-8px" }}
+              >
+                <div className="h-4 w-4 rotate-45 border-b border-l border-[#E7DED2] bg-[#FFFDF9]" />
+              </div>
+            )}
+
+            {selectedPhase ? (
+              <>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-semibold text-[#2B2B2B]">
+                      <EditableText
+                        value={selectedPhase.title}
+                        onSave={(next) => handleSavePhaseField(selectedPhase.id, "title", next)}
+                        placeholder="Phase title"
+                        className="text-base font-semibold text-[#2B2B2B]"
+                      />
+                    </h3>
+                    <p className="mt-1 text-sm text-[#6F6A64]">
+                      <EditableText
+                        value={selectedPhase.description || ""}
+                        onSave={(next) => handleSavePhaseField(selectedPhase.id, "description", next)}
+                        multiline
+                        placeholder="Describe this phase…"
+                        emptyHint="Double-click to add a description…"
+                        className="text-sm text-[#6F6A64]"
+                      />
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5 text-xs text-[#9B948B]">
+                    <Clock className="h-3.5 w-3.5" />
+                    {selectedPhase.estimated_weeks} week{selectedPhase.estimated_weeks !== 1 ? "s" : ""}
+                  </div>
+                </div>
+
+                <PhaseTasksList
+                  tasks={phaseTasks
+                    .filter((t) => t.phase_id === selectedPhase.id)
+                    .sort((a, b) => a.sort_order - b.sort_order)}
+                  showAddForm={showAddPhaseTask}
+                  onShowAddForm={setShowAddPhaseTask}
+                  newText={newPhaseTaskText}
+                  onNewTextChange={setNewPhaseTaskText}
+                  newPriority={newPhaseTaskPriority}
+                  onNewPriorityChange={setNewPhaseTaskPriority}
+                  onAdd={handleAddPhaseTask}
+                  onToggle={handleTogglePhaseTask}
+                  onDelete={handleDeletePhaseTask}
+                />
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[#DDD3C7] bg-[#F6F3EE] px-4 py-10 text-center text-sm text-[#9B948B]">
+                Select a phase on the left to see its tasks.
+              </div>
+            )}
+          </div>
+        </div>
       </div>{/* end Roadmap section */}
 
       {/* Weekly Schedule */}
@@ -477,7 +557,7 @@ export default function GoalDetailPage() {
               so it's impossible to miss as the obvious next step. */}
           {hasTasks && (
             <button
-              onClick={() => router.push(`/goals/${id}/plan-week`)}
+              onClick={() => setShowWeeklyWizard(true)}
               className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -487,19 +567,25 @@ export default function GoalDetailPage() {
         </div>
 
         {!hasTasks && (
-          <div className="rounded-2xl border border-dashed border-[#DDD3C7] bg-[#FFFDF9] p-12 text-center">
-            <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
-            <p className="text-sm font-medium text-[#2B2B2B]">No weekly plan yet</p>
-            <p className="text-xs text-[#9B948B] mt-1 mb-5">
-              Generate a personalized weekly plan with your team — it&apos;s your next step
-            </p>
-            <button
-              onClick={() => router.push(`/goals/${id}/plan-week`)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
-            >
-              <Sparkles className="h-4 w-4" />
-              Generate with Team
-            </button>
+          <div className="relative">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#7FAEE6] opacity-50 blur-xl"
+            />
+            <div className="relative rounded-2xl border-2 border-[#7FAEE6] bg-[#FFFDF9] p-12 text-center shadow-[0_8px_28px_rgba(127,174,230,0.18)]">
+              <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
+              <p className="text-sm font-medium text-[#2B2B2B]">No weekly plan yet</p>
+              <p className="text-xs text-[#9B948B] mt-1 mb-5">
+                Generate a personalized weekly plan with your team — it&apos;s your next step
+              </p>
+              <button
+                onClick={() => setShowWeeklyWizard(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate with Team
+              </button>
+            </div>
           </div>
         )}
 
@@ -532,22 +618,6 @@ export default function GoalDetailPage() {
               />
             ))}
 
-            {/* Goal To-Do List — 8th slot */}
-            <GoalTodoCard
-              todos={goalTodos}
-              onToggle={handleToggleGoalTodo}
-              onDelete={handleDeleteGoalTodo}
-              onUpdate={handleUpdateGoalTodo}
-              showAddForm={showAddTodo}
-              onShowAddForm={setShowAddTodo}
-              newText={newTodoText}
-              onNewTextChange={setNewTodoText}
-              newDeadline={newTodoDeadline}
-              onNewDeadlineChange={setNewTodoDeadline}
-              newPriority={newTodoPriority}
-              onNewPriorityChange={setNewTodoPriority}
-              onAdd={handleAddGoalTodo}
-            />
           </div>
         )}
       </div>
@@ -592,6 +662,25 @@ export default function GoalDetailPage() {
           onClose={() => setRightPanel("none")}
         />
       )}
+
+      {showWeeklyWizard && goal && (activePhase || phases[0]) && (
+        <GoalWizardPanel
+          intent="weekly-planning"
+          goalId={id}
+          goal={{ title: goal.title, description: goal.description || "" }}
+          phase={{
+            id: (activePhase || phases[0]).id,
+            title: (activePhase || phases[0]).title,
+            description: (activePhase || phases[0]).description || "",
+            estimatedWeeks: (activePhase || phases[0]).estimated_weeks || 4,
+          }}
+          onClose={() => setShowWeeklyWizard(false)}
+          onWeeklyPlanSaved={() => {
+            setShowWeeklyWizard(false);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -602,225 +691,145 @@ const PRIORITY_DOT: Record<string, string> = {
   low: "bg-[#7FB38A]",
 };
 
-function formatDeadlineShort(d: string): string {
-  const date = new Date(d);
-  const month = date.toLocaleString("en", { month: "short" });
-  const day = date.getDate();
-  const h = date.getHours();
-  const mins = date.getMinutes();
-  if (h === 0 && mins === 0) return `${month} ${day}`;
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const ap = h >= 12 ? "PM" : "AM";
-  return `${month} ${day} ${h12}:${String(mins).padStart(2, "0")}${ap}`;
-}
+// Per-phase color used by the roadmap left rail. Cycles by index so any
+// number of phases gets a distinct hue without hand-coding per name.
+const PHASE_COLORS: { bg: string }[] = [
+  { bg: "#7FAEE6" }, // blue
+  { bg: "#C9A968" }, // gold
+  { bg: "#9CC4A4" }, // green
+  { bg: "#9B6B5C" }, // brown
+  { bg: "#7FB3B3" }, // teal
+  { bg: "#B58FA0" }, // mauve
+];
 
-function GoalTodoCard({
-  todos, onToggle, onDelete, onUpdate,
-  showAddForm, onShowAddForm,
-  newText, onNewTextChange,
-  newDeadline, onNewDeadlineChange,
-  newPriority, onNewPriorityChange,
+function PhaseTasksList({
+  tasks,
+  showAddForm,
+  onShowAddForm,
+  newText,
+  onNewTextChange,
+  newPriority,
+  onNewPriorityChange,
   onAdd,
+  onToggle,
+  onDelete,
 }: {
-  todos: TodoItem[];
-  onToggle: (id: string, completed: boolean) => void;
-  onDelete: (id: string) => void;
-  onUpdate: (id: string, patch: Partial<Pick<TodoItem, "text" | "deadline" | "priority">>) => void;
+  tasks: PhaseTask[];
   showAddForm: boolean;
   onShowAddForm: (v: boolean) => void;
   newText: string;
   onNewTextChange: (v: string) => void;
-  newDeadline: string;
-  onNewDeadlineChange: (v: string) => void;
   newPriority: "high" | "medium" | "low";
-  onNewPriorityChange: (v: "high" | "medium" | "low") => void;
+  onNewPriorityChange: (p: "high" | "medium" | "low") => void;
   onAdd: () => void;
+  onToggle: (taskId: string, completed: boolean) => void;
+  onDelete: (taskId: string) => void;
 }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editingDeadlineId, setEditingDeadlineId] = useState<string | null>(null);
-  const [showNewDeadlinePicker, setShowNewDeadlinePicker] = useState(false);
-
   return (
-    <div className="rounded-xl border border-[#B8D4F0] bg-[#EAF3FD] p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-[#3B7DD8]">
-          Goal To-Dos
-        </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-[#7FAEE6]">
-            {todos.filter(t => t.completed).length}/{todos.length} done
-          </span>
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
+          Tasks ({tasks.length})
+        </p>
+        {!showAddForm && (
           <button
             onClick={() => onShowAddForm(true)}
-            className="p-1 rounded-md bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors"
-            title="Add to-do"
+            className="inline-flex items-center gap-1 text-xs text-[#7FAEE6] hover:underline"
           >
             <Plus className="h-3 w-3" />
+            Add task
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Add form modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => onShowAddForm(false)} />
-          <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-md">
-            <div className="px-6 pt-6 pb-4 border-b border-[#E7DED2]">
-              <h2 className="text-lg font-semibold text-[#2B2B2B]">Add Goal To-Do</h2>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#2B2B2B] mb-1.5">Task</label>
-                <input
-                  autoFocus
-                  value={newText}
-                  onChange={(e) => onNewTextChange(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && newText.trim()) onAdd(); if (e.key === "Escape") onShowAddForm(false); }}
-                  placeholder="What needs to be done?"
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2B2B2B] mb-1.5">Deadline <span className="text-[#9B948B] font-normal">(optional)</span></label>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowNewDeadlinePicker(!showNewDeadlinePicker)}
-                    className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-left text-[#6F6A64] hover:border-[#7FAEE6] transition-colors"
-                  >
-                    {newDeadline ? formatDeadlineShort(newDeadline) : "Click to set deadline..."}
-                  </button>
-                  {showNewDeadlinePicker && (
-                    <DateTimePicker
-                      value={newDeadline || null}
-                      onChange={(iso) => { onNewDeadlineChange(iso); setShowNewDeadlinePicker(false); }}
-                      onClose={() => setShowNewDeadlinePicker(false)}
-                    />
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2B2B2B] mb-1.5">Priority</label>
-                <select
-                  value={newPriority}
-                  onChange={(e) => onNewPriorityChange(e.target.value as "high" | "medium" | "low")}
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6]"
-                >
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E7DED2]">
-              <button
-                onClick={() => onShowAddForm(false)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onAdd}
-                disabled={!newText.trim()}
-                className="px-5 py-2 rounded-xl text-sm font-medium bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] disabled:opacity-40 transition-colors shadow-[0_2px_8px_rgba(127,174,230,0.3)]"
-              >
-                Add To-Do
-              </button>
-            </div>
-          </div>
+      {tasks.length === 0 && !showAddForm && (
+        <div className="rounded-lg border border-dashed border-[#DDD3C7] bg-[#F6F3EE] px-3 py-4 text-center text-xs text-[#9B948B]">
+          No tasks for this phase yet.
         </div>
       )}
 
-      {/* Todo list */}
-      <div className="space-y-1 max-h-[240px] overflow-y-auto">
-        {todos.length === 0 && !showAddForm && (
-          <p className="text-xs text-[#7FAEE6] py-3 text-center">No items yet</p>
-        )}
-        {todos.map(todo => (
-          <div key={todo.id} className="rounded-lg bg-white/60 px-2.5 py-2 group/item">
-            {/* Row 1: checkbox + text + delete */}
-            <div className="flex items-start gap-2">
-              <button
-                onClick={() => onToggle(todo.id, todo.completed)}
-                className="mt-0.5 shrink-0"
-              >
-                {todo.completed ? (
-                  <CheckCircle2 className="h-4 w-4 text-[#7FB38A]" />
-                ) : (
-                  <Circle className="h-4 w-4 text-[#B8D4F0]" />
-                )}
-              </button>
-              {editingId === todo.id ? (
-                <input
-                  autoFocus
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  onBlur={() => { if (editText.trim()) onUpdate(todo.id, { text: editText.trim() }); setEditingId(null); }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { if (editText.trim()) onUpdate(todo.id, { text: editText.trim() }); setEditingId(null); }
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                  className="text-xs flex-1 bg-[#F6F3EE] border border-[#7FAEE6] rounded px-1.5 py-0.5 outline-none text-[#2B2B2B]"
-                />
-              ) : (
-                <span
-                  onDoubleClick={() => { setEditText(todo.text); setEditingId(todo.id); }}
-                  className={`text-xs flex-1 cursor-text ${todo.completed ? "line-through text-[#9B948B]" : "text-[#2B2B2B]"}`}
-                >
-                  {todo.text}
-                </span>
-              )}
-              <button
-                onClick={() => onDelete(todo.id)}
-                className="opacity-0 group-hover/item:opacity-100 p-0.5 text-[#9B948B] hover:text-[#D5847A] transition-all shrink-0"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </div>
-            {/* Row 2: deadline + priority */}
-            <div className="mt-1 ml-6 flex items-center gap-2 text-[10px]">
-              {editingDeadlineId === todo.id ? (
-                <span className="relative inline-block">
-                  <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#7FAEE6] text-[#6F6A64] inline-block">
-                    {todo.deadline ? formatDeadlineShort(todo.deadline) : "Pick date"}
-                  </span>
-                  <DateTimePicker
-                    value={todo.deadline ?? null}
-                    onChange={(iso) => { onUpdate(todo.id, { deadline: iso }); setEditingDeadlineId(null); }}
-                    onClose={() => setEditingDeadlineId(null)}
-                  />
-                </span>
-              ) : todo.deadline ? (
-                <button
-                  onClick={() => setEditingDeadlineId(todo.id)}
-                  className="text-[#9B948B] hover:opacity-80"
-                >
-                  📅 {formatDeadlineShort(todo.deadline)}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setEditingDeadlineId(todo.id)}
-                  className="text-[#B8D4F0] hover:text-[#7FAEE6] transition-colors"
-                >
-                  + deadline
-                </button>
-              )}
-              <span className="ml-auto" />
-              <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[todo.priority]}`} />
-              <select
-                value={todo.priority}
-                onChange={(e) => onUpdate(todo.id, { priority: e.target.value as TodoItem["priority"] })}
-                className="text-[10px] px-0.5 rounded bg-transparent border-none text-[#9B948B] outline-none cursor-pointer"
-              >
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
+      <div className="space-y-1">
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[#F6F3EE]"
+          >
+            <button
+              onClick={() => onToggle(task.id, task.completed)}
+              aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
+              className={`h-4 w-4 shrink-0 rounded-full border-2 transition-colors ${
+                task.completed
+                  ? "border-[#7FB38A] bg-[#7FB38A]"
+                  : "border-[#DDD3C7] hover:border-[#7FAEE6]"
+              }`}
+            />
+            <span
+              className={`shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[task.priority]}`}
+              aria-hidden
+            />
+            <span
+              className={`min-w-0 flex-1 truncate text-sm ${
+                task.completed ? "text-[#9B948B] line-through" : "text-[#2B2B2B]"
+              }`}
+            >
+              {task.title}
+            </span>
+            <button
+              onClick={() => onDelete(task.id)}
+              aria-label="Delete task"
+              className="shrink-0 text-[#DDD3C7] opacity-0 transition-opacity hover:text-[#D5847A] group-hover:opacity-100"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         ))}
       </div>
+
+      {showAddForm && (
+        <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-2 py-1.5">
+          <input
+            autoFocus
+            value={newText}
+            onChange={(e) => onNewTextChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onAdd();
+              if (e.key === "Escape") {
+                onShowAddForm(false);
+                onNewTextChange("");
+              }
+            }}
+            placeholder="What needs to happen in this phase?"
+            className="min-w-0 flex-1 bg-transparent text-sm text-[#2B2B2B] outline-none placeholder:text-[#9B948B]"
+          />
+          <select
+            value={newPriority}
+            onChange={(e) =>
+              onNewPriorityChange(e.target.value as "high" | "medium" | "low")
+            }
+            className="shrink-0 bg-transparent text-xs text-[#6F6A64] outline-none"
+          >
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <button
+            onClick={onAdd}
+            disabled={!newText.trim()}
+            className="shrink-0 rounded-md bg-[#7FAEE6] px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-[#6A9DDA] disabled:opacity-40"
+          >
+            Add
+          </button>
+          <button
+            onClick={() => {
+              onShowAddForm(false);
+              onNewTextChange("");
+            }}
+            className="shrink-0 text-xs text-[#9B948B] hover:text-[#2B2B2B]"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

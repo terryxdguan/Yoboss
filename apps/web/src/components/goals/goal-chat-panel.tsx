@@ -557,7 +557,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
   return (
     <div
-      className="shrink-0 border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col h-[calc(100vh-96px)] sticky top-0 relative"
+      className="fixed right-0 top-16 bottom-0 z-[45] border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]"
       style={{ width: panelWidth }}
     >
       {/* Resize handle */}

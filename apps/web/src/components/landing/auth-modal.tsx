@@ -68,13 +68,13 @@ export function AuthModal({
     setLoading(false);
   }, [open, initialMode]);
 
-  // Read-only probe — the /goals/create page is responsible for clearing
-  // the key after it consumes it. We just need to know "was a goal typed
-  // before login?" to pick the right redirect destination. Cookie-backed
-  // so the email-confirmation round-trip (possibly in a different tab)
-  // can still see it.
+  // Read-only probe — the /goals page is responsible for clearing the
+  // key after it consumes it (auto-opens the wizard panel with the
+  // pending text). We just need to know "was a goal typed before login?"
+  // to pick the right redirect destination. Cookie-backed so the email-
+  // confirmation round-trip (possibly in a different tab) can still see it.
   const postAuthDestination = (): string =>
-    hasPendingGoal() ? "/goals/create" : "/dashboard";
+    hasPendingGoal() ? "/goals" : "/dashboard";
 
   if (!open) return null;
 

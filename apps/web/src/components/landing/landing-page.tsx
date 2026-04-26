@@ -79,9 +79,9 @@ export function LandingPage() {
     setPendingGoal(text);
     if (loggedIn) {
       // Already authenticated — no need for the auth modal; drop them
-      // straight into the goal-creation flow and let /goals/create
-      // consume pendingGoal on mount.
-      window.location.href = "/goals/create";
+      // straight into the goal-creation flow and let /goals consume
+      // pendingGoal on mount (auto-opens the wizard panel with their text).
+      window.location.href = "/goals";
       return;
     }
     openAuth("signup");

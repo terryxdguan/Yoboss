@@ -64,7 +64,7 @@ export function GoalPickerModal({ goals, selectedIds, onSave, onClose }: GoalPic
               <button
                 onClick={() => {
                   onClose();
-                  router.push("/goals/create");
+                  router.push("/goals");
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] transition-colors"
               >
