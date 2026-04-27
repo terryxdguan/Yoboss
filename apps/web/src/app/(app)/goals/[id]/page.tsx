@@ -28,6 +28,7 @@ import {
   createPhaseTask,
   updatePhaseTask,
   deletePhaseTask,
+  deleteTask,
 } from "@/lib/db/actions";
 import { EditableText } from "@/components/ui/editable-text";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
@@ -39,6 +40,18 @@ import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
 type RightPanel = "none" | "ai" | "deliverables" | "notes";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Pastel band per weekday, mirroring the ToDos Board column-header palette
+// so the two boards feel like one design language. Index 0 = Monday.
+const DAY_COLORS: { band: string; text: string }[] = [
+  { band: "border-[#BFDCC5] bg-[#F4FBF5]", text: "text-[#3F7C4A]" }, // Mon — green
+  { band: "border-[#E8D5A4] bg-[#FFF9EA]", text: "text-[#8E6B2E]" }, // Tue — yellow
+  { band: "border-[#B9D4E8] bg-[#F2F8FC]", text: "text-[#5E8FCE]" }, // Wed — blue
+  { band: "border-[#BFD9CF] bg-[#F2FAF6]", text: "text-[#4F8A77]" }, // Thu — teal-green
+  { band: "border-[#D9CFA9] bg-[#FFF9E8]", text: "text-[#7B6A2E]" }, // Fri — tan
+  { band: "border-[#D5C8BD] bg-[#F9F5F1]", text: "text-[#7B6A60]" }, // Sat — warm beige
+  { band: "border-[#E0B7B4] bg-[#FFF3F1]", text: "text-[#9A615B]" }, // Sun — rose
+];
 
 function getWeekDates(): string[] {
   const weekStart = getWeekStart();
@@ -284,6 +297,20 @@ export default function GoalDetailPage() {
           t.id === taskId ? { ...t, [field]: value } : t
         ),
       });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (weeklyPlan) {
+      setWeeklyPlan({
+        ...weeklyPlan,
+        daily_tasks: weeklyPlan.daily_tasks.filter((t) => t.id !== taskId),
+      });
+    }
+    try {
+      await deleteTask(taskId);
+    } catch (err) {
+      console.error("Failed to delete task:", err);
     }
   };
 
@@ -611,11 +638,13 @@ export default function GoalDetailPage() {
               <DayCard
                 key={dayIdx}
                 dayName={DAY_NAMES_SHORT[dayIdx]}
+                dayIndex={dayIdx}
                 date={weekDates[dayIdx]}
                 tasks={tasksByDay[dayIdx] || []}
                 isToday={dayIdx === todayIdx}
                 onToggleTask={handleToggleTask}
                 onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
                 onAskAI={handleAskAI}
               />
             ))}
@@ -624,11 +653,13 @@ export default function GoalDetailPage() {
               <DayCard
                 key={dayIdx}
                 dayName={DAY_NAMES_SHORT[dayIdx]}
+                dayIndex={dayIdx}
                 date={weekDates[dayIdx]}
                 tasks={tasksByDay[dayIdx] || []}
                 isToday={dayIdx === todayIdx}
                 onToggleTask={handleToggleTask}
                 onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
                 onAskAI={handleAskAI}
               />
             ))}
@@ -865,70 +896,66 @@ function PhaseMilestoneList({
 
 function DayCard({
   dayName,
+  dayIndex,
   date,
   tasks,
   isToday,
   onToggleTask,
   onUpdateTask,
+  onDeleteTask,
   onAskAI,
 }: {
   dayName: string;
+  dayIndex: number;
   date: string;
   tasks: DailyTask[];
   isToday: boolean;
   onToggleTask: (taskId: string, completed: boolean) => void;
   onUpdateTask: (taskId: string, field: "title" | "time_slot", value: string) => void;
+  onDeleteTask: (taskId: string) => void;
   onAskAI: (task: DailyTask) => void;
 }) {
   const completedCount = tasks.filter((t) => t.completed).length;
+  const color = DAY_COLORS[dayIndex] ?? DAY_COLORS[0];
+  const allDone = tasks.length > 0 && completedCount === tasks.length;
 
   return (
-    <div
-      className={`rounded-xl border bg-[#FFFDF9] min-h-[140px] shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden ${
-        isToday
-          ? "border-[#7FAEE6]/40 ring-1 ring-[#7FAEE6]/15"
-          : "border-[#E7DED2]"
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold ${isToday ? "text-[#7FAEE6]" : "text-[#2B2B2B]"}`}>
-            {dayName}
-            {isToday && <span className="ml-1 text-[11px] font-normal">(Today)</span>}
-          </span>
-        </div>
-        <span className={`text-[11px] ${isToday ? "text-[#7FAEE6]" : "text-[#9B948B]"}`}>{date}</span>
+    <div className="flex flex-col gap-2">
+      {/* Colored header band — mirrors ToDos column-header pill. Today is
+          marked by a bold "(Today)" suffix instead of a blue ring so the
+          per-day color stays visually unambiguous. */}
+      <div className={`flex items-center justify-between rounded-lg border px-3 py-2 ${color.band}`}>
+        <span className={`text-sm font-semibold ${color.text}`}>
+          {dayName}
+          {isToday && <span className="ml-1 text-[11px]">(Today)</span>}
+        </span>
+        <span className={`flex items-center gap-2 text-[11px] ${color.text}`}>
+          <span className="opacity-70">{date}</span>
+          {tasks.length > 0 && (
+            <span className={`font-semibold tabular-nums ${allDone ? "text-[#7FB38A]" : ""}`}>
+              {completedCount}/{tasks.length}
+            </span>
+          )}
+        </span>
       </div>
 
-      {/* Tasks */}
+      {/* Body: dashed empty state, otherwise vertical stack of mini-cards. */}
       {tasks.length === 0 ? (
-        <div className="px-4 py-4">
-          <p className="text-xs text-[#DDD3C7] italic">No tasks</p>
+        <div className="rounded-lg border border-dashed border-[#DDD3C7] bg-[#F6F3EE]/40 px-3 py-6 text-center text-xs text-[#9B948B]">
+          No tasks
         </div>
       ) : (
-        <div className="divide-y divide-[#E7DED2]">
+        <div className="flex flex-col gap-2">
           {tasks.map((task) => (
             <TaskItem
               key={task.id}
               task={task}
               onToggle={onToggleTask}
               onUpdate={onUpdateTask}
+              onDelete={onDeleteTask}
               onAskAI={onAskAI}
             />
           ))}
-        </div>
-      )}
-
-      {tasks.length > 0 && (
-        <div className="px-4 py-2 border-t border-[#E7DED2] bg-[#F6F3EE]/50">
-          <span className={`text-[10px] font-medium ${
-            completedCount === tasks.length
-              ? "text-[#7FB38A]"
-              : "text-[#9B948B]"
-          }`}>
-            {completedCount}/{tasks.length} done
-          </span>
         </div>
       )}
     </div>
@@ -939,11 +966,13 @@ function TaskItem({
   task,
   onToggle,
   onUpdate,
+  onDelete,
   onAskAI,
 }: {
   task: DailyTask;
   onToggle: (taskId: string, completed: boolean) => void;
   onUpdate: (taskId: string, field: "title" | "time_slot", value: string) => void;
+  onDelete: (taskId: string) => void;
   onAskAI: (task: DailyTask) => void;
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
@@ -972,7 +1001,7 @@ function TaskItem({
   };
 
   return (
-    <div className="group/item px-4 py-3 hover:bg-[#F6F3EE]/60 transition-colors relative">
+    <div className="group/item rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 hover:border-[#DDD3C7] transition-colors relative">
       {/* Time slot */}
       {editingTime ? (
         <input
@@ -1031,14 +1060,23 @@ function TaskItem({
           )}
         </div>
 
-        {/* AI button — visible on hover */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
-          className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 rounded hover:bg-[#7FAEE6]/10"
-          title="Ask Team"
-        >
-          <MessageSquare className="h-3.5 w-3.5 text-[#7FAEE6]" />
-        </button>
+        {/* Hover actions: Ask Team + Delete */}
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
+            className="rounded p-1 hover:bg-[#7FAEE6]/10"
+            title="Ask Team"
+          >
+            <MessageSquare className="h-3.5 w-3.5 text-[#7FAEE6]" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+            className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#D5847A]"
+            title="Delete"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
