@@ -444,7 +444,7 @@ export default function GoalDetailPage() {
       {/* Overall Progress */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#2B2B2B]">Overall Progress</h2>
+          <h2 className="text-base font-semibold text-[#2B2B2B]">This Week</h2>
           <span className="text-sm font-semibold text-[#2B2B2B]">{progressPct}%</span>
         </div>
         <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
