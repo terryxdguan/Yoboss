@@ -19,7 +19,6 @@ import type {
   DashboardStats,
   DashboardTodayItem,
   DashboardWorkflowRun,
-  WorkflowSummary,
   GoalWithPhases,
 } from "../types/database";
 import { getWeekStart, getTodayDayOfWeek, classifyTimeSlot } from "../utils/date";
@@ -576,58 +575,132 @@ export async function upsertGoalNote(
 // Goal Deliverables
 // ============================================================
 
+/** Map common file extensions to MIME types so the panel's icon picker
+ *  (which keys off file_type) can render the right glyph for chat-
+ *  generated files where we only know the filename. */
+function inferFileType(filename: string): string | null {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  if (!ext) return null;
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+    txt: "text/plain",
+    csv: "text/csv",
+    json: "application/json",
+    html: "text/html",
+    md: "text/markdown",
+    zip: "application/zip",
+  };
+  return map[ext] ?? null;
+}
+
 export async function getGoalDeliverables(
   goalId: string
 ): Promise<GoalDeliverable[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? "";
+
+  // 1. Manually-added deliverables.
+  const { data: manualRows, error: manualErr } = await supabase
     .from("goal_deliverables")
     .select("*")
     .eq("goal_id", goalId)
     .order("created_at", { ascending: false });
+  if (manualErr) throw manualErr;
+  const manual = manualRows || [];
 
-  if (error) throw error;
-  return data || [];
-}
+  // 2. Files generated inside any chat session attached to this goal.
+  //    Aggregated read-time so old/new generated files surface
+  //    automatically without a parallel write path. Synthetic id
+  //    "chat:{fileId}" tells the panel these are derived (not deletable
+  //    via goal_deliverables — they live in chat_messages metadata).
+  const { data: sessions } = await supabase
+    .from("chat_sessions")
+    .select("id")
+    .eq("goal_id", goalId);
+  const sessionIds = (sessions || []).map((s) => s.id);
 
-export async function addGoalDeliverable(data: {
-  goalId: string;
-  title: string;
-  url?: string;
-  fileType?: string;
-  source?: "manual" | "ai_generated";
-}): Promise<GoalDeliverable> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  let aiGenerated: GoalDeliverable[] = [];
+  if (sessionIds.length > 0) {
+    const { data: msgs } = await supabase
+      .from("chat_messages")
+      .select("metadata, created_at")
+      .in("session_id", sessionIds)
+      .not("metadata", "is", null);
 
-  const { data: deliverable, error } = await supabase
-    .from("goal_deliverables")
-    .insert({
-      goal_id: data.goalId,
-      user_id: user.id,
-      title: data.title,
-      url: data.url || null,
-      file_type: data.fileType || null,
-      source: data.source || "manual",
-    })
-    .select()
-    .single();
+    type FileEntry = { fileId: string; filename: string; createdAt: string };
+    const byFileId = new Map<string, FileEntry>();
+    for (const m of msgs || []) {
+      const meta = m.metadata as { generatedFiles?: { fileId?: string; filename?: string }[] } | null;
+      const files = meta?.generatedFiles;
+      if (!Array.isArray(files)) continue;
+      for (const f of files) {
+        if (!f?.fileId) continue;
+        const existing = byFileId.get(f.fileId);
+        const ts = m.created_at;
+        // Keep the earliest occurrence (when the file was first generated).
+        if (!existing || new Date(ts).getTime() < new Date(existing.createdAt).getTime()) {
+          byFileId.set(f.fileId, {
+            fileId: f.fileId,
+            filename: f.filename || "download",
+            createdAt: ts,
+          });
+        }
+      }
+    }
 
-  if (error) throw error;
-  return deliverable;
-}
+    // Backfill real filenames for entries persisted before we added
+    // metadata-resolution to the chat panel — those still say "download".
+    // Single round of parallel Anthropic Files API calls; each lookup is
+    // cheap and unbilled, and we don't write back so this stays a pure
+    // read.
+    const arr = Array.from(byFileId.values());
+    const unresolved = arr.filter((f) => !f.filename || f.filename === "download");
+    if (unresolved.length > 0) {
+      const { getAnthropicClient } = await import("@/lib/ai/client");
+      const client = getAnthropicClient();
+      await Promise.all(
+        unresolved.map(async (f) => {
+          try {
+            const meta = await client.beta.files.retrieveMetadata(f.fileId);
+            if (meta.filename) f.filename = meta.filename;
+          } catch {
+            /* keep "download" fallback */
+          }
+        })
+      );
+    }
 
-export async function deleteGoalDeliverable(id: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("goal_deliverables")
-    .delete()
-    .eq("id", id);
+    aiGenerated = arr.map((f) => ({
+      id: `chat:${f.fileId}`,
+      goal_id: goalId,
+      user_id: userId,
+      title: f.filename,
+      url: `/api/ai/files/${f.fileId}`,
+      file_type: inferFileType(f.filename),
+      source: "ai_generated" as const,
+      created_at: f.createdAt,
+    }));
+  }
 
-  if (error) throw error;
+  // 3. Merge, newest first.
+  const all = [...manual, ...aiGenerated];
+  all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return all;
 }
 
 // ============================================================
@@ -794,15 +867,21 @@ export async function getSessionMessages(
   offset = 0
 ): Promise<ChatMessage[]> {
   const supabase = await createClient();
+  // Fetch the most recent `limit` messages (descending), then reverse so
+  // callers see chronological order. The previous ascending ordering was
+  // a real bug: once a session crossed `limit` total messages it silently
+  // returned only the oldest `limit` and cut off the actual recent
+  // history that the user wants to see on reopen. With this change,
+  // offset = "skip the N newest" — none of the current callers use it.
   const { data, error } = await supabase
     .from("chat_messages")
     .select("*")
     .eq("session_id", sessionId)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).reverse();
 }
 
 export async function getSessionMessageCount(sessionId: string): Promise<number> {
@@ -1623,7 +1702,6 @@ export async function getDashboardData(): Promise<{
   stats: DashboardStats;
   todayItems: DashboardTodayItem[];
   highPriorityItems: DashboardTodayItem[];
-  workflows: WorkflowSummary[];
   goalsWithPhases: GoalWithPhases[];
   onboarding: DashboardOnboarding;
 }> {
@@ -1637,7 +1715,6 @@ export async function getDashboardData(): Promise<{
       },
       todayItems: [],
       highPriorityItems: [],
-      workflows: [],
       goalsWithPhases: [],
       onboarding: { stage: "stage1", goalCount: 0, singleGoalId: null, weeklyPlanCount: 0, personalTodoCount: 0 },
     };
@@ -1665,7 +1742,7 @@ export async function getDashboardData(): Promise<{
     // Q3+Q6: All todos
     supabase
       .from("todos")
-      .select("id, text, tag, completed, priority, deadline, completed_at, sort_order")
+      .select("id, text, tag, completed, priority, deadline, completed_at, sort_order, goal_id")
       .eq("user_id", user.id),
     // Q4a: Workflows (all — template/specific merged)
     supabase
@@ -1738,21 +1815,14 @@ export async function getDashboardData(): Promise<{
     latestPlanIds.push(p.id);
   }
 
-  // TO-DOS card counts come from the todos table only, split by whether
-  // the todo is linked to an active goal. This fixes two prior bugs:
-  //   1. Old pendingGoalTodos counted daily_tasks (weekly schedule items),
-  //      not todos — two different concepts crammed into one card.
-  //   2. Old pendingPersonalTodos counted ALL todos including goal-linked
-  //      ones, so a todo with goal_id ≠ null rendered as "personal".
-  // Todos whose goal_id points at a non-active goal (completed / archived)
-  // fall into the "personal" bucket so they stay visible but aren't
-  // mis-labeled as belonging to an ongoing goal.
-  const pendingGoalTodos = todos.filter(
-    t => !t.completed && t.goal_id && activeGoalIds.has(t.goal_id)
-  ).length;
-  const pendingPersonalTodos = todos.filter(
-    t => !t.completed && !(t.goal_id && activeGoalIds.has(t.goal_id))
-  ).length;
+  // TO-DOS card counts are filled in below, after `todayItems` is built —
+  // they need to be derived from the same merged stream that the Today's
+  // To-Do List section renders (today's pending daily_tasks for active
+  // goals + todos with deadline today), otherwise the top card and the
+  // list visibly disagree. Splitting goal vs personal happens via the
+  // already-set `source` field on each todayItem.
+  let pendingGoalTodos = 0;
+  let pendingPersonalTodos = 0;
 
   // Workflows stats
   const totalWorkflows = workflows.length;
@@ -1809,15 +1879,17 @@ export async function getDashboardData(): Promise<{
 
   // --- Today Items ---
 
-  // Build planId → goalTitle map
+  // Build planId → goalTitle and planId → goalId maps. The id map lets the
+  // dashboard "Send to Team" button route the chat into the goal's session
+  // instead of the generic dashboard task-assistant session.
   const planGoalMap = new Map<string, string>();
+  const planGoalIdMap = new Map<string, string>();
   for (const p of plans) {
     const ph = Array.isArray(p.phases) ? p.phases[0] : p.phases;
     if (!ph) continue;
     const goal = Array.isArray(ph.goals) ? ph.goals[0] : ph.goals;
-    if (goal?.title) {
-      planGoalMap.set(p.id, goal.title);
-    }
+    if (goal?.title) planGoalMap.set(p.id, goal.title);
+    if (goal?.id) planGoalIdMap.set(p.id, goal.id);
   }
 
   const todayItems: DashboardTodayItem[] = [];
@@ -1845,6 +1917,7 @@ export async function getDashboardData(): Promise<{
           deadline: null,
           priority: "medium" as const,
           tag: "Goal",
+          goalId: planGoalIdMap.get(t.weekly_plan_id) || null,
         });
       }
     }
@@ -1879,20 +1952,24 @@ export async function getDashboardData(): Promise<{
         deadline: t.deadline,
         priority: t.priority,
         tag: t.tag || "Personal",
+        goalId: isGoalTodo ? t.goal_id! : null,
       });
     }
   }
 
-  // --- Workflows for favorites picker ---
-  const workflowSummaries: WorkflowSummary[] = workflows.map(w => ({
-    id: w.id,
-    name: w.name,
-    description: w.description,
-    lastRunStatus: w.last_run_status as "success" | "failed" | null,
-    lastRunAt: w.last_run_at,
-  }));
+  // Now that todayItems is fully assembled (goal daily_tasks + todos
+  // with deadline today), derive the TO-DOS card counts from it so the
+  // top stat and the Today's To-Do List section can never disagree.
+  pendingGoalTodos = todayItems.filter(
+    (i) => i.source === "goal" && !i.completed,
+  ).length;
+  pendingPersonalTodos = todayItems.filter(
+    (i) => i.source === "personal" && !i.completed,
+  ).length;
+  stats.pendingGoalTodos = pendingGoalTodos;
+  stats.pendingPersonalTodos = pendingPersonalTodos;
 
-  // Goals with phases for Important Goals section
+  // Goals with phases for Active Goals section
   const goalsWithPhases = (goalsWithPhasesRes.data || []) as GoalWithPhases[];
 
   // High priority pending todos (across all todos, not just today)
@@ -1910,9 +1987,10 @@ export async function getDashboardData(): Promise<{
       deadline: t.deadline,
       priority: t.priority,
       tag: t.tag || "Personal",
+      goalId: null,
     }));
 
-  return { stats, todayItems, highPriorityItems, workflows: workflowSummaries, goalsWithPhases, onboarding };
+  return { stats, todayItems, highPriorityItems, goalsWithPhases, onboarding };
 }
 
 // ============================================================
