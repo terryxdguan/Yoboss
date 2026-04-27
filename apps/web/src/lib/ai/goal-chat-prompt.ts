@@ -54,19 +54,18 @@ Choose based on goal duration:
 
 SHORT GOALS (≤ 2 weeks total — trips, events, sprints):
 - Use exactly 1 phase covering the whole goal (estimated_weeks = 1).
-- Include "weekly_schedule" with concrete daily tasks (day_of_week 0=Mon to 6=Sun, with time_slot and time_estimate_minutes). This creates the schedule directly.
-- Put prep/admin/booking tasks (e.g. "Book flights", "Apply for visa") in phases[0].todos. The weekly_schedule covers during-the-event days; phases[0].todos covers everything that has to happen BEFORE.
+- Include "weekly_schedule" with concrete daily tasks (day_of_week 0=Mon to 6=Sun, with time_slot and time_estimate_minutes). The weekly_schedule is where every actionable item lives — including one-time prep/admin (e.g. "Book flights" on Mon morning) AND during-event activities.
+- phases[0].milestones is a 3-6 item bird's-eye outline of what the trip / event delivers (e.g. "Arrived in Tokyo", "All restaurant reservations confirmed", "Day-2 itinerary executed"). Read-only milestone markers — NOT a checklist the user ticks off. Action happens in weekly_schedule.
 - For travel: schedule should map to actual trip days with locations and activities.
 
 LONG GOALS (> 2 weeks — ongoing learning, fitness, career, business):
 - Use 3-6 phases that build progressively from foundation to mastery.
 - Do NOT include weekly_schedule — user will generate per-phase later.
-- Each phase should have 3-8 specific, actionable todos.
-- Cross-cutting setup items (workspace setup, account creation, picking a stack, ongoing rituals like a weekly review slot) belong in phases[0].todos — the foundation phase. Do NOT scatter the same item across multiple phases.
+- Each phase should have 3-6 specific milestones — these are the sub-phase markers, the bird's-eye outline of what the user accomplishes by the end of the phase. NOT a daily / weekly checklist. Phrase them as **completed states** ("Anki deck set up and seeded", "First 30-min tutor session done", "Rolled R + 5 vowels mastered"), not verb-imperative tasks ("Set up Anki", "Book tutor"). The user does NOT tick milestones off — the weekly schedule is where day-to-day check-offs happen.
+- Cross-cutting setup outcomes (workspace ready, account opened, stack picked, weekly review cadence in place) belong as phases[0].milestones. Do NOT scatter the same milestone across multiple phases.
 
 RULES for the plan content:
-- Every task must be concrete and actionable — names should be verbs ("Book flight to Tokyo", not "Flights").
-- Assign priorities: "high" for must-do, "medium" for important, "low" for nice-to-have.
+- **Milestones describe outcomes**, not actions. ("Top 1000 Spanish words deck built and reviewed daily" not "Set up Anki with deck").
 - Be warm and encouraging in tone, but concrete and specific in content.
 - Reflect ALL the context you gathered — if the user said "budget $1000", don't create a $5000 plan.`;
 
@@ -144,26 +143,24 @@ const CREATE_GOAL_PLAN_TOOL: Anthropic.Tool = {
               type: "number",
               description: "Estimated weeks to complete (1-8)",
             },
-            todos: {
+            milestones: {
               type: "array",
               items: {
                 type: "object",
                 properties: {
                   title: {
                     type: "string",
-                    description: "Specific, actionable task",
-                  },
-                  priority: {
-                    type: "string",
-                    enum: ["high", "medium", "low"],
+                    description: "A milestone — a completed-state phrase describing what the user has accomplished by the end of this milestone (e.g. 'Anki deck built and reviewed daily', 'First 30-min tutor session done'). NOT an action verb.",
                   },
                 },
-                required: ["title", "priority"],
+                required: ["title"],
               },
-              description: "3-8 specific tasks for this phase. Can be empty for short goals that use weekly_schedule instead.",
+              description: "3-6 milestones for this phase — bird's-eye sub-phase markers, read-only on the UI. NOT a daily checklist.",
+              minItems: 3,
+              maxItems: 6,
             },
           },
-          required: ["title", "description", "estimated_weeks", "todos"],
+          required: ["title", "description", "estimated_weeks", "milestones"],
         },
         minItems: 1,
         maxItems: 6,
@@ -219,16 +216,38 @@ const CREATE_GOAL_PLAN_TOOL: Anthropic.Tool = {
 
 export const GOAL_CHAT_TOOLS = [ASK_QUESTION_TOOL, CREATE_GOAL_PLAN_TOOL];
 
+// When the user creates a goal mid-week, the SHORT-goal path generates
+// a weekly_schedule covering Mon-Sun by default. That leaves "past" days
+// (Mon/Tue if today is Wed) cluttered with stale tasks the user can't
+// realistically do. Append a today-awareness clause to the system prompt
+// so the model only generates tasks from today onward. The save layer
+// (use-goal-session.ts / goal-wizard-panel.tsx) does a defensive filter
+// in case the model still emits past-day items.
+function buildTodayNote(todayDow: number): string {
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  return `
+
+## Current day awareness
+
+It's already ${dayNames[todayDow]} (day_of_week=${todayDow}). When generating \`weekly_schedule\` for a SHORT GOAL, only emit tasks for \`day_of_week\` ${todayDow} through 6 (${dayNames[todayDow]} through Sunday). Do NOT emit tasks for earlier days of this week — those days are already past and the user cannot act on them.`;
+}
+
 export async function chatWithGoalCoach(
-  messages: Anthropic.MessageParam[]
+  messages: Anthropic.MessageParam[],
+  todayDow?: number
 ) {
   const client = getAnthropicClient();
+
+  const system =
+    typeof todayDow === "number" && todayDow > 0 && todayDow <= 6
+      ? SYSTEM_PROMPT + buildTodayNote(todayDow)
+      : SYSTEM_PROMPT;
 
   const stream = await client.messages.stream({
     // Opus 4.7 — goal creation is high-stakes planning, worth the extra cost.
     model: MODELS.opus,
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
+    system,
     tools: GOAL_CHAT_TOOLS,
     messages,
   });

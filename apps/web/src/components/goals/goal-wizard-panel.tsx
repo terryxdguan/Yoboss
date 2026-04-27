@@ -93,6 +93,17 @@ interface WeeklyPlanningProps extends CommonProps {
     description: string;
     estimatedWeeks: number;
   };
+  /** Milestones for the CURRENT phase. The AI uses them as the "what
+   *  must this week advance toward" anchor. Empty list is fine for legacy
+   *  goals created before milestones existed. */
+  phaseMilestones: string[];
+  /** All phases of the goal (in order) — gives the AI the full roadmap
+   *  for context-aware pacing decisions. */
+  roadmap: {
+    title: string;
+    description: string;
+    estimated_weeks: number;
+  }[];
   /** Called once the weekly_plan + daily_tasks rows are written. Host
    *  typically calls router.refresh() and closes the panel. */
   onWeeklyPlanSaved: () => void;
@@ -377,6 +388,8 @@ function WeeklyPlanningBody({
   goalId,
   goal,
   phase,
+  phaseMilestones,
+  roadmap,
   onWeeklyPlanSaved,
 }: WeeklyPlanningProps) {
   const router = useRouter();
@@ -420,6 +433,8 @@ function WeeklyPlanningBody({
       sessionId={sessionId}
       goal={goal}
       phase={phase}
+      phaseMilestones={phaseMilestones}
+      roadmap={roadmap}
       weekStart={weekStart}
       todayDow={todayDow}
       isSaving={isSaving}
@@ -438,6 +453,8 @@ function WeeklyPlanningChat({
   sessionId,
   goal,
   phase,
+  phaseMilestones,
+  roadmap,
   weekStart,
   todayDow,
   isSaving,
@@ -449,6 +466,8 @@ function WeeklyPlanningChat({
   sessionId: string;
   goal: { title: string; description: string };
   phase: { id: string; title: string; description: string; estimatedWeeks: number };
+  phaseMilestones: string[];
+  roadmap: { title: string; description: string; estimated_weeks: number }[];
   weekStart: string;
   todayDow: number;
   isSaving: boolean;
@@ -480,6 +499,8 @@ function WeeklyPlanningChat({
       estimatedWeeks: phase.estimatedWeeks,
       isMidWeekStart: todayDow > 0,
       startDayOfWeek: todayDow,
+      phaseMilestones,
+      roadmap,
     },
   });
 
@@ -509,9 +530,20 @@ function WeeklyPlanningChat({
         week_start: weekStart,
         ai_summary: sessionHook.weeklyPreview.ai_summary,
       });
+      // Defense-in-depth: the chat prompt already tells the model to plan
+      // only from today onward, but a non-zero portion of generations still
+      // emit past-day tasks. Drop them so the user never sees stale rows.
+      const futureTasks = sessionHook.weeklyPreview.tasks.filter(
+        (t) => t.day_of_week >= todayDow,
+      );
+      if (futureTasks.length === 0) {
+        throw new Error(
+          "Saved plan but every generated task fell on a past day — try regenerating.",
+        );
+      }
       const inserted = await createDailyTasks(
         created.id,
-        sessionHook.weeklyPreview.tasks.map((t) => ({
+        futureTasks.map((t) => ({
           day_of_week: t.day_of_week,
           title: t.title,
           description: t.description,

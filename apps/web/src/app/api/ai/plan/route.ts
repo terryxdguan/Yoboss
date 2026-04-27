@@ -93,13 +93,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "goal-session") {
-      const { messages, intent, context } = body as {
+      const { messages, intent, context, todayDow } = body as {
         messages: Anthropic.MessageParam[];
         intent: "goal-creation" | "weekly-planning" | "coach";
         context?: {
           weekly?: WeeklyPlanChatContext;
           coach?: GoalDetailChatContext;
         };
+        // 0=Mon..6=Sun, derived from the client's local clock. Only used
+        // by the goal-creation intent to skip past days when the SHORT
+        // goal path generates weekly_schedule mid-week. weekly-planning
+        // already carries this in context.weekly.startDayOfWeek.
+        todayDow?: number;
       };
 
       // Context compression lives client-side (session-memory.ts):
@@ -137,7 +142,7 @@ export async function POST(request: NextRequest) {
         stream = await chatWithWeeklyPlanCoach(messages, context.weekly);
         logRoute = "goal-session-weekly";
       } else {
-        stream = await chatWithGoalCoach(messages);
+        stream = await chatWithGoalCoach(messages, todayDow);
         logRoute = "goal-session-creation";
       }
 

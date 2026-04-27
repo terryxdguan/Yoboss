@@ -22,7 +22,7 @@ import {
   updateSessionSummary,
   markGoalDraftConfirmed,
 } from "@/lib/db/actions";
-import { getWeekStart } from "@/lib/utils/date";
+import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
 import {
   fixDoubleSerializedPlan,
   type AnthropicMessage,
@@ -266,6 +266,12 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
               : currentIntent === "coach" && coachContextRef.current
               ? { coach: coachContextRef.current }
               : undefined,
+          // Computed from the client's local clock so the prompt can skip
+          // past days of the current week. Server has no reliable view of
+          // the user's local day. Only the goal-creation intent's prompt
+          // consumes this; weekly-planning already carries it inside
+          // context.weekly. Harmless extra field for the coach intent.
+          todayDow: getTodayDayOfWeek(),
           // Client-side context compression — send summary + last 5
           // instead of the full history. The rolling summary itself is
           // refreshed in the background every 5 turns below; until the
@@ -911,15 +917,16 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
       // branch itself races against the todo + draft-mark branches.
 
       const writeWeeklySchedule = async () => {
-        // createPhases now also bulk-inserts each phase's todos as
-        // phase_tasks rows — pass the AI-generated todos through.
+        // createPhases bulk-inserts each phase's milestones into the
+        // phase_tasks table (table name kept for now; row semantic is
+        // milestone — read-only sub-phase markers, not actionable todos).
         const phases = await createPhases(
           goal.id,
           plan.phases.map((p) => ({
             title: p.title,
             description: p.description,
             estimated_weeks: p.estimated_weeks,
-            todos: p.todos ?? [],
+            milestones: p.milestones ?? [],
           }))
         );
         if (plan.weekly_schedule && phases.length > 0) {
@@ -929,17 +936,27 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
             week_start: getWeekStart(),
             ai_summary: plan.weekly_schedule.ai_summary,
           });
-          await createDailyTasks(
-            weeklyPlan.id,
-            plan.weekly_schedule.tasks.map((t) => ({
-              day_of_week: t.day_of_week,
-              title: t.title,
-              description: t.description,
-              time_estimate_minutes: t.time_estimate_minutes,
-              time_slot: t.time_slot,
-              sort_order: t.sort_order,
-            }))
+          // Defense-in-depth: even though the goal-creation prompt now tells
+          // the model to skip past days, a non-zero portion of generations
+          // still emit Mon/Tue tasks when the user creates a goal mid-week.
+          // Drop them here so the user never sees stale "past" rows.
+          const todayDow = getTodayDayOfWeek();
+          const futureTasks = plan.weekly_schedule.tasks.filter(
+            (t) => t.day_of_week >= todayDow,
           );
+          if (futureTasks.length > 0) {
+            await createDailyTasks(
+              weeklyPlan.id,
+              futureTasks.map((t) => ({
+                day_of_week: t.day_of_week,
+                title: t.title,
+                description: t.description,
+                time_estimate_minutes: t.time_estimate_minutes,
+                time_slot: t.time_slot,
+                sort_order: t.sort_order,
+              }))
+            );
+          }
         }
       };
 
