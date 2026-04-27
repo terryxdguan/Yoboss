@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Flag, Clock, X, Trash2, Archive, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/db/client";
 import type { Goal, Phase } from "@/lib/types/database";
@@ -12,8 +12,42 @@ interface GoalWithPhases extends Goal {
   phases: Phase[];
 }
 
+// Goal-card avatar palette — saturated tones reused from the roadmap phase
+// number squares so the goal-card "letter avatar" feels like a sibling of
+// the phase squares. 6 phase colors + 1 coral so all 7 weekday-like tones
+// are available. Color is hashed by goal.id (not list index) so a goal's
+// color stays stable even if other goals around it are added or removed.
+const GOAL_COLORS = [
+  "bg-[#7FAEE6]", // blue
+  "bg-[#C9A968]", // gold
+  "bg-[#9CC4A4]", // green
+  "bg-[#9B6B5C]", // brown
+  "bg-[#7FB3B3]", // teal
+  "bg-[#B58FA0]", // mauve
+  "bg-[#D4946B]", // coral
+];
+
+function colorForGoal(id: string): string {
+  // First 8 hex chars of the UUID interpreted as a 32-bit unsigned int.
+  // UUIDv4's first segment is already random, so plain modulo is good
+  // enough to distribute across the palette without a real hash.
+  const slice = id.replace(/-/g, "").slice(0, 8);
+  const n = parseInt(slice, 16);
+  return GOAL_COLORS[n % GOAL_COLORS.length];
+}
+
+function firstLetter(title: string): string {
+  const trimmed = title.trim();
+  if (!trimmed) return "?";
+  // Array.from handles multi-codepoint chars (emoji, surrogate pairs)
+  // properly — `title[0]` would split a surrogate pair and render a
+  // broken glyph for goals titled e.g. "🚀 Launch ...".
+  return Array.from(trimmed)[0].toUpperCase();
+}
+
 export default function GoalsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [goals, setGoals] = useState<GoalWithPhases[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -46,6 +80,18 @@ export default function GoalsPage() {
       setWizardState({ open: true, autoStart: true, initialGoalText: pending });
     }
   }, []);
+
+  // ?new=1 handoff from the dashboard's "Create new" button. Open the
+  // wizard immediately so the user lands one click closer to creating a
+  // goal. One-shot guard + URL strip so reload doesn't re-trigger.
+  const newGoalHandledRef = useRef(false);
+  useEffect(() => {
+    if (newGoalHandledRef.current) return;
+    if (searchParams.get("new") !== "1") return;
+    newGoalHandledRef.current = true;
+    setWizardState({ open: true, autoStart: false });
+    router.replace("/goals", { scroll: false });
+  }, [searchParams, router]);
 
   const handleArchive = async (goal: GoalWithPhases, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -181,17 +227,32 @@ function GoalCard({
   };
   const status = statusConfig[goal.status] || statusConfig.active;
 
+  const colorClass = colorForGoal(goal.id);
+  const letter = firstLetter(goal.title);
+
   return (
     <div
       onClick={onClick}
       className="group rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-5 cursor-pointer transition-all hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7]"
     >
-      {/* Title + Status */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="text-sm font-semibold text-[#2B2B2B] line-clamp-1 flex-1">{goal.title}</h3>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${status.badge}`}>
-          {status.label}
-        </span>
+      {/* Letter avatar + Title + Status */}
+      <div className="flex items-start gap-3 mb-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-semibold text-white ${colorClass}`}
+          aria-hidden
+        >
+          {letter}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-2 flex-1 text-sm font-semibold text-[#2B2B2B]">
+              {goal.title}
+            </h3>
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${status.badge}`}>
+              {status.label}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Description */}
