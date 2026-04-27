@@ -45,12 +45,37 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/api/webhooks/") ||
-    request.nextUrl.pathname.startsWith("/api/cron/");
+    request.nextUrl.pathname.startsWith("/api/cron/") ||
+    // Dev-only auto-login endpoint must be reachable without a session
+    // (otherwise the redirect below would loop). The route itself triple-
+    // guards against running in production, so whitelisting it here is
+    // safe regardless of env.
+    request.nextUrl.pathname.startsWith("/api/dev/");
 
-  // Protect private routes
+  // Protect private routes. On dev, if the bypass is configured, send the
+  // request through /api/dev/auto-login first so it gets a real session for
+  // the test account before continuing — lets browser-based automation skip
+  // the OAuth flow without faking auth state. The same triple guard as the
+  // route is applied here; production traffic always falls through to the
+  // plain redirect-to-/ branch.
   if (!user && !isPublicRoute) {
+    const devBypass =
+      process.env.NODE_ENV !== "production" &&
+      process.env.DEV_AUTH_BYPASS === "1" &&
+      !!process.env.DEV_AUTH_BYPASS_EMAIL &&
+      !!process.env.DEV_AUTH_BYPASS_PASSWORD;
+
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    if (devBypass) {
+      url.pathname = "/api/dev/auto-login";
+      url.searchParams.set(
+        "next",
+        request.nextUrl.pathname + request.nextUrl.search
+      );
+    } else {
+      url.pathname = "/";
+      url.search = "";
+    }
     return NextResponse.redirect(url);
   }
 

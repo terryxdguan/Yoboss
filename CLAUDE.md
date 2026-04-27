@@ -8,6 +8,28 @@
   - `cd apps/web && npx tsc --noEmit`
   - `cd apps/web && npx next build`
 
+## Dev auth bypass
+
+For browser-based automation (preview tools, headless QA), enable the
+auto-login route in `apps/web/.env.local` ONLY:
+
+```
+DEV_AUTH_BYPASS=1
+DEV_AUTH_BYPASS_EMAIL=<existing supabase auth user email>
+DEV_AUTH_BYPASS_PASSWORD=<that user's password>
+```
+
+When all three are set AND `NODE_ENV !== "production"`, the middleware
+redirects unauthenticated requests through
+[apps/web/src/app/api/dev/auto-login/route.ts](apps/web/src/app/api/dev/auto-login/route.ts),
+which calls `signInWithPassword` to mint a real Supabase session for that
+test user, then redirects to the original path.
+
+**Never set these env vars on Vercel / production.** The route itself
+short-circuits to 404 when `NODE_ENV === "production"` regardless, but
+the policy is "don't even configure them there" so there's no chance of
+accidental exposure.
+
 ## Database migrations
 
 `supabase/migrations/*.sql` are applied automatically on every Vercel deploy by
