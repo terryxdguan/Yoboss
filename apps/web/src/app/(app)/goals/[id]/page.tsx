@@ -632,9 +632,13 @@ export default function GoalDetailPage() {
         )}
 
         {hasTasks && (
-          <div className="grid grid-cols-4 gap-3">
-            {/* Row 1: Mon-Thu */}
-            {[0, 1, 2, 3].map((dayIdx) => (
+          // CSS-columns masonry: days flow Mon→Sun top-to-bottom in column 1,
+          // then continue into column 2 on lg+ screens. Each DayCard sets
+          // `break-inside-avoid` on its outer frame so a day never splits
+          // across columns. Heights auto-balance between columns, so sparse
+          // days don't leave empty space below them.
+          <div className="columns-1 lg:columns-2 gap-3">
+            {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => (
               <DayCard
                 key={dayIdx}
                 dayName={DAY_NAMES_SHORT[dayIdx]}
@@ -648,22 +652,6 @@ export default function GoalDetailPage() {
                 onAskAI={handleAskAI}
               />
             ))}
-            {/* Row 2: Fri-Sun + Goal Todos */}
-            {[4, 5, 6].map((dayIdx) => (
-              <DayCard
-                key={dayIdx}
-                dayName={DAY_NAMES_SHORT[dayIdx]}
-                dayIndex={dayIdx}
-                date={weekDates[dayIdx]}
-                tasks={tasksByDay[dayIdx] || []}
-                isToday={dayIdx === todayIdx}
-                onToggleTask={handleToggleTask}
-                onUpdateTask={handleUpdateTask}
-                onDeleteTask={handleDeleteTask}
-                onAskAI={handleAskAI}
-              />
-            ))}
-
           </div>
         )}
       </div>
@@ -920,7 +908,8 @@ function DayCard({
   const allDone = tasks.length > 0 && completedCount === tasks.length;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="break-inside-avoid mb-3 rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-2.5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+      <div className="flex flex-col gap-2">
       {/* Colored header band — mirrors ToDos column-header pill. Today is
           marked by a bold "(Today)" suffix instead of a blue ring so the
           per-day color stays visually unambiguous. */}
@@ -958,6 +947,7 @@ function DayCard({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -1060,23 +1050,22 @@ function TaskItem({
           )}
         </div>
 
-        {/* Hover actions: Ask Team + Delete */}
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100">
-          <button
-            onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
-            className="rounded p-1 hover:bg-[#7FAEE6]/10"
-            title="Ask Team"
-          >
-            <MessageSquare className="h-3.5 w-3.5 text-[#7FAEE6]" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
-            className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#D5847A]"
-            title="Delete"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {/* Send to Team — always visible green triangle, matches ToDos. */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
+          className="text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
+          title="Send to Team"
+        >
+          ▶
+        </button>
+        {/* Delete — hover-only, since destructive actions don't need to advertise. */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+          className="shrink-0 rounded p-1 text-[#9B948B] opacity-0 transition-opacity hover:bg-[#E7DED2] hover:text-[#D5847A] group-hover/item:opacity-100"
+          title="Delete"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );
