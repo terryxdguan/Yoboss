@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { X, Send, Paperclip, FileText, Globe, Code, Download } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -49,6 +50,11 @@ interface Message {
    *  tab close, etc). Mirrored from chat_messages.metadata.interrupted so
    *  reloading the panel still shows the "continue from here" warning. */
   interrupted?: boolean;
+  /** True when the AI request was rejected because the user is out of
+   *  credits / monthly allowance (HTTP 402, code=QUOTA_EXCEEDED). Renders
+   *  a dedicated block linking to /account instead of the generic
+   *  interrupted warning. */
+  quotaExceeded?: boolean;
 }
 
 interface ApiMessage {
@@ -108,7 +114,9 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
   const fileInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<ApiMessage[]>([]);
   const startedRef = useRef(false);
-  const { width: panelWidth, onMouseDown: onResizeMouseDown } = useResize(480, 360, 720);
+  // Default to the max width so the panel feels generous on first open;
+  // the user can still drag the handle leftward to anything ≥ 360.
+  const { width: panelWidth, onMouseDown: onResizeMouseDown } = useResize(720, 360, 720);
 
   // Load session and history from DB
   useEffect(() => {
@@ -130,6 +138,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           // Either an explicit interrupt marker or a partial row where the
           // final flush never happened — both render the same warning.
           interrupted: Boolean(m.metadata?.interrupted) || Boolean(m.metadata?.partial),
+          quotaExceeded: Boolean(m.metadata?.quotaExceeded),
         }));
         setMessages(uiMsgs);
         historyRef.current = dbMessages.map((m) => ({
@@ -238,7 +247,14 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
         if (!res.ok) {
           const body = await res.json().catch(() => null);
-          throw new Error(body?.error || `API error: ${res.status}`);
+          const baseMsg = body?.error || `API error: ${res.status}`;
+          // Tag quota errors so the catch handler can show a credits-
+          // specific UI block (link to /account) instead of the generic
+          // interrupted warning.
+          if (body?.code === "QUOTA_EXCEEDED" || res.status === 402) {
+            throw new Error(`QUOTA_EXCEEDED:${baseMsg}`);
+          }
+          throw new Error(baseMsg);
         }
 
         let turnComplete: {
@@ -324,6 +340,29 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
         break;
       }
 
+      // Resolve real filenames for code-execution-generated files.
+      // Anthropic's SSE `code_execution_output` block only carries
+      // `file_id`; the actual filename lives in the Files API metadata.
+      // Without this hop the UI would show "download" for every file.
+      if (files.length > 0) {
+        try {
+          const res = await fetch("/api/ai/files/metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileIds: files.map((f) => f.fileId) }),
+          });
+          if (res.ok) {
+            const { files: nameMap } = (await res.json()) as { files: Record<string, string> };
+            for (const f of files) {
+              const resolved = nameMap[f.fileId];
+              if (resolved) f.filename = resolved;
+            }
+          }
+        } catch {
+          // Non-blocking — keep "download" fallback if metadata lookup fails.
+        }
+      }
+
       // Final update with all accumulated data
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantId ? {
@@ -394,10 +433,23 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
         }
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const rawMsg = err instanceof Error ? err.message : "Something went wrong";
+      const isQuota = rawMsg.startsWith("QUOTA_EXCEEDED:");
+      const msg = isQuota ? rawMsg.slice("QUOTA_EXCEEDED:".length) : rawMsg;
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, content: text || `Error: ${msg}`, interrupted: true } : m
+          m.id === assistantId
+            ? {
+                ...m,
+                // For quota errors we leave content empty and let the
+                // dedicated block render the explanation + CTA. For all
+                // other errors keep the legacy "Error: ..." fallback so
+                // the user can still see what broke.
+                content: isQuota ? text : (text || `Error: ${msg}`),
+                interrupted: !isQuota,
+                quotaExceeded: isQuota,
+              }
+            : m
         )
       );
       // Persist partial state + mark interrupted so reloading the panel
@@ -417,7 +469,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             content: text,
             metadata: {
               partial: false,
-              interrupted: true,
+              ...(isQuota ? { quotaExceeded: true } : { interrupted: true }),
               ...(tools.length > 0 ? { toolActivity: tools } : {}),
               ...(files.length > 0 ? { generatedFiles: files } : {}),
             },
@@ -650,7 +702,18 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                   {isStreaming && msg === displayMessages[displayMessages.length - 1] && !msg.toolActivity?.length && (
                     <span className="inline-block ml-0.5 animate-pulse">|</span>
                   )}
-                  {msg.interrupted && !(isStreaming && msg === displayMessages[displayMessages.length - 1]) && (
+                  {msg.quotaExceeded && (
+                    <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[12px] text-[#C9843D] space-y-1.5">
+                      <div>⚠️ 你本月的额度已用完，余额也已耗尽。</div>
+                      <Link
+                        href="/account"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#C9843D] text-white text-[11px] font-medium hover:bg-[#B5742F] transition-colors"
+                      >
+                        前往账户页购买 Credits →
+                      </Link>
+                    </div>
+                  )}
+                  {msg.interrupted && !msg.quotaExceeded && !(isStreaming && msg === displayMessages[displayMessages.length - 1]) && (
                     <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[11px] text-[#C9843D]">
                       ⚠️ This response was interrupted. Send a new message to continue from here.
                     </div>

@@ -116,7 +116,9 @@ type GoalWizardPanelProps = GoalCreationProps | WeeklyPlanningProps;
 // ---------------------------------------------------------------
 
 export function GoalWizardPanel(props: GoalWizardPanelProps) {
-  const { width, onMouseDown } = useResize(480, 360, 720);
+  // Default to the max width so the panel feels generous on first open;
+  // the user can still drag the handle leftward to anything ≥ 360.
+  const { width, onMouseDown } = useResize(720, 360, 720);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
