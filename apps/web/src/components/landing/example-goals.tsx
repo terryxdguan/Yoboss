@@ -74,18 +74,15 @@ export function ExampleGoals({ onSelect, compact }: ExampleGoalsProps) {
             key={example.title}
             onClick={() => onSelect(example.text)}
             className={`group cursor-pointer bg-[#F1ECE4] hover:bg-[#FFFDF9] rounded-xl text-left transition-all duration-200 border border-transparent hover:border-[#E7DED2] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0 ${
-              compact ? "px-3.5 py-3" : "px-5 py-4"
+              compact ? "px-3.5 py-2.5" : "px-5 py-3"
             }`}
           >
-            <div className={`flex items-center gap-2 flex-nowrap overflow-hidden ${compact ? "" : "mb-1"}`}>
+            <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
               <Icon className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0`} strokeWidth={1.75} style={{ color: example.color }} />
-              <h3 className={`font-medium text-[#2B2B2B] ${compact ? "text-xs truncate" : "text-sm"}`}>
+              <h3 className={`font-medium text-[#2B2B2B] truncate ${compact ? "text-xs" : "text-sm"}`}>
                 {example.title}
               </h3>
             </div>
-            <p className={`text-[#6F6A64] mt-1 ${compact ? "text-[11px] line-clamp-1" : "text-xs leading-relaxed"}`}>
-              {example.description}
-            </p>
           </button>
         );
       })}
