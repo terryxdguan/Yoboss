@@ -126,9 +126,11 @@ export async function createPhases(
     title: string;
     description: string;
     estimated_weeks: number;
-    /** Per-phase sub-tasks. Inserted into phase_tasks after the phase row
-     *  itself is created. Empty array → no tasks for that phase. */
-    todos?: { title: string; priority: "high" | "medium" | "low" }[];
+    /** Per-phase milestones — read-only sub-phase markers shown on the
+     *  goal detail page. Persisted into phase_tasks (legacy table name;
+     *  semantic is now milestone, not actionable todo). Empty array → no
+     *  milestones for that phase. */
+    milestones?: { title: string }[];
   }[]
 ): Promise<Phase[]> {
   const supabase = await createClient();
@@ -151,21 +153,22 @@ export async function createPhases(
   if (error) throw error;
   if (!data) return [];
 
-  // Bulk-insert phase_tasks for each phase that has todos. data is
-  // returned in insert order so phases[i] aligns with the ith input.
-  const taskRows = data.flatMap((phase, i) => {
-    const todos = phases[i]?.todos ?? [];
-    return todos.map((t, j) => ({
+  // Bulk-insert milestones into phase_tasks. data is returned in insert
+  // order so phases[i] aligns with the ith input.
+  const milestoneRows = data.flatMap((phase, i) => {
+    const milestones = phases[i]?.milestones ?? [];
+    return milestones.map((m, j) => ({
       phase_id: phase.id,
-      title: t.title,
-      priority: t.priority,
+      title: m.title,
+      // priority column is not nullable but defaults to 'medium' in DB —
+      // milestones don't carry a real priority, the column is legacy.
       sort_order: j,
     }));
   });
-  if (taskRows.length > 0) {
+  if (milestoneRows.length > 0) {
     const { error: tasksErr } = await supabase
       .from("phase_tasks")
-      .insert(taskRows);
+      .insert(milestoneRows);
     if (tasksErr) throw tasksErr;
   }
 
@@ -230,54 +233,56 @@ export async function getPhaseTasksByGoalId(
   });
 }
 
-export async function togglePhaseTask(
+// Append a new milestone to the end of a phase's milestone list. sort_order
+// is computed as max(existing) + 1, or 0 if the phase is empty. Returns the
+// full inserted row so the caller can append to local state with the real id.
+export async function createPhaseTask(
+  phaseId: string,
+  title: string,
+): Promise<import("@/lib/types/database").PhaseTask> {
+  const supabase = await createClient();
+
+  const { data: maxRow } = await supabase
+    .from("phase_tasks")
+    .select("sort_order")
+    .eq("phase_id", phaseId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextSortOrder = (maxRow?.sort_order ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from("phase_tasks")
+    .insert({ phase_id: phaseId, title, sort_order: nextSortOrder })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as unknown as import("@/lib/types/database").PhaseTask;
+}
+
+// Patch a milestone's title and/or sort_order. Other columns
+// (priority, completed) are intentionally not exposed — the goal-detail UI
+// doesn't surface them and we don't want callers to accidentally mutate them.
+export async function updatePhaseTask(
   taskId: string,
-  completed: boolean,
+  patch: { title?: string; sort_order?: number },
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("phase_tasks")
-    .update({
-      completed,
-      completed_at: completed ? new Date().toISOString() : null,
-    })
+    .update(patch)
     .eq("id", taskId);
   if (error) throw error;
 }
 
-export async function addPhaseTask(input: {
-  phase_id: string;
-  title: string;
-  priority?: "high" | "medium" | "low";
-}): Promise<import("@/lib/types/database").PhaseTask> {
-  const supabase = await createClient();
-  // Pick next sort_order at the end of the phase's task list.
-  const { data: existing, error: countErr } = await supabase
-    .from("phase_tasks")
-    .select("sort_order")
-    .eq("phase_id", input.phase_id)
-    .order("sort_order", { ascending: false })
-    .limit(1);
-  if (countErr) throw countErr;
-  const nextSort = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
-
-  const { data, error } = await supabase
-    .from("phase_tasks")
-    .insert({
-      phase_id: input.phase_id,
-      title: input.title,
-      priority: input.priority ?? "medium",
-      sort_order: nextSort,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
 export async function deletePhaseTask(taskId: string): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.from("phase_tasks").delete().eq("id", taskId);
+  const { error } = await supabase
+    .from("phase_tasks")
+    .delete()
+    .eq("id", taskId);
   if (error) throw error;
 }
 

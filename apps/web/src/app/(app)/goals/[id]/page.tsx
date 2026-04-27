@@ -13,8 +13,11 @@ import {
   MessageSquare,
   Paperclip,
   FileText,
+  Flag,
+  ChevronUp,
+  ChevronDown,
+  X,
   Plus,
-  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
 import type { Goal, Phase, WeeklyPlan, DailyTask, PhaseTask } from "@/lib/types/database";
@@ -22,8 +25,8 @@ import {
   updateGoal,
   updatePhase,
   getPhaseTasksByGoalId,
-  addPhaseTask,
-  togglePhaseTask,
+  createPhaseTask,
+  updatePhaseTask,
   deletePhaseTask,
 } from "@/lib/db/actions";
 import { EditableText } from "@/components/ui/editable-text";
@@ -58,14 +61,10 @@ export default function GoalDetailPage() {
   const [showWeeklyWizard, setShowWeeklyWizard] = useState(false);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [pendingAITask, setPendingAITask] = useState<DailyTask | null>(null);
-  // Phase tasks (the per-phase 1.1, 1.2 ... checklist persisted in phase_tasks).
-  // We hold them flat; UI filters by selectedPhaseId.
+  // Phase milestones (sub-phase markers) — read-only outline shown next
+  // to the active phase. Persisted in phase_tasks (legacy table name).
+  // Held flat here; UI filters by selectedPhaseId.
   const [phaseTasks, setPhaseTasks] = useState<PhaseTask[]>([]);
-  const [newPhaseTaskText, setNewPhaseTaskText] = useState("");
-  const [newPhaseTaskPriority, setNewPhaseTaskPriority] = useState<
-    "high" | "medium" | "low"
-  >("medium");
-  const [showAddPhaseTask, setShowAddPhaseTask] = useState(false);
 
   // Tail pointer on the right roadmap card tracks the selected phase's
   // vertical center so it visually "points back" to the source card on
@@ -151,50 +150,71 @@ export default function GoalDetailPage() {
     loadData();
   }, [loadData]);
 
-  // Phase task handlers
-  const handleAddPhaseTask = async () => {
-    if (!newPhaseTaskText.trim() || !selectedPhaseId) return;
-    try {
-      const task = await addPhaseTask({
-        phase_id: selectedPhaseId,
-        title: newPhaseTaskText.trim(),
-        priority: newPhaseTaskPriority,
-      });
-      setPhaseTasks((prev) => [...prev, task]);
-      setNewPhaseTaskText("");
-      setNewPhaseTaskPriority("medium");
-      setShowAddPhaseTask(false);
-    } catch (err) {
-      console.error("Failed to add phase task:", err);
-    }
-  };
-
-  const handleTogglePhaseTask = async (taskId: string, completed: boolean) => {
-    // Optimistic update
+  const handleUpdateMilestone = async (taskId: string, title: string) => {
+    // Reject empty titles — keeps DB free of blank rows. EditableText already
+    // no-ops on unchanged values, so this only fires when the user truly
+    // saved an empty string.
+    if (!title.trim()) return;
     setPhaseTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? {
-              ...t,
-              completed: !completed,
-              completed_at: !completed ? new Date().toISOString() : null,
-            }
-          : t,
-      ),
+      prev.map((t) => (t.id === taskId ? { ...t, title } : t)),
     );
     try {
-      await togglePhaseTask(taskId, !completed);
+      await updatePhaseTask(taskId, { title });
     } catch (err) {
-      console.error("Failed to toggle phase task:", err);
+      console.error("Failed to update milestone:", err);
     }
   };
 
-  const handleDeletePhaseTask = async (taskId: string) => {
+  const handleDeleteMilestone = async (taskId: string) => {
     setPhaseTasks((prev) => prev.filter((t) => t.id !== taskId));
     try {
       await deletePhaseTask(taskId);
     } catch (err) {
-      console.error("Failed to delete phase task:", err);
+      console.error("Failed to delete milestone:", err);
+    }
+  };
+
+  const handleMoveMilestone = async (
+    taskId: string,
+    direction: "up" | "down",
+  ) => {
+    const target = phaseTasks.find((t) => t.id === taskId);
+    if (!target) return;
+    const siblings = phaseTasks
+      .filter((t) => t.phase_id === target.phase_id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const idx = siblings.findIndex((t) => t.id === taskId);
+    const neighborIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (neighborIdx < 0 || neighborIdx >= siblings.length) return;
+    const neighbor = siblings[neighborIdx];
+
+    const targetSort = target.sort_order;
+    const neighborSort = neighbor.sort_order;
+
+    setPhaseTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === target.id) return { ...t, sort_order: neighborSort };
+        if (t.id === neighbor.id) return { ...t, sort_order: targetSort };
+        return t;
+      }),
+    );
+
+    try {
+      await Promise.all([
+        updatePhaseTask(target.id, { sort_order: neighborSort }),
+        updatePhaseTask(neighbor.id, { sort_order: targetSort }),
+      ]);
+    } catch (err) {
+      console.error("Failed to reorder milestones:", err);
+    }
+  };
+
+  const handleAddMilestone = async (phaseId: string, title: string) => {
+    try {
+      const created = await createPhaseTask(phaseId, title);
+      setPhaseTasks((prev) => [...prev, created]);
+    } catch (err) {
+      console.error("Failed to create milestone:", err);
     }
   };
 
@@ -521,24 +541,19 @@ export default function GoalDetailPage() {
                   </div>
                 </div>
 
-                <PhaseTasksList
-                  tasks={phaseTasks
+                <PhaseMilestoneList
+                  milestones={phaseTasks
                     .filter((t) => t.phase_id === selectedPhase.id)
                     .sort((a, b) => a.sort_order - b.sort_order)}
-                  showAddForm={showAddPhaseTask}
-                  onShowAddForm={setShowAddPhaseTask}
-                  newText={newPhaseTaskText}
-                  onNewTextChange={setNewPhaseTaskText}
-                  newPriority={newPhaseTaskPriority}
-                  onNewPriorityChange={setNewPhaseTaskPriority}
-                  onAdd={handleAddPhaseTask}
-                  onToggle={handleTogglePhaseTask}
-                  onDelete={handleDeletePhaseTask}
+                  onUpdate={handleUpdateMilestone}
+                  onDelete={handleDeleteMilestone}
+                  onMove={handleMoveMilestone}
+                  onAdd={(title) => handleAddMilestone(selectedPhase.id, title)}
                 />
               </>
             ) : (
               <div className="rounded-xl border border-dashed border-[#DDD3C7] bg-[#F6F3EE] px-4 py-10 text-center text-sm text-[#9B948B]">
-                Select a phase on the left to see its tasks.
+                Select a phase on the left to see its milestones.
               </div>
             )}
           </div>
@@ -674,6 +689,17 @@ export default function GoalDetailPage() {
             description: (activePhase || phases[0]).description || "",
             estimatedWeeks: (activePhase || phases[0]).estimated_weeks || 4,
           }}
+          phaseMilestones={phaseTasks
+            .filter((t) => t.phase_id === (activePhase || phases[0]).id)
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((t) => t.title)}
+          roadmap={[...phases]
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((p) => ({
+              title: p.title,
+              description: p.description || "",
+              estimated_weeks: p.estimated_weeks || 0,
+            }))}
           onClose={() => setShowWeeklyWizard(false)}
           onWeeklyPlanSaved={() => {
             setShowWeeklyWizard(false);
@@ -684,12 +710,6 @@ export default function GoalDetailPage() {
     </div>
   );
 }
-
-const PRIORITY_DOT: Record<string, string> = {
-  high: "bg-[#D5847A]",
-  medium: "bg-[#D4B06A]",
-  low: "bg-[#7FB38A]",
-};
 
 // Per-phase color used by the roadmap left rail. Cycles by index so any
 // number of phases gets a distinct hue without hand-coding per name.
@@ -702,133 +722,142 @@ const PHASE_COLORS: { bg: string }[] = [
   { bg: "#B58FA0" }, // mauve
 ];
 
-function PhaseTasksList({
-  tasks,
-  showAddForm,
-  onShowAddForm,
-  newText,
-  onNewTextChange,
-  newPriority,
-  onNewPriorityChange,
-  onAdd,
-  onToggle,
+// Editable per-phase milestones. The Flag-icon outline doubles as the
+// canonical sub-phase markers AND as user-editable refinement: hover any
+// row to reveal ↑/↓/✕; double-click the title to rename via EditableText;
+// the bottom "+ Add milestone" button toggles into an inline input row.
+function PhaseMilestoneList({
+  milestones,
+  onUpdate,
   onDelete,
+  onMove,
+  onAdd,
 }: {
-  tasks: PhaseTask[];
-  showAddForm: boolean;
-  onShowAddForm: (v: boolean) => void;
-  newText: string;
-  onNewTextChange: (v: string) => void;
-  newPriority: "high" | "medium" | "low";
-  onNewPriorityChange: (p: "high" | "medium" | "low") => void;
-  onAdd: () => void;
-  onToggle: (taskId: string, completed: boolean) => void;
-  onDelete: (taskId: string) => void;
+  milestones: import("@/lib/types/database").PhaseTask[];
+  onUpdate: (id: string, title: string) => void;
+  onDelete: (id: string) => void;
+  onMove: (id: string, direction: "up" | "down") => void;
+  onAdd: (title: string) => void;
 }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (adding) inputRef.current?.focus();
+  }, [adding]);
+
+  const commitAdd = () => {
+    const trimmed = draft.trim();
+    if (trimmed) {
+      onAdd(trimmed);
+      setDraft("");
+      // Stay in adding mode after a successful Enter so the user can
+      // chain-add several milestones in a row.
+    }
+  };
+
+  const cancelAdd = () => {
+    setDraft("");
+    setAdding(false);
+  };
+
   return (
     <div className="mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
-          Tasks ({tasks.length})
-        </p>
-        {!showAddForm && (
-          <button
-            onClick={() => onShowAddForm(true)}
-            className="inline-flex items-center gap-1 text-xs text-[#7FAEE6] hover:underline"
-          >
-            <Plus className="h-3 w-3" />
-            Add task
-          </button>
-        )}
-      </div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
+        Milestones ({milestones.length})
+      </p>
 
-      {tasks.length === 0 && !showAddForm && (
-        <div className="rounded-lg border border-dashed border-[#DDD3C7] bg-[#F6F3EE] px-3 py-4 text-center text-xs text-[#9B948B]">
-          No tasks for this phase yet.
+      {milestones.length > 0 && (
+        <div className="space-y-1">
+          {milestones.map((m, idx) => {
+            const isFirst = idx === 0;
+            const isLast = idx === milestones.length - 1;
+            return (
+              <div
+                key={m.id}
+                className="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[#F8F5EF]"
+              >
+                <Flag className="mt-1 h-4 w-4 shrink-0 text-[#7FAEE6]" />
+                <div className="min-w-0 flex-1">
+                  <EditableText
+                    value={m.title}
+                    onSave={(next) => onUpdate(m.id, next)}
+                    placeholder="Milestone title"
+                    className="text-sm text-[#2B2B2B]"
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => onMove(m.id, "up")}
+                    disabled={isFirst}
+                    title="Move up"
+                    className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#2B2B2B] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#9B948B]"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onMove(m.id, "down")}
+                    disabled={isLast}
+                    title="Move down"
+                    className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#2B2B2B] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#9B948B]"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(m.id)}
+                    title="Delete"
+                    className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#D5847A]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div className="space-y-1">
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            className="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[#F6F3EE]"
-          >
-            <button
-              onClick={() => onToggle(task.id, task.completed)}
-              aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
-              className={`h-4 w-4 shrink-0 rounded-full border-2 transition-colors ${
-                task.completed
-                  ? "border-[#7FB38A] bg-[#7FB38A]"
-                  : "border-[#DDD3C7] hover:border-[#7FAEE6]"
-              }`}
-            />
-            <span
-              className={`shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[task.priority]}`}
-              aria-hidden
-            />
-            <span
-              className={`min-w-0 flex-1 truncate text-sm ${
-                task.completed ? "text-[#9B948B] line-through" : "text-[#2B2B2B]"
-              }`}
-            >
-              {task.title}
-            </span>
-            <button
-              onClick={() => onDelete(task.id)}
-              aria-label="Delete task"
-              className="shrink-0 text-[#DDD3C7] opacity-0 transition-opacity hover:text-[#D5847A] group-hover:opacity-100"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {showAddForm && (
-        <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-2 py-1.5">
+      {adding ? (
+        <div className="flex items-start gap-2.5 rounded-lg px-2 py-1.5">
+          <Flag className="mt-1 h-4 w-4 shrink-0 text-[#7FAEE6]" />
           <input
-            autoFocus
-            value={newText}
-            onChange={(e) => onNewTextChange(e.target.value)}
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onAdd();
-              if (e.key === "Escape") {
-                onShowAddForm(false);
-                onNewTextChange("");
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitAdd();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelAdd();
               }
             }}
-            placeholder="What needs to happen in this phase?"
-            className="min-w-0 flex-1 bg-transparent text-sm text-[#2B2B2B] outline-none placeholder:text-[#9B948B]"
-          />
-          <select
-            value={newPriority}
-            onChange={(e) =>
-              onNewPriorityChange(e.target.value as "high" | "medium" | "low")
-            }
-            className="shrink-0 bg-transparent text-xs text-[#6F6A64] outline-none"
-          >
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-          <button
-            onClick={onAdd}
-            disabled={!newText.trim()}
-            className="shrink-0 rounded-md bg-[#7FAEE6] px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-[#6A9DDA] disabled:opacity-40"
-          >
-            Add
-          </button>
-          <button
-            onClick={() => {
-              onShowAddForm(false);
-              onNewTextChange("");
+            onBlur={() => {
+              if (draft.trim()) {
+                commitAdd();
+              }
+              setAdding(false);
+              setDraft("");
             }}
-            className="shrink-0 text-xs text-[#9B948B] hover:text-[#2B2B2B]"
-          >
-            ✕
-          </button>
+            placeholder="New milestone…"
+            className="min-w-0 flex-1 rounded-md border border-[#7FAEE6] bg-[#FFFDF9] px-2 py-1 text-sm text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30"
+          />
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="mt-1 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#9B948B] hover:bg-[#F8F5EF] hover:text-[#2B2B2B]"
+        >
+          <Plus className="h-4 w-4" />
+          Add milestone
+        </button>
       )}
     </div>
   );
