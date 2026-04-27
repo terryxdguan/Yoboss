@@ -995,30 +995,12 @@ function TaskItem({
   };
 
   return (
-    <div className="group/item rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 hover:border-[#DDD3C7] transition-colors relative">
-      {/* Time slot */}
-      {editingTime ? (
-        <input
-          autoFocus
-          value={timeDraft}
-          onChange={(e) => setTimeDraft(e.target.value)}
-          onBlur={commitTime}
-          onKeyDown={(e) => { if (e.key === "Enter") commitTime(); if (e.key === "Escape") { setTimeDraft(task.time_slot || ""); setEditingTime(false); } }}
-          className="text-[10px] text-[#9B948B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none w-full mb-1"
-        />
-      ) : (
-        task.time_slot && (
-          <p
-            className="text-[10px] text-[#9B948B] mb-1 cursor-text"
-            onDoubleClick={() => setEditingTime(true)}
-          >
-            {task.time_slot}
-          </p>
-        )
-      )}
-
-      {/* Title row */}
-      <div className="flex items-start gap-2">
+    <div className="group/item rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 hover:border-[#DDD3C7] transition-colors">
+      {/* Single-row layout: checkbox · time · title · ▶ · ✕. Title gets
+          flex-1 + min-w-0 so it's the only element that wraps when long;
+          everything else stays on the first line, with action buttons
+          top-aligned via items-start. */}
+      <div className="flex items-start gap-2.5">
         <button
           onClick={() => onToggle(task.id, task.completed)}
           className="shrink-0 mt-0.5"
@@ -1030,6 +1012,28 @@ function TaskItem({
           )}
         </button>
 
+        {/* Time slot — inline, only renders when present. */}
+        {editingTime ? (
+          <input
+            autoFocus
+            value={timeDraft}
+            onChange={(e) => setTimeDraft(e.target.value)}
+            onBlur={commitTime}
+            onKeyDown={(e) => { if (e.key === "Enter") commitTime(); if (e.key === "Escape") { setTimeDraft(task.time_slot || ""); setEditingTime(false); } }}
+            className="shrink-0 w-32 text-sm text-[#9B948B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none"
+          />
+        ) : (
+          task.time_slot && (
+            <span
+              className="shrink-0 text-sm text-[#9B948B] cursor-text whitespace-nowrap"
+              onDoubleClick={() => setEditingTime(true)}
+            >
+              {task.time_slot}
+            </span>
+          )
+        )}
+
+        {/* Title — flex-1, wraps within itself when content overflows. */}
         <div className="flex-1 min-w-0">
           {editingTitle ? (
             <input
@@ -1038,11 +1042,11 @@ function TaskItem({
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setTitleDraft(task.title); setEditingTitle(false); } }}
-              className="text-xs text-[#2B2B2B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none w-full"
+              className="text-sm text-[#2B2B2B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none w-full"
             />
           ) : (
             <p
-              className={`text-xs leading-snug cursor-text ${
+              className={`text-sm leading-snug cursor-text ${
                 task.completed
                   ? "text-[#9B948B] line-through"
                   : "text-[#2B2B2B]"
@@ -1057,7 +1061,7 @@ function TaskItem({
         {/* Send to Team — always visible green triangle, matches ToDos. */}
         <button
           onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
-          className="text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
+          className="shrink-0 mt-0.5 text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] transition-colors"
           title="Send to Team"
         >
           ▶
