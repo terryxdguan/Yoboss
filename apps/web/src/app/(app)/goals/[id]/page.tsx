@@ -41,19 +41,16 @@ type RightPanel = "none" | "ai" | "deliverables" | "notes";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Saturated band per weekday, reusing the same palette as PHASE_COLORS so
-// the day headers carry the same visual weight as the phase number squares
-// in the roadmap rail. Mon–Sat reuse phases 1–6; Sun gets a new coral tone
-// so all 7 days are visually distinct. White text on these mid-saturation
-// bgs to mirror the phase squares.
-const DAY_COLORS: { bg: string }[] = [
-  { bg: "bg-[#7FAEE6]" }, // Mon — blue   (Phase 1)
-  { bg: "bg-[#C9A968]" }, // Tue — gold   (Phase 2)
-  { bg: "bg-[#9CC4A4]" }, // Wed — green  (Phase 3)
-  { bg: "bg-[#9B6B5C]" }, // Thu — brown  (Phase 4)
-  { bg: "bg-[#7FB3B3]" }, // Fri — teal   (Phase 5)
-  { bg: "bg-[#B58FA0]" }, // Sat — mauve  (Phase 6)
-  { bg: "bg-[#D4946B]" }, // Sun — coral  (new)
+// Pastel band per weekday, mirroring the ToDos Board column-header palette
+// so the two boards feel like one design language. Index 0 = Monday.
+const DAY_COLORS: { band: string; text: string }[] = [
+  { band: "border-[#BFDCC5] bg-[#F4FBF5]", text: "text-[#3F7C4A]" }, // Mon — green
+  { band: "border-[#E8D5A4] bg-[#FFF9EA]", text: "text-[#8E6B2E]" }, // Tue — yellow
+  { band: "border-[#B9D4E8] bg-[#F2F8FC]", text: "text-[#5E8FCE]" }, // Wed — blue
+  { band: "border-[#BFD9CF] bg-[#F2FAF6]", text: "text-[#4F8A77]" }, // Thu — teal-green
+  { band: "border-[#D9CFA9] bg-[#FFF9E8]", text: "text-[#7B6A2E]" }, // Fri — tan
+  { band: "border-[#D5C8BD] bg-[#F9F5F1]", text: "text-[#7B6A60]" }, // Sat — warm beige
+  { band: "border-[#E0B7B4] bg-[#FFF3F1]", text: "text-[#9A615B]" }, // Sun — rose
 ];
 
 function getWeekDates(): string[] {
@@ -674,6 +671,10 @@ export default function GoalDetailPage() {
               description: p.description || "",
               status: p.status,
               estimatedWeeks: p.estimated_weeks || 0,
+              milestones: phaseTasks
+                .filter((t) => t.phase_id === p.id)
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((t) => t.title),
             })),
             weeklyTasks: weeklyPlan?.daily_tasks?.map((t) => ({
               dayOfWeek: t.day_of_week,
@@ -913,19 +914,18 @@ function DayCard({
   return (
     <div className="break-inside-avoid mb-3 rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-2.5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
       <div className="flex flex-col gap-2">
-      {/* Saturated header band — same palette as the phase number squares
-          in the roadmap rail, white text. Today is marked by a bold
-          "(Today)" suffix; the per-day bg already carries the per-day
-          identity so no extra ring is needed. */}
-      <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${color.bg}`}>
-        <span className="text-sm font-semibold text-white">
+      {/* Pastel header band — mirrors ToDos column-header pill. Today is
+          marked by a bold "(Today)" suffix instead of a blue ring so the
+          per-day color stays visually unambiguous. */}
+      <div className={`flex items-center justify-between rounded-lg border px-3 py-2 ${color.band}`}>
+        <span className={`text-sm font-semibold ${color.text}`}>
           {dayName}
           {isToday && <span className="ml-1 text-[11px]">(Today)</span>}
         </span>
-        <span className="flex items-center gap-2 text-[11px] text-white">
-          <span className="opacity-80">{date}</span>
+        <span className={`flex items-center gap-2 text-[11px] ${color.text}`}>
+          <span className="opacity-70">{date}</span>
           {tasks.length > 0 && (
-            <span className={`font-semibold tabular-nums ${allDone ? "" : "opacity-80"}`}>
+            <span className={`font-semibold tabular-nums ${allDone ? "text-[#7FB38A]" : ""}`}>
               {completedCount}/{tasks.length}
             </span>
           )}
