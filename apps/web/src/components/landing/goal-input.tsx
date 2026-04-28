@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-
-const PLACEHOLDER = "Make an additional $10,000 in the next 6 months";
+import { GOAL_PLACEHOLDER as PLACEHOLDER } from "./example-goals";
 
 interface GoalInputProps {
   value: string;

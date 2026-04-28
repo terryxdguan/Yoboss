@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { X, Eye, EyeOff, Check, AlertCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
-import { hasPendingGoal } from "@/lib/pending-goal";
 
 interface AuthModalProps {
   open: boolean;
@@ -68,13 +67,12 @@ export function AuthModal({
     setLoading(false);
   }, [open, initialMode]);
 
-  // Read-only probe — the /goals page is responsible for clearing the
-  // key after it consumes it (auto-opens the wizard panel with the
-  // pending text). We just need to know "was a goal typed before login?"
-  // to pick the right redirect destination. Cookie-backed so the email-
-  // confirmation round-trip (possibly in a different tab) can still see it.
-  const postAuthDestination = (): string =>
-    hasPendingGoal() ? "/goals" : "/dashboard";
+  // Always land on /dashboard after auth. If the visitor typed a goal
+  // before signing up, the dashboard onboarding pre-fills its "Welcome"
+  // textarea from the pendingGoal cookie — letting the user press the
+  // button themselves instead of being dropped straight into the
+  // roadmap-creation AI flow.
+  const postAuthDestination = (): string => "/dashboard";
 
   if (!open) return null;
 

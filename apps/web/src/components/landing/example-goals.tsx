@@ -13,6 +13,11 @@ interface ExampleGoalsProps {
   compact?: boolean;
 }
 
+// Shared placeholder for the goal input — surfaced both on the landing
+// page (GoalInput) and the dashboard onboarding's "Welcome" textarea.
+export const GOAL_PLACEHOLDER =
+  "Make an additional $10,000 in the next 6 months";
+
 export const EXAMPLES: {
   icon: LucideIcon;
   color: string;

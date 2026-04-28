@@ -10,8 +10,11 @@ import {
   MessageSquare,
 } from "lucide-react";
 import type { DashboardOnboarding } from "@/lib/db/actions";
-import { setPendingGoal } from "@/lib/pending-goal";
-import { EXAMPLES as GOAL_EXAMPLES } from "@/components/landing/example-goals";
+import { clearPendingGoal, getPendingGoal, setPendingGoal } from "@/lib/pending-goal";
+import {
+  EXAMPLES as GOAL_EXAMPLES,
+  GOAL_PLACEHOLDER,
+} from "@/components/landing/example-goals";
 
 // Marker that survives a navigation to /todos and back. The celebration
 // modal on the regular dashboard reads it to know whether to fire (i.e.
@@ -19,8 +22,6 @@ import { EXAMPLES as GOAL_EXAMPLES } from "@/components/landing/example-goals";
 export const ONBOARDING_ACTIVE_KEY = "yoboss-onboarding-active";
 
 type StepId = "roadmap" | "weekly-plan" | "todo-item";
-
-const GOAL_PLACEHOLDER = "How to lose 30 lbs (13.6 kg) in 6 months";
 
 const employeeModes = [
   {
@@ -68,6 +69,18 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
     } catch {
       // sessionStorage unavailable (private mode etc.) — celebration
       // simply won't fire; not a real failure.
+    }
+  }, []);
+
+  // Pick up any goal the visitor typed on the landing page before
+  // signing up — pre-fill the textarea so they see their own words and
+  // press the button themselves rather than getting auto-launched into
+  // the AI roadmap flow.
+  useEffect(() => {
+    const pending = getPendingGoal();
+    if (pending) {
+      clearPendingGoal();
+      setGoalText(pending);
     }
   }, []);
 

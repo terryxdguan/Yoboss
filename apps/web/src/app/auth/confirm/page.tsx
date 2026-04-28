@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/db/client";
-import { hasPendingGoal } from "@/lib/pending-goal";
 
 // Email-confirmation landing page. The Supabase email template points
 // here:
@@ -18,10 +17,9 @@ import { hasPendingGoal } from "@/lib/pending-goal";
 // the verification and gets the resulting cookies.
 
 function pickDestination(rawNext: string | null): string {
-  // Cookie wins: it's the deliberate "the user typed a goal before
-  // signing up" signal we set on the landing page, and it survives the
-  // email round-trip across tabs in the same browser.
-  if (hasPendingGoal()) return "/goals";
+  // Always land on /dashboard. If a goal was typed before signup, the
+  // onboarding-dashboard reads the pendingGoal cookie on mount and
+  // pre-fills its textarea with that text.
 
   if (rawNext) {
     // Same-origin path → use as-is. Block protocol-relative ("//evil")
@@ -77,10 +75,8 @@ export default function ConfirmEmailPage() {
         return;
       }
       // Success — verifyOtp has set the session cookies. Pick the
-      // destination by consulting the pendingGoal cookie first (the
-      // authoritative signal for "user typed a goal before signing up
-      // — drop them into the create flow"), then fall back to the URL
-      // `next` param, then to /dashboard.
+      // destination from the URL `next` param, falling back to
+      // /dashboard. The dashboard handles any pending typed goal.
       const dest = pickDestination(rawNext);
       // Hard navigation so the middleware sees the new session on the
       // very first request to `dest`.

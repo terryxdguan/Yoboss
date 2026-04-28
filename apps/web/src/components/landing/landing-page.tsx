@@ -88,10 +88,10 @@ export function LandingPage() {
   const handleSubmitGoal = (text: string) => {
     setPendingGoal(text);
     if (loggedIn) {
-      // Already authenticated — no need for the auth modal; drop them
-      // straight into the goal-creation flow and let /goals consume
-      // pendingGoal on mount (auto-opens the wizard panel with their text).
-      window.location.href = "/goals";
+      // Already authenticated — skip the auth modal and drop them on
+      // /dashboard. The onboarding-dashboard reads pendingGoal and
+      // pre-fills its textarea with whatever they just typed.
+      window.location.href = "/dashboard";
       return;
     }
     openAuth("signup");
