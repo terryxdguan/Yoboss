@@ -382,14 +382,6 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new Event("yoboss:open-chat"))}
-                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[#CFC3B5] bg-[#FFFDF9] px-3 py-1.5 text-xs font-semibold text-[#6F6A64] hover:bg-[#F1ECE4]"
-              >
-                Ask Team
-                <MessageSquare className="h-3.5 w-3.5" />
-              </button>
             </div>
 
             <p className="mb-4 text-sm leading-relaxed text-[#6F6A64]">

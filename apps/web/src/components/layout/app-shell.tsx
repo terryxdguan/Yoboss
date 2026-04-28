@@ -25,8 +25,9 @@ export function AppShell({ children, userAvatar, userName }: AppShellProps) {
         setChatOpen((prev) => !prev);
       }
     };
-    // Programmatic open from anywhere in the tree (e.g. the dashboard
-    // Employee card's "Ask Team" button) without prop drilling.
+    // Programmatic open from anywhere in the tree via the
+    // `yoboss:open-chat` event — keeps the keyboard shortcut and any
+    // future opener wired without prop drilling.
     const handleOpenChat = () => setChatOpen(true);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("yoboss:open-chat", handleOpenChat);
