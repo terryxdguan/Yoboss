@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Bell, Settings, Check, AlertTriangle } from "lucide-react";
+import { Bell, Settings, Check, AlertTriangle } from "lucide-react";
 import { getUnreadNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/db/actions";
 import type { Notification } from "@/lib/types/notification";
 
@@ -52,16 +52,6 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
-          {/* Search */}
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9B948B] h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              className="w-64 rounded-full border border-[#E7DED2] bg-[#FFFDF9] pl-10 pr-4 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:border-[#7FAEE6] focus:ring-4 focus:ring-[#7FAEE6]/10 outline-none transition-all"
-            />
-          </div>
-
           {/* Notifications */}
           <div className="relative">
             <button

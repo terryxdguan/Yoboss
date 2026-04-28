@@ -9,7 +9,6 @@ import {
   ListChecks,
   GitBranch,
   UsersRound,
-  HelpCircle,
   LogOut,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
@@ -103,15 +102,6 @@ export function Sidebar() {
         {/* Bottom */}
         <div className="mt-auto space-y-2">
           <div className="h-px bg-[#E7DED2] my-2" />
-          <Link
-            href="/help"
-            className="flex items-center gap-4 rounded-xl px-3 py-3 text-[#6F6A64] hover:bg-[#FFFDF9] hover:text-[#2B2B2B] transition-colors"
-          >
-            <HelpCircle className="h-5 w-5 shrink-0" />
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-sm">
-              Help
-            </span>
-          </Link>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-4 rounded-xl px-3 py-3 text-[#6F6A64] hover:bg-[#FFFDF9] hover:text-[#2B2B2B] transition-colors"
