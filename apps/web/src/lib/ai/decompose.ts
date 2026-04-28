@@ -1,10 +1,12 @@
 import { getAnthropicClient, MODELS } from "./client";
+import { PERSONA } from "./persona";
 
 // Goal decomposition: takes a user's goal description and breaks it into 3-6 phases.
 // Uses Opus for complex reasoning about ambiguous goals.
 // Called via /api/ai/plan route (streaming).
 
-const SYSTEM_PROMPT = `You are an AI goal coach. The user will describe an ambitious personal goal.
+const SYSTEM_PROMPT = `${PERSONA}
+You are an AI goal coach. The user will describe an ambitious personal goal.
 Your job is to decompose it into 3-6 actionable phases that build on each other.
 
 Each phase should:

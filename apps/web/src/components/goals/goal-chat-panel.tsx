@@ -116,7 +116,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
   const startedRef = useRef(false);
   // Default to the max width so the panel feels generous on first open;
   // the user can still drag the handle leftward to anything ≥ 360.
-  const { width: panelWidth, onMouseDown: onResizeMouseDown } = useResize(720, 360, 720);
+  const { width: panelWidth, onMouseDown: onResizeMouseDown } = useResize(520, 360, 720);
 
   // Load session and history from DB
   useEffect(() => {
@@ -626,7 +626,9 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           </div>
           <div className="min-w-0">
             <span className="text-sm font-semibold text-[#2B2B2B] block truncate">General Assistant</span>
-            <span className="text-[10px] text-[#9B948B]">{panelTitle || "Goal Coach"}</span>
+            {panelTitle && (
+              <span className="text-[10px] text-[#9B948B]">{panelTitle}</span>
+            )}
           </div>
         </div>
         <button

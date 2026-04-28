@@ -1,11 +1,13 @@
 import { getAnthropicClient, MODELS } from "./client";
+import { PERSONA } from "./persona";
 import type { Phase, DailyTask } from "../types/database";
 
 // Weekly plan generation: takes a phase and generates daily tasks for the current week.
 // Uses Sonnet for structured but less creative generation.
 // Classifies each task as USER_ACTION, AI_EXECUTABLE, or AI_ASSISTED.
 
-const SYSTEM_PROMPT = `You are an AI goal coach generating a weekly plan.
+const SYSTEM_PROMPT = `${PERSONA}
+You are an AI goal coach generating a weekly plan.
 Given a goal phase and context about the user's progress, create specific daily tasks for this week.
 
 Guidelines:

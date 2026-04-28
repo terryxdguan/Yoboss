@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, X, AlertCircle } from "lucide-react";
+import {
+  Check,
+  X,
+  AlertCircle,
+  Flag,
+  Calendar,
+  Users,
+  FileText,
+  MessageCircle,
+  Wallet,
+} from "lucide-react";
 import { GoalInput } from "./goal-input";
 import { ExampleGoals } from "./example-goals";
 import { AuthModal } from "./auth-modal";
@@ -99,19 +109,13 @@ export function LandingPage() {
             <div className="hidden md:flex items-center gap-6">
               <a
                 className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
-                href="#"
-              >
-                Product
-              </a>
-              <a
-                className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
-                href="#"
+                href="#features"
               >
                 Features
               </a>
               <a
                 className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
-                href="#"
+                href="/pricing"
               >
                 Pricing
               </a>
@@ -170,15 +174,82 @@ export function LandingPage() {
           <ExampleGoals onSelect={(text) => setGoalText(text)} />
         </section>
 
+        {/* Features */}
+        <section id="features" className="max-w-6xl mx-auto px-6 mt-24 mb-20 scroll-mt-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#2B2B2B] mb-3">
+              Everything you need to actually finish what you start
+            </h2>
+            <p className="text-base text-[#6F6A64] max-w-2xl mx-auto">
+              YoBoss turns one big goal into a phased roadmap, a weekly schedule, and a small
+              team of digital employees that ship real work alongside you.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              {
+                icon: Flag,
+                title: "Turn any ambition into a clear plan",
+                body: "Tell your team where you want to land. They come back with a phased roadmap and milestones you can edit, reorder, or rip up. The blank-page problem, solved.",
+                color: "#7FAEE6",
+              },
+              {
+                icon: Calendar,
+                title: "Your week, planned every Monday",
+                body: "Every Monday your team drafts the week — concrete tasks slotted into real time blocks. Miss a day? They re-plan around it, no guilt trip.",
+                color: "#7FB38A",
+              },
+              {
+                icon: Users,
+                title: "A team of specialists",
+                body: "Hire General Assistant, Content Writer, Market Researcher, and more. Each one ships output you can download.",
+                color: "#C9A968",
+              },
+              {
+                icon: FileText,
+                title: "Real files, not just chat",
+                body: "Ask for a pitch deck, an interview script, or a spreadsheet — your team writes the code, runs it, and hands you the file.",
+                color: "#D5847A",
+              },
+              {
+                icon: MessageCircle,
+                title: "A team that remembers everything",
+                body: "Every conversation about your goal lives in one shared space. Your team always knows your roadmap, this week's plan, and what you shipped yesterday — so you never re-explain.",
+                color: "#9B6B5C",
+              },
+              {
+                icon: Wallet,
+                title: "Pay only for what you use",
+                body: "Free tier covers casual use. Upgrade or top up with credits — no surprise bills, full visibility on usage.",
+                color: "#7FB3B3",
+              },
+            ].map(({ icon: Icon, title, body, color }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-6 text-left hover:border-[#DDD3C7] hover:shadow-[0_8px_24px_rgba(30,34,39,0.06)] transition-all"
+              >
+                <div
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl mb-4"
+                  style={{ backgroundColor: `${color}1F`, color }}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-base font-semibold text-[#2B2B2B] mb-1.5">{title}</h3>
+                <p className="text-sm text-[#6F6A64] leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Footer */}
         <footer className="w-full border-t border-[#E7DED2] mt-14">
           <div className="flex items-center justify-between px-8 py-2 w-full max-w-7xl mx-auto">
             <span className="text-xs font-semibold text-[#2B2B2B]">YoBoss</span>
             <div className="flex items-center gap-6">
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Features</a>
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Pricing</a>
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Privacy</a>
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#">Terms</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#features">Features</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/pricing">Pricing</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/privacy">Privacy</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/terms">Terms</a>
             </div>
             <span className="text-xs text-[#9B948B]">&copy; 2026 YoBoss</span>
           </div>

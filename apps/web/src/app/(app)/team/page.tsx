@@ -192,7 +192,7 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-[#2B2B2B]">Employees</h1>
+          <h1 className="text-2xl font-semibold text-[#2B2B2B]">Team</h1>
           <p className="text-sm text-[#6F6A64] mt-1">
             Your team — {team.length} members
           </p>

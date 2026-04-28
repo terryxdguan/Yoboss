@@ -1,11 +1,13 @@
 import { getAnthropicClient, MODELS } from "./client";
+import { PERSONA } from "./persona";
 import type { DailyTask, Phase } from "../types/database";
 
 // Weekly review: generates an end-of-week summary and coaching.
 // Uses Sonnet. Streamed to the client.
 // Includes phase transition nudge when appropriate.
 
-const SYSTEM_PROMPT = `You are an AI goal coach generating a weekly review. Summarize the week and provide forward-looking guidance.
+const SYSTEM_PROMPT = `${PERSONA}
+You are an AI goal coach generating a weekly review. Summarize the week and provide forward-looking guidance.
 
 Structure your review as:
 1. **This week's highlights** — what went well, specific tasks completed

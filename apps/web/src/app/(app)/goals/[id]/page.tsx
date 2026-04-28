@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -66,6 +66,7 @@ function getWeekDates(): string[] {
 export default function GoalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [weeklyPlan, setWeeklyPlan] = useState<(WeeklyPlan & { daily_tasks: DailyTask[] }) | null>(null);
@@ -162,6 +163,38 @@ export default function GoalDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Pick up dashboard "Send to Team" handoff: dashboard navigates here with
+  // ?chat=1&taskTitle=…&taskTime=… when the clicked todo belongs to this
+  // goal. We open the Team panel and seed a synthetic DailyTask so the
+  // chat draft auto-fills like a normal in-page Send to Team click would.
+  // One-shot guard avoids re-firing when we strip the params from the URL.
+  const dashboardChatHandledRef = useRef(false);
+  useEffect(() => {
+    if (dashboardChatHandledRef.current) return;
+    if (!goal) return;
+    if (searchParams.get("chat") !== "1") return;
+    dashboardChatHandledRef.current = true;
+
+    const taskTitle = searchParams.get("taskTitle");
+    const taskTime = searchParams.get("taskTime");
+    if (taskTitle) {
+      setPendingAITask({
+        id: "__from-dashboard__",
+        weekly_plan_id: "",
+        day_of_week: 0,
+        title: taskTitle,
+        description: null,
+        time_slot: taskTime,
+        time_estimate_minutes: null,
+        completed: false,
+        completed_at: null,
+        sort_order: 0,
+      });
+    }
+    setRightPanel("ai");
+    router.replace(`/goals/${id}`, { scroll: false });
+  }, [goal, searchParams, router, id]);
 
   const handleUpdateMilestone = async (taskId: string, title: string) => {
     // Reject empty titles — keeps DB free of blank rows. EditableText already

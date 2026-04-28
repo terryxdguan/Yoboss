@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 import { getAnthropicClient, MODELS } from "@/lib/ai/client";
 import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
+import { PERSONA } from "@/lib/ai/persona";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -62,15 +63,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const basePrompt = await loadPromptFile(promptFile);
-    const yobossPrefix = `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
+    const yobossPrefix = `${PERSONA}
+IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
 
 FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using code execution, you MUST copy the output file to $OUTPUT_DIR so the user can download it. Example: after creating a file, run: cp /tmp/myfile.html $OUTPUT_DIR/myfile.html. The $OUTPUT_DIR environment variable is pre-set. Only files in $OUTPUT_DIR are downloadable.
-
 `;
-    const fullPrompt = yobossPrefix + basePrompt;
-    const systemPrompt = extraContext
-      ? `${fullPrompt}\n\n---\nADDITIONAL CONTEXT:\n${extraContext}`
-      : fullPrompt;
+
+    // Three-block system layout for prompt caching:
+    //   1. yobossPrefix — identical across all agents/users → all calls share one cache entry
+    //   2. basePrompt   — identical per-agent → each agent's repeat calls hit
+    //   3. extraContext — per-call (turn-specific) → not cached
+    // Two cache_control breakpoints; block 3 (when present) lives outside
+    // the cached prefix so per-call context never invalidates blocks 1-2.
+    const systemBlocks: Anthropic.Messages.TextBlockParam[] = [
+      { type: "text", text: yobossPrefix, cache_control: { type: "ephemeral" } },
+      { type: "text", text: basePrompt, cache_control: { type: "ephemeral" } },
+    ];
+    if (extraContext) {
+      systemBlocks.push({
+        type: "text",
+        text: `---\nADDITIONAL CONTEXT:\n${extraContext}`,
+      });
+    }
 
     const client = getAnthropicClient();
     const encoder = new TextEncoder();
@@ -86,7 +100,7 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
           const apiStream = client.messages.stream({
             model: modelName,
             max_tokens: 16000,
-            system: systemPrompt,
+            system: systemBlocks,
             tools: SERVER_TOOLS,
             messages,
           });
@@ -99,14 +113,24 @@ FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using co
           const finalMessage = await apiStream.finalMessage();
 
           // Log usage per-turn (server-side, simpler than accumulating
-          // across client-driven continuations).
+          // across client-driven continuations). The cache_* fields show
+          // prompt-caching effectiveness; same shape as goal-chat so
+          // both surfaces grep with `[*-chat] usage`.
           if (finalMessage.usage) {
+            const u = finalMessage.usage;
+            console.log("[agent-chat] usage", {
+              agent: promptFile,
+              input: u.input_tokens,
+              output: u.output_tokens,
+              cache_read: u.cache_read_input_tokens ?? 0,
+              cache_write: u.cache_creation_input_tokens ?? 0,
+            });
             logUsage(
               user.id,
               "agent-chat",
               modelName,
-              finalMessage.usage.input_tokens,
-              finalMessage.usage.output_tokens
+              u.input_tokens,
+              u.output_tokens
             ).catch(() => {});
           }
 

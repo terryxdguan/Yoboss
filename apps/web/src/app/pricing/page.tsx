@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Zap } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Check, Zap } from "lucide-react";
 import { getBillingState } from "@/lib/db/actions";
 
 type TierId = "free" | "basic" | "pro";
@@ -67,19 +68,25 @@ export default function PricingPage() {
   const [currentTier, setCurrentTier] = useState<TierId>("free");
   const [hasActiveSub, setHasActiveSub] = useState(false);
   const [billingLoaded, setBillingLoaded] = useState(false);
+  // signedIn is determined by whether getBillingState resolves; on the
+  // public landing-style entry to this page we render sign-up CTAs
+  // instead of subscribe/portal actions.
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const q = await getBillingState();
+        setSignedIn(true);
         const tier = (q?.tier as TierId) ?? "free";
         setCurrentTier(tier);
         // Any non-free tier with a linked subscription id means Stripe has a
         // live subscription for this user, so plan changes must go through
         // the portal rather than creating a new checkout session.
         setHasActiveSub(!!q?.stripe_subscription_id && tier !== "free");
-      } catch (err) {
-        console.error("Failed to load billing state:", err);
+      } catch {
+        // Not authenticated — keep defaults; CTAs will switch to sign-up.
+        setSignedIn(false);
       } finally {
         setBillingLoaded(true);
       }
@@ -122,9 +129,18 @@ export default function PricingPage() {
     label: string;
     disabled: boolean;
     onClick?: () => void;
+    href?: string;
   } {
     if (!billingLoaded) {
       return { label: "Loading…", disabled: true };
+    }
+    // Public visitor (not signed in): every tier CTA points at sign-up.
+    if (!signedIn) {
+      if (tierId === "free") {
+        return { label: "Sign up — it's free", disabled: false, href: "/" };
+      }
+      const tierName = tierId === "basic" ? "Basic" : "Pro";
+      return { label: `Sign up to get ${tierName}`, disabled: false, href: "/" };
     }
     if (tierId === currentTier) {
       return { label: "Current Plan", disabled: true };
@@ -167,7 +183,33 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
+    <div className="min-h-screen bg-[#F6F3EE]">
+      {/* Minimal nav. The page lives outside (app)/, so it has no
+          AppShell sidebar — give logged-in visitors a way back, and
+          public visitors a way home. */}
+      <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
+        <Link href="/" className="text-xl font-bold tracking-tighter text-[#2B2B2B]">
+          YoBoss
+        </Link>
+        {signedIn ? (
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="text-sm text-[#7FAEE6] hover:text-[#6A9DDA] font-semibold"
+          >
+            Sign up →
+          </Link>
+        )}
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-[#2B2B2B] mb-3">Simple, transparent pricing</h1>
         <p className="text-lg text-[#6F6A64]">Start free. Upgrade when you need more capacity.</p>
@@ -212,17 +254,26 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={cta.onClick}
-                disabled={cta.disabled}
-                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  cta.disabled
-                    ? "bg-[#F1ECE4] text-[#9B948B] cursor-not-allowed"
-                    : "bg-[#7FAEE6] text-white hover:bg-[#6A9DDA]"
-                }`}
-              >
-                {cta.label}
-              </button>
+              {cta.href ? (
+                <Link
+                  href={cta.href}
+                  className="block text-center w-full py-2.5 rounded-lg font-semibold text-sm transition-colors bg-[#7FAEE6] text-white hover:bg-[#6A9DDA]"
+                >
+                  {cta.label}
+                </Link>
+              ) : (
+                <button
+                  onClick={cta.onClick}
+                  disabled={cta.disabled}
+                  className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                    cta.disabled
+                      ? "bg-[#F1ECE4] text-[#9B948B] cursor-not-allowed"
+                      : "bg-[#7FAEE6] text-white hover:bg-[#6A9DDA]"
+                  }`}
+                >
+                  {cta.label}
+                </button>
+              )}
             </div>
           );
         })}
@@ -241,16 +292,26 @@ export default function PricingPage() {
               <div className="text-3xl font-bold my-2">{pack.price}</div>
               <p className="text-sm text-[#7FB38A] font-semibold">{pack.credits}</p>
               {pack.bonus && <p className="text-xs text-[#D4B06A] mb-3">{pack.bonus} bonus</p>}
-              <button
-                onClick={() => startCheckout("credits", pack.id)}
-                disabled={loading === pack.id}
-                className="mt-4 w-full py-2 rounded-lg bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA]"
-              >
-                {loading === pack.id ? "Loading..." : "Buy"}
-              </button>
+              {signedIn ? (
+                <button
+                  onClick={() => startCheckout("credits", pack.id)}
+                  disabled={loading === pack.id}
+                  className="mt-4 w-full py-2 rounded-lg bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA]"
+                >
+                  {loading === pack.id ? "Loading..." : "Buy"}
+                </button>
+              ) : (
+                <Link
+                  href="/"
+                  className="block text-center mt-4 w-full py-2 rounded-lg bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA]"
+                >
+                  Sign up to buy
+                </Link>
+              )}
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

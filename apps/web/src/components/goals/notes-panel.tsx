@@ -60,7 +60,7 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
   }, []);
 
   return (
-    <div className="w-96 shrink-0 border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col h-[calc(100vh-96px)] sticky top-0">
+    <div className="fixed right-0 top-16 bottom-0 z-[45] w-96 border-l border-[#E7DED2] bg-[#FFFDF9] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]">
       {/* Header */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2">

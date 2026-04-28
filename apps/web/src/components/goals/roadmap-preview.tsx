@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Loader2, Calendar, Clock } from "lucide-react";
+import { X, Loader2, Calendar, Clock, Flag } from "lucide-react";
 import type { GoalPlanData } from "@/lib/types/goal-chat";
 
 interface RoadmapPreviewProps {
@@ -10,12 +10,6 @@ interface RoadmapPreviewProps {
   isSaving?: boolean;
   error?: string | null;
 }
-
-const PRIORITY_COLORS = {
-  high: "#D5847A",
-  medium: "#D4B06A",
-  low: "#7FB38A",
-};
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -30,7 +24,10 @@ export function RoadmapPreview({
   // is not an array (e.g. after an interrupted resume). The hook validates
   // too, but belt-and-suspenders here prevents a hard crash.
   const phases = Array.isArray(plan.phases) ? plan.phases : [];
-  const totalTodos = phases.reduce((sum, p) => sum + (p.todos?.length ?? 0), 0);
+  const totalMilestones = phases.reduce(
+    (sum, p) => sum + (p.milestones?.length ?? 0),
+    0,
+  );
   const hasSchedule = !!plan.weekly_schedule;
   const scheduleTasks = plan.weekly_schedule?.tasks || [];
 
@@ -43,7 +40,8 @@ export function RoadmapPreview({
   }
 
   const summaryParts: string[] = [`${phases.length} phase${phases.length === 1 ? "" : "s"}`];
-  if (totalTodos > 0) summaryParts.push(`${totalTodos} task${totalTodos === 1 ? "" : "s"}`);
+  if (totalMilestones > 0)
+    summaryParts.push(`${totalMilestones} milestone${totalMilestones === 1 ? "" : "s"}`);
   if (hasSchedule) summaryParts.push(`${scheduleTasks.length} scheduled`);
 
   return (
@@ -139,22 +137,14 @@ export function RoadmapPreview({
                       </div>
 
                       <div className="ml-[15px] pl-6 border-l border-[#E7DED2] mb-5">
-                        {phase.todos.map((todo, todoIdx) => (
+                        {(phase.milestones ?? []).map((m, mIdx) => (
                           <div
-                            key={todoIdx}
+                            key={mIdx}
                             className="flex items-start gap-2.5 py-1.5"
                           >
-                            <span className="text-[11px] text-[#9B948B] font-mono shrink-0 w-6 pt-0.5">
-                              {phaseIdx + 1}.{todoIdx + 1}
-                            </span>
-                            <span
-                              className="shrink-0 w-2 h-2 rounded-full mt-1.5"
-                              style={{
-                                backgroundColor: PRIORITY_COLORS[todo.priority],
-                              }}
-                            />
+                            <Flag className="h-3.5 w-3.5 shrink-0 text-[#7FAEE6] mt-0.5" />
                             <span className="text-sm text-[#2B2B2B]">
-                              {todo.title}
+                              {m.title}
                             </span>
                           </div>
                         ))}

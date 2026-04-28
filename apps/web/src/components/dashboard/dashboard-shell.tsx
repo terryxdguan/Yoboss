@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 import type { GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import type { DashboardTodayItem, DailyTask } from "@/lib/types/database";
@@ -47,12 +48,34 @@ function buildTaskContext(item: DashboardTodayItem): DailyTask {
 export function DashboardShell({ children, allItems, highPriorityItems }: DashboardShellProps) {
   const [chatItem, setChatItem] = useState<DashboardTodayItem | null>(null);
   const [addTodoOpener, setAddTodoOpener] = useState<(() => void) | null>(null);
+  const router = useRouter();
+
+  // If the clicked item belongs to a Goal, route the chat into that
+  // Goal's session by navigating to the goal page with URL params the
+  // page reads on mount. This guarantees the user lands on the same
+  // chat session as the Goal page Coach panel, with full goal context
+  // (phases, milestones, weekly plan) loaded into the system prompt.
+  // Personal todos keep the in-place dashboard task-assistant chat.
+  const handleSendToChat = useCallback(
+    (item: DashboardTodayItem) => {
+      if (item.goalId) {
+        const params = new URLSearchParams();
+        params.set("chat", "1");
+        params.set("taskTitle", item.title);
+        if (item.description) params.set("taskTime", item.description);
+        router.push(`/goals/${item.goalId}?${params.toString()}`);
+        return;
+      }
+      setChatItem(item);
+    },
+    [router]
+  );
 
   return (
     <div className="flex -mx-6 md:-mx-8 -mb-12">
       {/* Main content */}
       <div className="flex-1 min-w-0 px-6 md:px-8 pb-12">
-        <DashboardChatContext.Provider value={setChatItem}>
+        <DashboardChatContext.Provider value={handleSendToChat}>
           <DashboardAddTodoRegisterContext.Provider value={setAddTodoOpener}>
             <DashboardAddTodoContext.Provider value={addTodoOpener}>
               {children}

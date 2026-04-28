@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { getDashboardData, getWorkflows, getTodoTags } from "@/lib/db/actions";
 import { DashboardStats } from "@/components/dashboard/stats";
 import { DashboardTodayItems } from "@/components/dashboard/today-items";
-import { DashboardImportantGoals } from "@/components/dashboard/important-goals";
-import { DashboardFavoriteWorkflows } from "@/components/dashboard/favorite-workflows";
-import { DashboardFavoriteMembers } from "@/components/dashboard/favorite-members";
+import { DashboardActiveGoals } from "@/components/dashboard/active-goals";
+import { DashboardTeam } from "@/components/dashboard/team";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { WelcomeBannerHost } from "@/components/dashboard/welcome-banner-host";
 import { OnboardingDashboard } from "@/components/dashboard/onboarding-dashboard";
@@ -64,9 +63,8 @@ export default async function TodayPage() {
           todoTags={todoTags.map(t => t.name)}
           goals={data.goalsWithPhases}
         />
-        <DashboardImportantGoals goals={data.goalsWithPhases} />
-        <DashboardFavoriteWorkflows workflows={data.workflows} allWorkflows={allWorkflows} />
-        <DashboardFavoriteMembers />
+        <DashboardActiveGoals goals={data.goalsWithPhases} />
+        <DashboardTeam />
       </div>
     </DashboardShell>
   );

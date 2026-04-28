@@ -1,7 +1,9 @@
 import { getAnthropicClient, MODELS } from "./client";
+import { PERSONA } from "./persona";
 import type Anthropic from "@anthropic-ai/sdk";
 
-const SYSTEM_PROMPT = `You are YoBoss, an AI goal coach. Your job is to help the user turn an ambitious goal into a clear, actionable plan.
+const SYSTEM_PROMPT = `${PERSONA}
+You are YoBoss, an AI goal coach. Your job is to help the user turn an ambitious goal into a clear, actionable plan.
 
 ## Core principle
 

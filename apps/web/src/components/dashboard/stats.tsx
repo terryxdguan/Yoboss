@@ -161,7 +161,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
           <h3 className="text-2xl font-semibold text-[#2B2B2B]">
             {teamCount}
           </h3>
-          <p className="text-xs text-[#6F6A64]">Employees hired</p>
+          <p className="text-xs text-[#6F6A64]">Team members</p>
         </div>
       </div>
 

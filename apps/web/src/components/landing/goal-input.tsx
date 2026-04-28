@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 
-const PLACEHOLDER = "How to lose 30 lbs (13.6 kg) in 6 months";
+const PLACEHOLDER = "Make an additional $10,000 in the next 6 months";
 
 interface GoalInputProps {
   value: string;

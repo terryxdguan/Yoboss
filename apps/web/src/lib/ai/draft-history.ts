@@ -226,12 +226,12 @@ export function fixDoubleSerializedPlan(plan: GoalPlanData): void {
   if (typeof p.phases === "string") {
     try { p.phases = JSON.parse(p.phases as string); } catch { /* leave as-is */ }
   }
-  // Also fix nested todos arrays inside each phase — same quirk can
-  // hit one level deeper.
+  // Also fix nested milestones arrays inside each phase — same quirk
+  // can hit one level deeper.
   if (Array.isArray(p.phases)) {
     for (const phase of p.phases as Record<string, unknown>[]) {
-      if (typeof phase.todos === "string") {
-        try { phase.todos = JSON.parse(phase.todos as string); } catch { /* leave as-is */ }
+      if (typeof phase.milestones === "string") {
+        try { phase.milestones = JSON.parse(phase.milestones as string); } catch { /* leave as-is */ }
       }
     }
   }

@@ -1,18 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Paperclip, Plus, ExternalLink, Trash2, FileText, Image, File } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  X,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  File,
+  Download,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import type { GoalDeliverable } from "@/lib/types/database";
-import { getGoalDeliverables, addGoalDeliverable, deleteGoalDeliverable } from "@/lib/db/actions";
+import { getGoalDeliverables } from "@/lib/db/actions";
 
 interface DeliverablesPanelProps {
   goalId: string;
   onClose: () => void;
 }
 
+// Anthropic Files API doesn't expose a per-file expires_at; their session-
+// scoped containers have an expiration but the value isn't returned in the
+// metadata response. We assume a 30-day window from created_at, matching
+// what the user observes in practice. Tweak here if Anthropic publishes
+// the real number.
+const RETENTION_DAYS = 30;
+
+type SortKey = "created" | "filename" | "expires";
+type SortDir = "asc" | "desc";
+
+function expiresAtMs(d: GoalDeliverable): number {
+  return new Date(d.created_at).getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function fmtTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Days remaining until expiry, "1 day left" / "29 days left" / "<1 day left".
+ *  Caller should check `expMs <= now` separately to render the "Expired"
+ *  badge — this function never returns that string. */
+function fmtCountdown(expMs: number, now: number): string {
+  const diff = expMs - now;
+  if (diff < DAY_MS) return "<1 day left";
+  // Ceil so a freshly-generated file (≈30 d minus a few ms) reads "30 days
+  // left", not "29".
+  const days = Math.ceil(diff / DAY_MS);
+  return `${days} ${days === 1 ? "day" : "days"} left`;
+}
+
 function fileTypeIcon(fileType: string | null) {
   if (!fileType) return <File className="h-4 w-4 text-[#9B948B]" />;
-  if (fileType.startsWith("image/")) return <Image className="h-4 w-4 text-[#7FAEE6]" />;
+  if (fileType.startsWith("image/")) return <ImageIcon className="h-4 w-4 text-[#7FAEE6]" />;
   if (fileType.includes("pdf") || fileType.includes("document")) return <FileText className="h-4 w-4 text-[#D5847A]" />;
   return <File className="h-4 w-4 text-[#9B948B]" />;
 }
@@ -20,9 +65,8 @@ function fileTypeIcon(fileType: string | null) {
 export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
   const [deliverables, setDeliverables] = useState<GoalDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("created");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   useEffect(() => {
     getGoalDeliverables(goalId).then((data) => {
@@ -31,38 +75,45 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
     });
   }, [goalId]);
 
-  const handleAdd = async () => {
-    if (!title.trim()) return;
-    setAdding(true);
-    try {
-      const d = await addGoalDeliverable({
-        goalId,
-        title: title.trim(),
-        url: url.trim() || undefined,
-      });
-      setDeliverables((prev) => [d, ...prev]);
-      setTitle("");
-      setUrl("");
-    } catch (err) {
-      console.error("Add deliverable error:", err);
-    } finally {
-      setAdding(false);
-    }
-  };
+  // Esc to close — matches the chat panel UX.
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteGoalDeliverable(id);
-      setDeliverables((prev) => prev.filter((d) => d.id !== id));
-    } catch (err) {
-      console.error("Delete deliverable error:", err);
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
     }
-  };
+  }
+
+  const sorted = useMemo(() => {
+    const sign = sortDir === "asc" ? 1 : -1;
+    return [...deliverables].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "created") {
+        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (sortKey === "filename") {
+        cmp = a.title.localeCompare(b.title);
+      } else {
+        cmp = expiresAtMs(a) - expiresAtMs(b);
+      }
+      return sign * cmp;
+    });
+  }, [deliverables, sortKey, sortDir]);
+
+  const now = Date.now();
 
   return (
-    <div className="w-96 shrink-0 border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col h-[calc(100vh-96px)] sticky top-0">
+    <div
+      className="fixed right-0 top-16 bottom-0 z-[45] w-[520px] border-l border-[#E7DED2] bg-[#FFFDF9] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
+      <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2] shrink-0">
         <div className="flex items-center gap-2">
           <Paperclip className="h-4 w-4 text-[#7FAEE6]" />
           <span className="text-sm font-medium text-[#2B2B2B]">Deliverables</span>
@@ -75,86 +126,102 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
         </button>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Table */}
+      <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <p className="text-sm text-[#9B948B] text-center py-8">Loading...</p>
-        ) : deliverables.length === 0 ? (
-          <div className="text-center py-8">
+          <p className="text-sm text-[#9B948B] text-center py-8">Loading…</p>
+        ) : sorted.length === 0 ? (
+          <div className="text-center py-12 px-4">
             <Paperclip className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
             <p className="text-sm text-[#9B948B]">No deliverables yet</p>
-            <p className="text-xs text-[#9B948B] mt-1">Add files, links, or generated outputs</p>
+            <p className="text-xs text-[#9B948B] mt-1">
+              Files generated in your chat with the team will appear here.
+            </p>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {deliverables.map((d) => (
-              <li
-                key={d.id}
-                className="group flex items-start gap-3 p-3 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] hover:border-[#DDD3C7] transition-colors"
-              >
-                {fileTypeIcon(d.file_type)}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#2B2B2B] truncate">{d.title}</p>
-                  {d.url && (
-                    <a
-                      href={d.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-[#7FAEE6] hover:underline flex items-center gap-1 mt-0.5"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      <span className="truncate">{d.url}</span>
-                    </a>
-                  )}
-                  <div className="flex items-center gap-2 mt-1">
-                    {d.source === "ai_generated" && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7FAEE6]/10 text-[#7FAEE6]">Generated</span>
-                    )}
-                    <span className="text-[10px] text-[#9B948B]">
-                      {new Date(d.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(d.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[#D5847A]/10 transition-all"
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-[#D5847A]" />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <table className="w-full text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-[1] bg-[#FFFDF9]">
+              <tr>
+                <SortHeader label="Created" active={sortKey === "created"} dir={sortDir} onClick={() => toggleSort("created")} className="w-[110px]" />
+                <SortHeader label="File" active={sortKey === "filename"} dir={sortDir} onClick={() => toggleSort("filename")} />
+                <SortHeader label="Expires" active={sortKey === "expires"} dir={sortDir} onClick={() => toggleSort("expires")} className="w-[120px]" />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((d) => {
+                const exp = expiresAtMs(d);
+                const expired = exp < now;
+                return (
+                  <tr key={d.id} className="border-t border-[#F1ECE4] hover:bg-[#F8F5EF] transition-colors">
+                    <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F1ECE4]">
+                      <div className="text-[#6F6A64]">{fmtDate(d.created_at)}</div>
+                      <div className="text-[#9B948B] text-[11px] mt-0.5">{fmtTime(d.created_at)}</div>
+                    </td>
+                    <td className="px-3 py-2.5 align-top border-t border-[#F1ECE4]">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <span className="shrink-0 mt-0.5">{fileTypeIcon(d.file_type)}</span>
+                        <span className="min-w-0 flex-1 text-[#2B2B2B] break-words">{d.title}</span>
+                        {expired ? null : d.url ? (
+                          <a
+                            href={d.url}
+                            download={d.title}
+                            title="Download"
+                            className="shrink-0 p-1 rounded text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </a>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F1ECE4]">
+                      {expired ? (
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[#D5847A] bg-[#D5847A]/10 font-medium">
+                          Expired
+                        </span>
+                      ) : (
+                        <span className="text-[#6F6A64]">{fmtCountdown(exp, now)}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
-
-      {/* Add form */}
-      <div className="border-t border-[#E7DED2] px-4 py-3 space-y-2">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title (e.g., Flight itinerary)"
-          className="w-full text-sm bg-[#FFFDF9] border border-[#DDD3C7] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
-        />
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="URL (optional)"
-          className="w-full text-sm bg-[#FFFDF9] border border-[#DDD3C7] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleAdd();
-          }}
-        />
-        <button
-          onClick={handleAdd}
-          disabled={!title.trim() || adding}
-          className="w-full flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] active:scale-[0.98] transition-all disabled:opacity-40"
-        >
-          <Plus className="h-4 w-4" />
-          {adding ? "Adding..." : "Add Deliverable"}
-        </button>
-      </div>
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  active,
+  dir,
+  onClick,
+  className = "",
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <th className={`text-left px-3 py-2 border-b border-[#E7DED2] ${className}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+          active ? "text-[#2B2B2B]" : "text-[#9B948B] hover:text-[#6F6A64]"
+        }`}
+      >
+        {label}
+        {active ? (
+          dir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronDown className="h-3 w-3 opacity-0" />
+        )}
+      </button>
+    </th>
   );
 }

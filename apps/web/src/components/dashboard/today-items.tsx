@@ -237,7 +237,6 @@ export function DashboardTodayItems({
             [
               { key: "schedule", label: "Schedule", border: "border-[#7FAEE6]/50" },
               { key: "todo", label: "To-Do", border: "border-[#7FB38A]/50" },
-              { key: "high", label: "High Priority", border: "border-[#D5847A]/60" },
             ] as const
           ).map(({ key, label, border }) => {
             const hidden = hiddenCategories.has(key);
@@ -284,7 +283,7 @@ export function DashboardTodayItems({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-6">
           {visibleItems.map(item => {
             const isSchedule = item.sourceType === "daily_task";
             const isHigh = item.priority === "high";

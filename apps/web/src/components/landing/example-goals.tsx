@@ -1,6 +1,6 @@
 import {
   Dumbbell,
-  Rocket,
+  Briefcase,
   Timer,
   Globe,
   ShoppingBag,
@@ -28,11 +28,11 @@ export const EXAMPLES: {
     text: "How to lose 30 lbs (13.6 kg) in 6 months",
   },
   {
-    icon: Rocket,
+    icon: Briefcase,
     color: "#D4C5A0",    // beige character (with laptop + duck)
-    title: "Launch an AI product",
-    description: "From prompt engineering to full-stack deployment.",
-    text: "I want to build and launch an AI-powered product from scratch",
+    title: "Land a new job",
+    description: "Polished resume, targeted outreach, and prep for the interviews that matter.",
+    text: "I want to land a new job in 3 months",
   },
   {
     icon: Timer,

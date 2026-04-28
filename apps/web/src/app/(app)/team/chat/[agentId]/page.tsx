@@ -14,6 +14,7 @@ import {
   Code,
   Download,
 } from "lucide-react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ALL_AGENTS, DEFAULT_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
@@ -59,6 +60,10 @@ interface UIMessage {
    *  maxDuration hit, tab closed, etc). UI renders a warning badge so
    *  the user knows the turn was cut short and can send a continue. */
   interrupted?: boolean;
+  /** True when the AI request was rejected because the user is out of
+   *  credits / monthly allowance. UI renders a credits-out block with
+   *  a CTA to /account instead of the generic interrupted warning. */
+  quotaExceeded?: boolean;
 }
 
 let counter = 0;
@@ -127,6 +132,7 @@ export default function AgentChatPage() {
         // stream that finished normally but hadn't done its final flush
         // yet — same visual treatment for now.
         interrupted: Boolean(m.metadata?.interrupted) || Boolean(m.metadata?.partial),
+        quotaExceeded: Boolean(m.metadata?.quotaExceeded),
       }));
       setMessages(uiMsgs);
       setSessionSummary(session?.summary || null);
@@ -232,7 +238,14 @@ export default function AgentChatPage() {
 
         if (!res.ok) {
           const body = await res.json().catch(() => null);
-          throw new Error(body?.error || `API error: ${res.status}`);
+          const baseMsg = body?.error || `API error: ${res.status}`;
+          // Tag quota errors so the catch handler can show a credits-
+          // specific UI block (link to /account) instead of the generic
+          // interrupted warning.
+          if (body?.code === "QUOTA_EXCEEDED" || res.status === 402) {
+            throw new Error(`QUOTA_EXCEEDED:${baseMsg}`);
+          }
+          throw new Error(baseMsg);
         }
 
         let turnComplete: {
@@ -323,6 +336,29 @@ export default function AgentChatPage() {
         break;
       }
 
+      // Resolve real filenames for code-execution-generated files.
+      // Anthropic's SSE `code_execution_output` block only carries
+      // `file_id`; the actual filename lives in the Files API metadata.
+      // Without this hop the UI would show "download" for every file.
+      if (files.length > 0) {
+        try {
+          const res = await fetch("/api/ai/files/metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileIds: files.map((f) => f.fileId) }),
+          });
+          if (res.ok) {
+            const { files: nameMap } = (await res.json()) as { files: Record<string, string> };
+            for (const f of files) {
+              const resolved = nameMap[f.fileId];
+              if (resolved) f.filename = resolved;
+            }
+          }
+        } catch {
+          // Non-blocking — keep "download" fallback if metadata lookup fails.
+        }
+      }
+
       // Final update with all accumulated data
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantId ? {
@@ -403,9 +439,20 @@ export default function AgentChatPage() {
           .catch(console.error);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const rawMsg = err instanceof Error ? err.message : "Something went wrong";
+      const isQuota = rawMsg.startsWith("QUOTA_EXCEEDED:");
+      const msg = isQuota ? rawMsg.slice("QUOTA_EXCEEDED:".length) : rawMsg;
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, content: text || `Error: ${msg}`, interrupted: true } : m))
+        prev.map((m) =>
+          m.id === assistantId
+            ? {
+                ...m,
+                content: isQuota ? text : (text || `Error: ${msg}`),
+                interrupted: !isQuota,
+                quotaExceeded: isQuota,
+              }
+            : m
+        )
       );
       // Persist whatever we got so far + mark interrupted. This is the
       // main benefit of the refactor: before, an error here threw away
@@ -424,7 +471,7 @@ export default function AgentChatPage() {
             content: text,
             metadata: {
               partial: false,
-              interrupted: true,
+              ...(isQuota ? { quotaExceeded: true } : { interrupted: true }),
               ...(tools.length > 0 ? { toolActivity: tools } : {}),
               ...(files.length > 0 ? { generatedFiles: files } : {}),
             },
@@ -690,7 +737,18 @@ export default function AgentChatPage() {
                     {isStreaming && msg === messages[messages.length - 1] && !msg.toolActivity?.length && (
                       <span className="inline-block ml-0.5 animate-pulse">|</span>
                     )}
-                    {msg.interrupted && !(isStreaming && msg === messages[messages.length - 1]) && (
+                    {msg.quotaExceeded && (
+                      <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[12px] text-[#C9843D] space-y-1.5">
+                        <div>⚠️ 你本月的额度已用完，余额也已耗尽。</div>
+                        <Link
+                          href="/account"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#C9843D] text-white text-[11px] font-medium hover:bg-[#B5742F] transition-colors"
+                        >
+                          前往账户页购买 Credits →
+                        </Link>
+                      </div>
+                    )}
+                    {msg.interrupted && !msg.quotaExceeded && !(isStreaming && msg === messages[messages.length - 1]) && (
                       <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[11px] text-[#C9843D]">
                         ⚠️ This response was interrupted. Send a new message to continue from here.
                       </div>

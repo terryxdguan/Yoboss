@@ -1,11 +1,13 @@
 import { getAnthropicClient, MODELS } from "./client";
+import { PERSONA } from "./persona";
 import type { DailyTask, Phase } from "../types/database";
 
 // Daily coaching message: generates a personalized message when the user opens the app.
 // Uses Sonnet. Streamed to the client.
 // Context: yesterday's progress, today's tasks, streak, phase progress.
 
-const SYSTEM_PROMPT = `You are a warm, supportive AI goal coach. Generate a short daily coaching message (3-5 sentences).
+const SYSTEM_PROMPT = `${PERSONA}
+You are a warm, supportive AI goal coach. Generate a short daily coaching message (3-5 sentences).
 
 Your tone:
 - Warm and personal, like a text from a supportive friend

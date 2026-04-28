@@ -1,4 +1,5 @@
 import { getAnthropicClient, MODELS } from "./client";
+import { PERSONA } from "./persona";
 import type Anthropic from "@anthropic-ai/sdk";
 
 export interface GoalDetailChatContext {
@@ -9,6 +10,10 @@ export interface GoalDetailChatContext {
     description: string;
     status: string;
     estimatedWeeks: number;
+    /** Per-phase milestone titles (the "1.1 / 1.2 / …" checklist items
+     *  the AI generates inside each phase). Optional because non-goal
+     *  call sites (dashboard task assistant, etc.) don't have phases. */
+    milestones?: string[];
   }[];
   weeklyTasks: {
     dayOfWeek: number;
@@ -19,32 +24,26 @@ export interface GoalDetailChatContext {
   weekSummary: string | null;
 }
 
-function buildSystemPrompt(context: GoalDetailChatContext): string {
-  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+// ---------------------------------------------------------------------------
+// System prompt is split into three blocks ordered most-stable → most-volatile
+// so prompt caching maximizes hit rate:
+//
+//   1. Common system  — identical for every user, every goal, every call.
+//                       Cached → 1000 users share one entry.
+//   2. Goal context   — per-user (goal/phases/milestones). Stable for the
+//                       length of a chat session.
+//                       Cached → that user's repeat calls within 5m hit it.
+//   3. Weekly tasks   — flips on every checkbox toggle. NOT cached so it
+//                       doesn't invalidate the upstream blocks.
+//
+// Two cache_control breakpoints (after blocks 1 and 2) gives us a stable
+// prefix when only block 3 changes.
+// ---------------------------------------------------------------------------
 
-  const phasesText = context.phases
-    .map((p, i) => `  Phase ${i + 1} [${p.status}]: ${p.title} — ${p.description} (~${p.estimatedWeeks}w)`)
-    .join("\n");
-
-  const tasksText = context.weeklyTasks.length > 0
-    ? context.weeklyTasks
-      .map((t) => `  ${dayNames[t.dayOfWeek]}: ${t.completed ? "[done]" : "[todo]"} ${t.title}${t.timeSlot ? ` (${t.timeSlot})` : ""}`)
-      .join("\n")
-    : "  No tasks scheduled yet.";
-
-  return `IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
+const COMMON_SYSTEM = `${PERSONA}
+IMPORTANT: Always address the user as "Hi Boss" at the start of each conversation. Be respectful and professional.
 
 You are a friendly and knowledgeable AI goal coach. The user is working on a specific goal and you have full context about their progress.
-
-GOAL: ${context.goalTitle}
-${context.goalDescription ? `DESCRIPTION: ${context.goalDescription}` : ""}
-
-ROADMAP:
-${phasesText}
-
-THIS WEEK'S SCHEDULE:
-${context.weekSummary ? `Summary: ${context.weekSummary}` : ""}
-${tasksText}
 
 YOUR ROLE:
 - Answer any questions about their goal, roadmap, or weekly tasks
@@ -64,6 +63,48 @@ CAPABILITIES:
 - DO NOT just print file content to stdout or return it as a markdown code block. Only files copied to $OUTPUT_DIR will be downloadable.
 - For presentations, use python-pptx; for spreadsheets, use openpyxl; for PDFs, use matplotlib or reportlab
 - After generating a file, tell the user what you created and that they can download it`;
+
+function buildGoalContextBlock(context: GoalDetailChatContext): string {
+  const phasesText = context.phases
+    .map((p, i) => {
+      const head = `  Phase ${i + 1} [${p.status}]: ${p.title} — ${p.description} (~${p.estimatedWeeks}w)`;
+      if (!p.milestones || p.milestones.length === 0) return head;
+      const milestones = p.milestones
+        .map((m, j) => `    ${i + 1}.${j + 1} ${m}`)
+        .join("\n");
+      return `${head}\n${milestones}`;
+    })
+    .join("\n");
+
+  return `GOAL: ${context.goalTitle}
+${context.goalDescription ? `DESCRIPTION: ${context.goalDescription}` : ""}
+
+ROADMAP:
+${phasesText || "  (no phases yet)"}`;
+}
+
+function buildWeeklyContextBlock(context: GoalDetailChatContext): string {
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const tasksText =
+    context.weeklyTasks.length > 0
+      ? context.weeklyTasks
+          .map(
+            (t) =>
+              `  ${dayNames[t.dayOfWeek]}: ${t.completed ? "[done]" : "[todo]"} ${t.title}${t.timeSlot ? ` (${t.timeSlot})` : ""}`
+          )
+          .join("\n")
+      : "  No tasks scheduled yet.";
+  return `THIS WEEK'S SCHEDULE:
+${context.weekSummary ? `Summary: ${context.weekSummary}` : ""}
+${tasksText}`;
+}
+
+function buildSystemBlocks(context: GoalDetailChatContext): Anthropic.TextBlockParam[] {
+  return [
+    { type: "text", text: COMMON_SYSTEM, cache_control: { type: "ephemeral" } },
+    { type: "text", text: buildGoalContextBlock(context), cache_control: { type: "ephemeral" } },
+    { type: "text", text: buildWeeklyContextBlock(context) },
+  ];
 }
 
 // Server-side tools that Anthropic executes
@@ -85,7 +126,7 @@ export function streamGoalDetailChat(
   onUsage?: (inputTokens: number, outputTokens: number) => void
 ): ReadableStream<Uint8Array> {
   const client = getAnthropicClient();
-  const systemPrompt = buildSystemPrompt(context);
+  const systemBlocks = buildSystemBlocks(context);
   const encoder = new TextEncoder();
 
   // Single-turn stream: run exactly ONE messages.stream() call and
@@ -98,7 +139,7 @@ export function streamGoalDetailChat(
         const stream = client.messages.stream({
           model: MODELS.opus,
           max_tokens: 16000,
-          system: systemPrompt,
+          system: systemBlocks,
           tools: SERVER_TOOLS,
           messages,
         });
@@ -110,14 +151,24 @@ export function streamGoalDetailChat(
 
         const finalMessage = await stream.finalMessage();
 
-        // Log usage per-turn.
-        if (onUsage && finalMessage.usage) {
-          try {
-            onUsage(
-              finalMessage.usage.input_tokens,
-              finalMessage.usage.output_tokens
-            );
-          } catch { /* non-blocking */ }
+        // Log usage per-turn. The cache_* fields tell us prompt-caching
+        // effectiveness: cache_read = bytes served from cache (10% cost),
+        // cache_write = bytes that wrote new cache entries (1.25× cost).
+        // Healthy ratio after warmup: cache_read >> cache_write, and
+        // input_tokens shrinks toward the size of the volatile suffix.
+        if (finalMessage.usage) {
+          const u = finalMessage.usage;
+          console.log("[goal-chat] usage", {
+            input: u.input_tokens,
+            output: u.output_tokens,
+            cache_read: u.cache_read_input_tokens ?? 0,
+            cache_write: u.cache_creation_input_tokens ?? 0,
+          });
+          if (onUsage) {
+            try {
+              onUsage(u.input_tokens, u.output_tokens);
+            } catch { /* non-blocking */ }
+          }
         }
 
         // Emit synthetic turn_complete so the client knows whether

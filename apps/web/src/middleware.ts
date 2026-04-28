@@ -34,10 +34,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Public routes: landing page, auth callback, auth pages, and service endpoints
-  // that authenticate via their own mechanism (Stripe signatures, CRON secret, etc.)
+  // Public routes: landing page, marketing pages (pricing/privacy/terms),
+  // auth callback, auth pages, and service endpoints that authenticate via
+  // their own mechanism (Stripe signatures, CRON secret, etc.)
   const isPublicRoute =
     request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname === "/pricing" ||
+    request.nextUrl.pathname === "/privacy" ||
+    request.nextUrl.pathname === "/terms" ||
     request.nextUrl.pathname === "/dashboard-preview" ||
     request.nextUrl.pathname === "/dashboard-main-preview" ||
     request.nextUrl.pathname === "/todos-layout-preview" ||

@@ -14,10 +14,10 @@ export interface GoalPlanData {
     title: string;
     description: string;
     estimated_weeks: number;
-    // All actionable work for the goal lives under a phase. Cross-cutting
-    // setup / cadence items the AI used to put in a separate "goal_todos"
-    // list now belong in the earliest phase's todos.
-    todos: { title: string; priority: "high" | "medium" | "low" }[];
+    // Milestones are the sub-phase markers the user sees in the roadmap —
+    // a bird's-eye view of what this phase delivers. Read-only on the UI;
+    // all actionable check-offs happen later in the weekly schedule.
+    milestones: { title: string }[];
   }[];
   // For short goals: direct weekly schedule (skips manual "Generate with AI")
   weekly_schedule?: {

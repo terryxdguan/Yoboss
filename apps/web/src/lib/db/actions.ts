@@ -2036,3 +2036,48 @@ export async function getRecentCreditTransactions(limit = 20) {
 
   return data || [];
 }
+
+export async function getCreditUsageSummary(): Promise<{
+  totalCreditsCents: number;
+  usedCreditsCents: number;
+  balanceCents: number;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const [{ data: quota }, { data: transactions }] = await Promise.all([
+    supabase
+      .from("user_quotas")
+      .select("credits_balance_cents")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("credit_transactions")
+      .select("amount_cents")
+      .eq("user_id", user.id),
+  ]);
+
+  const balanceCents = quota?.credits_balance_cents ?? 0;
+  const positiveCredits =
+    transactions?.reduce(
+      (sum, tx) => sum + Math.max(0, tx.amount_cents ?? 0),
+      0,
+    ) ?? 0;
+  const spentCredits =
+    transactions?.reduce(
+      (sum, tx) => sum + Math.max(0, -(tx.amount_cents ?? 0)),
+      0,
+    ) ?? 0;
+
+  const totalCreditsCents = Math.max(
+    positiveCredits,
+    balanceCents + spentCredits,
+  );
+
+  return {
+    totalCreditsCents,
+    usedCreditsCents: Math.max(0, totalCreditsCents - balanceCents),
+    balanceCents,
+  };
+}

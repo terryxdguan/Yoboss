@@ -1,36 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Calendar, Globe, Check, Zap, BarChart3, CreditCard, Sparkles } from "lucide-react";
+import { Calendar, Globe, Check, BarChart3, CreditCard, Sparkles } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   getBillingState,
-  getMonthlyUsageSummary,
+  getCreditUsageSummary,
   getRecentAiUsage,
   getUserTimezone,
   upsertUserTimezone,
 } from "@/lib/db/actions";
+import { TIMEZONES } from "@/lib/timezones";
 import type { UserQuota, AiUsageRecord } from "@/lib/types/database";
-
-const TIMEZONES = [
-  { value: "Pacific/Honolulu", label: "Hawaii (UTC-10)" },
-  { value: "America/Anchorage", label: "Alaska (UTC-9)" },
-  { value: "America/Los_Angeles", label: "Pacific Time (UTC-8)" },
-  { value: "America/Denver", label: "Mountain Time (UTC-7)" },
-  { value: "America/Chicago", label: "Central Time (UTC-6)" },
-  { value: "America/New_York", label: "Eastern Time (UTC-5)" },
-  { value: "America/Sao_Paulo", label: "Brasilia (UTC-3)" },
-  { value: "Europe/London", label: "London (UTC+0)" },
-  { value: "Europe/Paris", label: "Central Europe (UTC+1)" },
-  { value: "Europe/Helsinki", label: "Eastern Europe (UTC+2)" },
-  { value: "Asia/Dubai", label: "Dubai (UTC+4)" },
-  { value: "Asia/Kolkata", label: "India (UTC+5:30)" },
-  { value: "Asia/Bangkok", label: "Bangkok (UTC+7)" },
-  { value: "Asia/Shanghai", label: "China (UTC+8)" },
-  { value: "Asia/Tokyo", label: "Japan (UTC+9)" },
-  { value: "Australia/Sydney", label: "Sydney (UTC+11)" },
-  { value: "Pacific/Auckland", label: "New Zealand (UTC+12)" },
-];
 
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   free: { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", label: "Free" },
@@ -85,7 +66,11 @@ export default function AccountPage() {
   } | null>(null);
 
   const [quota, setQuota] = useState<UserQuota | null>(null);
-  const [monthly, setMonthly] = useState({ totalRequests: 0, totalCostCents: 0 });
+  const [creditUsage, setCreditUsage] = useState({
+    totalCreditsCents: 0,
+    usedCreditsCents: 0,
+    balanceCents: 0,
+  });
   const [usage, setUsage] = useState<AiUsageRecord[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -113,15 +98,15 @@ export default function AccountPage() {
           });
         }
 
-        const [q, m, u, tz] = await Promise.all([
+        const [q, credit, u, tz] = await Promise.all([
           getBillingState(),
-          getMonthlyUsageSummary(),
+          getCreditUsageSummary(),
           getRecentAiUsage(30, 0),
           getUserTimezone(),
         ]);
 
         setQuota(q);
-        setMonthly(m);
+        setCreditUsage(credit);
         setUsage(u);
         setHasMore(u.length === 30);
 
@@ -185,23 +170,27 @@ export default function AccountPage() {
     }
   }
 
-  // Handle quota staleness
-  const thisMonth = new Date().toISOString().slice(0, 7) + "-01";
-  const costMonth = quota && quota.last_month_reset === thisMonth ? quota.cost_this_month_cents : 0;
-
-  const monthlyCostLimit = quota?.monthly_cost_limit_cents ?? 2500;
   const tier = quota?.tier ?? "free";
   const tierStyle = TIER_STYLES[tier] || TIER_STYLES.free;
 
-  const monthlyCostPct = Math.min(100, Math.round((costMonth / monthlyCostLimit) * 100));
-
   // Billing-specific derived state
+  const currentMonth = new Date().toISOString().slice(0, 7);
   const monthlyAllowance = quota?.monthly_allowance_cents ?? 500;
-  const allowanceUsed = quota && quota.last_month_reset === thisMonth
-    ? Math.min(quota.cost_this_month_cents, monthlyAllowance)
-    : 0;
-  const allowancePct = Math.min(100, Math.round((allowanceUsed / monthlyAllowance) * 100));
-  const creditsBalance = quota?.credits_balance_cents ?? 0;
+  const allowanceUsed =
+    quota?.last_month_reset?.startsWith(currentMonth)
+      ? Math.min(quota.cost_this_month_cents ?? 0, monthlyAllowance)
+      : 0;
+  const allowancePct =
+    monthlyAllowance > 0
+      ? Math.min(100, Math.round((allowanceUsed / monthlyAllowance) * 100))
+      : 0;
+  const creditsBalance = creditUsage.balanceCents;
+  const creditsTotal = Math.max(creditUsage.totalCreditsCents, creditsBalance);
+  const creditsUsed = Math.min(creditUsage.usedCreditsCents, creditsTotal);
+  const creditsPct =
+    creditsTotal > 0
+      ? Math.min(100, Math.round((creditsUsed / creditsTotal) * 100))
+      : 0;
   const hasStripeCustomer = !!quota?.stripe_customer_id;
   const subscriptionPeriodEnd = quota?.subscription_current_period_end ?? null;
   const cancelAtPeriodEnd = !!quota?.cancel_at_period_end;
@@ -359,69 +348,57 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Monthly allowance progress */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-[#6F6A64] font-medium">Monthly Allowance</span>
-            <span className="text-[#2B2B2B] font-semibold">
-              {formatCost(allowanceUsed)} / {formatCost(monthlyAllowance)}
-            </span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
-            <div
-              className={`h-full rounded-full transition-all ${progressColor(allowancePct)}`}
-              style={{ width: `${allowancePct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Credits balance */}
-        <div className="flex items-center justify-between rounded-lg border border-[#E7DED2] bg-[#FAF9F6] px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#D4B06A]" />
-            <div>
-              <p className="text-xs text-[#6F6A64]">Credits Balance</p>
-              <p className="text-lg font-bold text-[#2B2B2B]">{formatCost(creditsBalance)}</p>
-            </div>
-          </div>
-          <a
-            href="/pricing"
-            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#7FAEE6] text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
-          >
-            Buy Credits
-          </a>
-        </div>
-      </div>
-
-      {/* Section 2: Usage Overview */}
-      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7FAEE6]/10">
-            <Zap className="h-4 w-4 text-[#7FAEE6]" />
-          </div>
-          <h2 className="text-sm font-semibold text-[#2B2B2B]">Usage</h2>
-        </div>
-
-        {/* This Month */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[#6F6A64] font-medium">Monthly Requests</span>
-            <span className="text-[#2B2B2B] font-semibold">{monthly.totalRequests}</span>
-          </div>
-
           <div>
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-[#6F6A64] font-medium">Monthly Cost</span>
-              <span className="text-[#2B2B2B] font-semibold">{formatCost(costMonth)} / {formatCost(monthlyCostLimit)}</span>
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="font-medium text-[#6F6A64]">Monthly Allowance</span>
+              <span className="font-semibold text-[#2B2B2B]">
+                {formatCost(allowanceUsed)} / {formatCost(monthlyAllowance)} used
+              </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
-              <div className={`h-full rounded-full transition-all ${progressColor(monthlyCostPct)}`} style={{ width: `${monthlyCostPct}%` }} />
+              <div
+                className={`h-full rounded-full transition-all ${progressColor(allowancePct)}`}
+                style={{ width: `${allowancePct}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#E7DED2] bg-[#FAF9F6] px-5 py-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#D4B06A]/10">
+                  <Sparkles className="h-5 w-5 text-[#D4B06A]" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-[#6F6A64]">Credits</p>
+                  <p className="text-2xl font-bold text-[#2B2B2B]">
+                    {formatCost(creditsUsed)} / {formatCost(creditsTotal)} used
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#9B948B]">
+                    {formatCost(creditsBalance)} remaining
+                  </p>
+                </div>
+              </div>
+              <a
+                href="/pricing"
+                className="inline-flex justify-center rounded-lg border border-[#7FAEE6] px-3.5 py-1.5 text-xs font-semibold text-[#7FAEE6] transition-colors hover:bg-[#EAF3FD]"
+              >
+                Buy Credits
+              </a>
+            </div>
+
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
+              <div
+                className={`h-full rounded-full transition-all ${progressColor(creditsPct)}`}
+                style={{ width: `${creditsPct}%` }}
+              />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Section 3: Usage History */}
+      {/* Section 2: Usage History */}
       <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
         <div className="flex items-center gap-2 mb-5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7FAEE6]/10">

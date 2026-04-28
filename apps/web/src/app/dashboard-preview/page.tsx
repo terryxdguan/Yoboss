@@ -178,7 +178,7 @@ export default function DashboardPreviewPage() {
               { icon: Target, label: "Start Here", active: true },
               { icon: Flag, label: "Goals" },
               { icon: ListChecks, label: "To-Dos" },
-              { icon: Bot, label: "AI Agents" },
+              { icon: Bot, label: "Team" },
             ].map(({ icon: Icon, label, active }) => (
               <div
                 key={label}

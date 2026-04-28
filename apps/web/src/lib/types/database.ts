@@ -179,6 +179,12 @@ export interface ChatMessage {
      *  maxDuration hit, fetch threw, user closed tab mid-stream, etc).
      *  Signals the UI to render a "continue from here" warning. */
     interrupted?: boolean;
+    /** Set when the assistant turn failed because the user's monthly
+     *  allowance is exhausted and credits balance is 0 (HTTP 402 with
+     *  code=QUOTA_EXCEEDED from /api/ai/*). UI renders a credits-out
+     *  block with a link to /account instead of the generic
+     *  interrupted warning. */
+    quotaExceeded?: boolean;
     /** Goal / weekly draft chats: the Anthropic `tool_use` block the
      *  assistant emitted in this turn. Persisted so that a resumed draft
      *  can rehydrate the plan preview and rebuild Anthropic history for
@@ -298,12 +304,11 @@ export interface DashboardTodayItem {
   deadline: string | null;
   priority: "high" | "medium" | "low";
   tag: string;
+  /** When this item belongs to a Goal (daily_task in any goal's weekly plan,
+   *  or a todo with goal_id pointing at an active goal). null for purely
+   *  personal todos. Used by the dashboard "Send to Team" button to route
+   *  the chat into the goal's existing session (shared chat history with
+   *  the Goal page Coach panel). */
+  goalId: string | null;
 }
 
-export interface WorkflowSummary {
-  id: string;
-  name: string;
-  description: string | null;
-  lastRunStatus: "success" | "failed" | null;
-  lastRunAt: string | null;
-}

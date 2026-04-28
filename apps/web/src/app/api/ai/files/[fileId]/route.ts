@@ -27,10 +27,20 @@ export async function GET(
     const downloadResponse = await client.beta.files.download(fileId);
     const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
 
+    // HTTP headers are Latin-1 (bytes 0-255), so non-ASCII filenames
+    // (Chinese, emoji, etc.) blow up `new Response(...)` if dropped
+    // straight into Content-Disposition. RFC 5987's filename*=UTF-8''…
+    // carries the real name, with an ASCII filename= fallback for very
+    // old clients.
+    const filename = metadata.filename || "download";
+    const asciiSafe =
+      /^[\x20-\x7E]+$/.test(filename) && !/["\\]/.test(filename) ? filename : "download";
+    const contentDisposition = `attachment; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+
     return new Response(fileBytes, {
       headers: {
         "Content-Type": metadata.mime_type || "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${metadata.filename || "download"}"`,
+        "Content-Disposition": contentDisposition,
         "Content-Length": fileBytes.length.toString(),
       },
     });
