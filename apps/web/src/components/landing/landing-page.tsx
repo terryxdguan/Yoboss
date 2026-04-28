@@ -153,12 +153,20 @@ export function LandingPage() {
       <main className="-mt-2">
         <section className="max-w-4xl mx-auto px-6 text-center">
           {/* Hero illustration */}
-          <div className="overflow-hidden max-h-[280px] md:max-h-[340px]">
-            <img
-              src="/hero-illustration.png"
-              alt="YoBoss — Your team planning and executing together"
-              className="mx-auto max-w-2xl w-full h-auto object-cover object-top"
-            />
+          <div className="relative mx-auto max-w-2xl">
+            <div className="overflow-hidden max-h-[280px] md:max-h-[340px]">
+              <img
+                src="/hero-illustration.png"
+                alt="YoBoss — Your team planning and executing together"
+                className="w-full h-auto object-cover object-top"
+              />
+            </div>
+            {/* Attribution badge — sits above the green (headphones)
+                character. Positioned in % so it tracks the image as it
+                scales down on narrower viewports. */}
+            <span className="absolute right-[2%] top-[28%] z-20 inline-flex items-center rounded-full border border-[#7FAEE6]/40 bg-[#FFFDF9] px-2.5 py-1 text-[10px] md:text-xs font-medium text-[#5E8FCE] shadow-[0_2px_8px_rgba(127,174,230,0.18)] whitespace-nowrap">
+              Powered by Claude Opus 4.7
+            </span>
           </div>
 
           <p className="text-xl md:text-2xl text-[#2B2B2B] mb-4 max-w-4xl mx-auto whitespace-nowrap">
