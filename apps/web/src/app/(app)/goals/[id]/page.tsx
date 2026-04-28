@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect, Fragment } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -74,6 +74,10 @@ export default function GoalDetailPage() {
   const [rightPanel, setRightPanel] = useState<RightPanel>("none");
   const [showWeeklyWizard, setShowWeeklyWizard] = useState(false);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  // Roadmap collapse state. When there's no weekly plan we default to a
+  // compact roadmap (chips + active phase only) so the "Generate" CTA stays
+  // visible above the fold. Toggle reveals the full 2-pane layout.
+  const [showAllPhases, setShowAllPhases] = useState(false);
   const [pendingAITask, setPendingAITask] = useState<DailyTask | null>(null);
   // Phase milestones (sub-phase markers) — read-only outline shown next
   // to the active phase. Persisted in phase_tasks (legacy table name).
@@ -90,6 +94,13 @@ export default function GoalDetailPage() {
 
   useLayoutEffect(() => {
     if (!selectedPhaseId) return;
+    // The 2-pane rail only exists in expanded mode. In compact mode (no
+    // weekly plan, toggle off) there's no rail to measure — clear the tail.
+    const expanded = (weeklyPlan?.daily_tasks?.length ?? 0) > 0 || showAllPhases;
+    if (!expanded) {
+      setTailTop(null);
+      return;
+    }
     const compute = () => {
       const card = phaseRefs.current.get(selectedPhaseId);
       const rail = railRef.current;
@@ -103,7 +114,7 @@ export default function GoalDetailPage() {
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
-  }, [selectedPhaseId, phases, phaseTasks.length]);
+  }, [selectedPhaseId, phases, phaseTasks.length, showAllPhases, weeklyPlan?.daily_tasks?.length]);
 
   const togglePanel = (panel: RightPanel) => {
     setRightPanel((prev) => (prev === panel ? "none" : panel));
@@ -431,41 +442,38 @@ export default function GoalDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1 border border-[#E7DED2] rounded-lg p-1">
-              <button
-                onClick={() => togglePanel("ai")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  rightPanel === "ai"
-                    ? "bg-[#7FAEE6] text-white"
-                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
-                }`}
-                title="Team"
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                Team
-              </button>
-              <button
-                onClick={() => togglePanel("deliverables")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  rightPanel === "deliverables"
-                    ? "bg-[#7FAEE6] text-white"
-                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
-                }`}
-                title="Deliverables"
-              >
-                <Paperclip className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => togglePanel("notes")}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  rightPanel === "notes"
-                    ? "bg-[#7FAEE6] text-white"
-                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
-                }`}
-                title="Notes"
-              >
-                <FileText className="h-3.5 w-3.5" />
-              </button>
+            {/* Action buttons. Each panel toggle is its own pill — when
+                active it fills with its accent color, when inactive it's a
+                light tint of the same color. Labels are always visible so
+                the actions read at a glance instead of being icon-only. */}
+            <div className="flex items-center gap-2">
+              {([
+                { key: "ai", label: "Team", icon: MessageSquare, accent: "#7FAEE6", tint: "#EAF3FD" },
+                { key: "deliverables", label: "Deliverables", icon: Paperclip, accent: "#7FB38A", tint: "#EFF7EC" },
+                { key: "notes", label: "Notes", icon: FileText, accent: "#C9A968", tint: "#FAF3E2" },
+              ] as const).map(({ key, label, icon: Icon, accent, tint }) => {
+                const active = rightPanel === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => togglePanel(key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+                    style={
+                      active
+                        ? {
+                            backgroundColor: accent,
+                            color: "#FFFFFF",
+                            boxShadow: `0 2px 8px ${accent}40`,
+                          }
+                        : { backgroundColor: tint, color: accent }
+                    }
+                    title={label}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#7FB38A]/10 text-[#7FB38A]">
               {goal.status}
@@ -474,33 +482,172 @@ export default function GoalDetailPage() {
         </div>
       </div>
 
-      {/* Overall Progress */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#2B2B2B]">This Week</h2>
-          <span className="text-sm font-semibold text-[#2B2B2B]">{progressPct}%</span>
-        </div>
-        <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
-          <div className="h-2 bg-[#E7DED2] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#7FB38A] rounded-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
+      {/* Hoisted "Generate Weekly Plan" CTA — when no plan exists this is
+          the user's next step, so we surface it above the roadmap (instead
+          of burying it below) and make it impossible to miss. */}
+      {!hasTasks && (
+        <div className="mb-6 relative">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#7FAEE6] opacity-50 blur-xl"
+          />
+          <div className="relative rounded-2xl border-2 border-[#7FAEE6] bg-[#FFFDF9] p-8 text-center shadow-[0_8px_28px_rgba(127,174,230,0.18)]">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EAF3FD] text-[#7FAEE6] text-[11px] font-semibold uppercase tracking-wider mb-3">
+              <Sparkles className="h-3 w-3" />
+              Next step
+            </div>
+            <p className="text-base font-semibold text-[#2B2B2B]">Generate your weekly plan</p>
+            <p className="text-xs text-[#9B948B] mt-1 mb-5">
+              Turn this roadmap into a personalized week of daily tasks
+            </p>
+            <button
+              onClick={() => setShowWeeklyWizard(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate with Team
+            </button>
           </div>
-          <p className="text-xs text-[#9B948B] mt-2">
-            {completedTasks} / {totalTasks} tasks completed
-          </p>
         </div>
-      </div>
+      )}
 
-      {/* Roadmap — left rail (phase list) and right pane (selected phase's
-          tasks) are two separate cards; right card has a tail pointer that
-          vertically tracks the selected phase on the left. */}
+      {/* Overall Progress — only meaningful once a weekly plan exists. */}
+      {hasTasks && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-[#2B2B2B]">This Week</h2>
+            <span className="text-sm font-semibold text-[#2B2B2B]">{progressPct}%</span>
+          </div>
+          <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+            <div className="h-2 bg-[#E7DED2] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#7FB38A] rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-[#9B948B] mt-2">
+              {completedTasks} / {totalTasks} tasks completed
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Roadmap — two layouts:
+          - Compact (no plan, default): a horizontal stepper of numbered
+            chips + just the active/selected phase's milestones. Saves space
+            so the "Generate" CTA stays in view.
+          - Expanded: original 2-pane (left rail + right detail w/ tail
+            pointer). Always used once a plan exists; available via toggle
+            otherwise. */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-[#2B2B2B]">Roadmap</h2>
-          <span className="text-xs text-[#9B948B]">{phases.length} phases</span>
+          {!hasTasks ? (
+            <button
+              onClick={() => setShowAllPhases((v) => !v)}
+              className="text-xs text-[#7FAEE6] font-medium hover:underline"
+            >
+              {showAllPhases ? "Show current phase only" : `Show all ${phases.length} phases`}
+            </button>
+          ) : (
+            <span className="text-xs text-[#9B948B]">{phases.length} phases</span>
+          )}
         </div>
+
+        {!hasTasks && !showAllPhases ? (
+          <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+            <div className="flex items-center pb-5 px-1">
+              {phases.map((phase, idx) => {
+                const color = PHASE_COLORS[idx % PHASE_COLORS.length];
+                const isSelected = phase.id === selectedPhaseId;
+                const isActive = phase.status === "active";
+                const isCompleted = phase.status === "completed";
+                return (
+                  <Fragment key={phase.id}>
+                    {idx > 0 && (
+                      <div className="h-px flex-1 bg-[#E7DED2] mx-1.5" />
+                    )}
+                    <button
+                      onClick={() => setSelectedPhaseId(phase.id)}
+                      className="relative flex flex-col items-center transition-transform active:scale-95"
+                      title={phase.title.replace(/^Phase \d+:\s*/, "")}
+                    >
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                          isSelected
+                            ? "text-white scale-110 shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                            : "text-[#6F6A64] hover:scale-105"
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? color.bg : `${color.bg}22`,
+                        }}
+                      >
+                        {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : idx + 1}
+                      </div>
+                      {isActive && (
+                        <span className="absolute -bottom-4 text-[10px] font-semibold text-[#7FB38A] whitespace-nowrap">
+                          Now
+                        </span>
+                      )}
+                    </button>
+                  </Fragment>
+                );
+              })}
+            </div>
+
+            {selectedPhase && (
+              <div className="border-t border-[#E7DED2] pt-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
+                        Phase {phases.findIndex((p) => p.id === selectedPhase.id) + 1} of {phases.length}
+                      </span>
+                      {selectedPhase.status === "active" && (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-[#7FB38A]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#7FB38A]" />
+                          You are here
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-base font-semibold text-[#2B2B2B]">
+                      <EditableText
+                        value={selectedPhase.title}
+                        onSave={(next) => handleSavePhaseField(selectedPhase.id, "title", next)}
+                        placeholder="Phase title"
+                        className="text-base font-semibold text-[#2B2B2B]"
+                      />
+                    </h3>
+                    <p className="mt-1 text-sm text-[#6F6A64]">
+                      <EditableText
+                        value={selectedPhase.description || ""}
+                        onSave={(next) => handleSavePhaseField(selectedPhase.id, "description", next)}
+                        multiline
+                        placeholder="Describe this phase…"
+                        emptyHint="Double-click to add a description…"
+                        className="text-sm text-[#6F6A64]"
+                      />
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5 text-xs text-[#9B948B]">
+                    <Clock className="h-3.5 w-3.5" />
+                    {selectedPhase.estimated_weeks} week{selectedPhase.estimated_weeks !== 1 ? "s" : ""}
+                  </div>
+                </div>
+
+                <PhaseMilestoneList
+                  milestones={phaseTasks
+                    .filter((t) => t.phase_id === selectedPhase.id)
+                    .sort((a, b) => a.sort_order - b.sort_order)}
+                  onUpdate={handleUpdateMilestone}
+                  onDelete={handleDeleteMilestone}
+                  onMove={handleMoveMilestone}
+                  onAdd={(title) => handleAddMilestone(selectedPhase.id, title)}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(260px,340px)_1fr]">
           {/* Left rail card */}
           <div
@@ -618,19 +765,19 @@ export default function GoalDetailPage() {
             )}
           </div>
         </div>
+        )}
       </div>{/* end Roadmap section */}
 
-      {/* Weekly Schedule */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[#7FAEE6]" />
-            <h2 className="text-base font-semibold text-[#2B2B2B]">Weekly Schedule</h2>
-          </div>
-          {/* Only show the top-right action once a plan exists. Before
-              generation, the primary CTA lives inside the empty-state card
-              so it's impossible to miss as the obvious next step. */}
-          {hasTasks && (
+      {/* Weekly Schedule — only renders once a plan exists. The pre-plan
+          CTA lives at the top of the page (hoisted), so this section
+          disappears entirely until generation. */}
+      {hasTasks && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-[#7FAEE6]" />
+              <h2 className="text-base font-semibold text-[#2B2B2B]">Weekly Schedule</h2>
+            </div>
             <button
               onClick={() => setShowWeeklyWizard(true)}
               className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
@@ -638,38 +785,13 @@ export default function GoalDetailPage() {
               <RefreshCw className="h-3.5 w-3.5" />
               Regenerate
             </button>
-          )}
-        </div>
-
-        {!hasTasks && (
-          <div className="relative">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#7FAEE6] opacity-50 blur-xl"
-            />
-            <div className="relative rounded-2xl border-2 border-[#7FAEE6] bg-[#FFFDF9] p-12 text-center shadow-[0_8px_28px_rgba(127,174,230,0.18)]">
-              <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
-              <p className="text-sm font-medium text-[#2B2B2B]">No weekly plan yet</p>
-              <p className="text-xs text-[#9B948B] mt-1 mb-5">
-                Generate a personalized weekly plan with your team — it&apos;s your next step
-              </p>
-              <button
-                onClick={() => setShowWeeklyWizard(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
-              >
-                <Sparkles className="h-4 w-4" />
-                Generate with Team
-              </button>
-            </div>
           </div>
-        )}
 
-        {hasTasks && (
-          // CSS-columns masonry: days flow Mon→Sun top-to-bottom in column 1,
-          // then continue into column 2 on lg+ screens. Each DayCard sets
-          // `break-inside-avoid` on its outer frame so a day never splits
-          // across columns. Heights auto-balance between columns, so sparse
-          // days don't leave empty space below them.
+          {/* CSS-columns masonry: days flow Mon→Sun top-to-bottom in column 1,
+              then continue into column 2 on lg+ screens. Each DayCard sets
+              `break-inside-avoid` on its outer frame so a day never splits
+              across columns. Heights auto-balance between columns, so sparse
+              days don't leave empty space below them. */}
           <div className="columns-1 lg:columns-2 gap-3">
             {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => (
               <DayCard
@@ -686,8 +808,8 @@ export default function GoalDetailPage() {
               />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       </div>{/* end max-w-6xl */}
       </div>{/* end main content */}
