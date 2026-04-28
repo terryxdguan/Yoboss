@@ -1,8 +1,24 @@
-"use client";
+import { createClient } from "@/lib/db/server";
+import { DailyEmailToggle } from "./email-toggle";
 
-import { Settings } from "lucide-react";
+export default async function SettingsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-export default function SettingsPage() {
+  let dailyEmailEnabled = true;
+  let timezone = "UTC";
+  if (user) {
+    const { data } = await supabase
+      .from("users")
+      .select("daily_email_enabled, timezone")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (data && typeof data.daily_email_enabled === "boolean") {
+      dailyEmailEnabled = data.daily_email_enabled;
+    }
+    if (data?.timezone) timezone = data.timezone;
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -14,17 +30,10 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
-        <div className="py-10 text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F1ECE4] flex items-center justify-center">
-            <Settings className="h-6 w-6 text-[#9B948B]" />
-          </div>
-          <p className="text-sm text-[#6F6A64]">No additional settings yet.</p>
-          <p className="text-xs text-[#9B948B] mt-1">
-            Notification preferences, theme, and other options coming soon.
-          </p>
-        </div>
-      </div>
+      <DailyEmailToggle
+        initialEnabled={dailyEmailEnabled}
+        initialTimezone={timezone}
+      />
     </div>
   );
 }

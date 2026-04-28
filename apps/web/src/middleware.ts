@@ -46,6 +46,9 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/api/webhooks/") ||
     request.nextUrl.pathname.startsWith("/api/cron/") ||
+    // Public unsubscribe links land on this route from email clients — must
+    // be reachable without a session. Token-protected via HMAC.
+    request.nextUrl.pathname.startsWith("/api/email/") ||
     // Dev-only auto-login endpoint must be reachable without a session
     // (otherwise the redirect below would loop). The route itself triple-
     // guards against running in production, so whitelisting it here is

@@ -1605,10 +1605,10 @@ export async function getUserTimezone(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return "UTC";
   const { data } = await supabase
-    .from("user_profiles")
+    .from("users")
     .select("timezone")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
   return data?.timezone || "UTC";
 }
 
@@ -1617,8 +1617,9 @@ export async function upsertUserTimezone(timezone: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
   const { error } = await supabase
-    .from("user_profiles")
-    .upsert({ id: user.id, timezone, updated_at: new Date().toISOString() });
+    .from("users")
+    .update({ timezone })
+    .eq("id", user.id);
   if (error) throw error;
 }
 
