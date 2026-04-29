@@ -10,9 +10,6 @@ import {
   Sparkles,
   Calendar,
   RefreshCw,
-  MessageSquare,
-  Paperclip,
-  FileText,
   Flag,
   ChevronUp,
   ChevronDown,
@@ -20,6 +17,7 @@ import {
   Plus,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
+import { useTranslations, useLocale } from "next-intl";
 import type { Goal, Phase, WeeklyPlan, DailyTask, PhaseTask } from "@/lib/types/database";
 import {
   updateGoal,
@@ -39,7 +37,7 @@ import { getWeekStart, getTodayDayOfWeek } from "@/lib/utils/date";
 
 type RightPanel = "none" | "ai" | "deliverables" | "notes";
 
-const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 // Pastel band per weekday, mirroring the ToDos Board column-header palette
 // so the two boards feel like one design language. Index 0 = Monday.
@@ -63,10 +61,23 @@ function getWeekDates(): string[] {
   });
 }
 
+function getGoalStatusBadge(
+  status: string,
+  t: (key: string) => string
+): { label: string; color: string } {
+  if (status === "completed") return { label: t("statusDone"), color: "#08A200" };
+  if (status === "archived") return { label: t("statusPaused"), color: "#FE4435" };
+  return { label: t("statusInProgress"), color: "#E09226" };
+}
+
 export default function GoalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("goals.detail");
+  const tList = useTranslations("goals.list");
+  const tDays = useTranslations("days.short");
+  const locale = useLocale();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [weeklyPlan, setWeeklyPlan] = useState<(WeeklyPlan & { daily_tasks: DailyTask[] }) | null>(null);
@@ -79,6 +90,8 @@ export default function GoalDetailPage() {
   // visible above the fold. Toggle reveals the full 2-pane layout.
   const [showAllPhases, setShowAllPhases] = useState(false);
   const [pendingAITask, setPendingAITask] = useState<DailyTask | null>(null);
+  const [actionMenuOpen, setActionMenuOpen] = useState(true);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
   // Phase milestones (sub-phase markers) — read-only outline shown next
   // to the active phase. Persisted in phase_tasks (legacy table name).
   // Held flat here; UI filters by selectedPhaseId.
@@ -120,6 +133,25 @@ export default function GoalDetailPage() {
     setRightPanel((prev) => (prev === panel ? "none" : panel));
     if (panel !== "ai") setPendingAITask(null);
   };
+
+  // Close the Action menu when clicking outside or pressing Escape.
+  useEffect(() => {
+    if (!actionMenuOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setActionMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActionMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [actionMenuOpen]);
 
   const loadData = useCallback(async () => {
     const supabase = createClient();
@@ -366,7 +398,7 @@ export default function GoalDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-[#9B948B]">Loading...</div>
+        <div className="text-sm text-[#9B948B]">{t("loading")}</div>
       </div>
     );
   }
@@ -374,12 +406,12 @@ export default function GoalDetailPage() {
   if (!goal) {
     return (
       <div className="text-center py-24">
-        <p className="text-[#6F6A64]">Goal not found</p>
+        <p className="text-[#6F6A64]">{t("notFound")}</p>
         <button
           onClick={() => router.push("/goals")}
-          className="text-sm text-[#7FAEE6] mt-2 hover:underline"
+          className="text-sm text-[#007AFF] mt-2 hover:underline"
         >
-          Back to Goals
+          {t("back")}
         </button>
       </div>
     );
@@ -416,68 +448,91 @@ export default function GoalDetailPage() {
         className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Goals
+        {t("back")}
       </button>
 
       <div className="mb-6">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1 mr-4">
-            <h1 className="text-2xl font-semibold text-[#2B2B2B]">
-              <EditableText
-                value={goal.title}
-                onSave={(next) => handleSaveGoalField("title", next)}
-                placeholder="Goal title"
-                className="text-2xl font-semibold text-[#2B2B2B]"
-              />
-            </h1>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold text-[#2B2B2B]">
+                <EditableText
+                  value={goal.title}
+                  onSave={(next) => handleSaveGoalField("title", next)}
+                  placeholder={t("titlePlaceholder")}
+                  className="text-2xl font-semibold text-[#2B2B2B]"
+                />
+              </h1>
+              {(() => {
+                const status = getGoalStatusBadge(goal.status, tList);
+                return (
+                  <span
+                    className="text-xs font-medium px-2.5 py-1 rounded-full"
+                    style={{
+                      backgroundColor: `${status.color}1F`,
+                      color: status.color,
+                    }}
+                  >
+                    {status.label}
+                  </span>
+                );
+              })()}
+            </div>
             <p className="text-sm text-[#6F6A64] mt-1">
               <EditableText
                 value={goal.description || ""}
                 onSave={(next) => handleSaveGoalField("description", next)}
                 multiline
-                placeholder="Describe this goal…"
-                emptyHint="Double-click to add a description…"
+                placeholder={t("descPlaceholder")}
+                emptyHint={t("descEmptyHint")}
                 className="text-sm text-[#6F6A64]"
               />
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Action buttons. Each panel toggle is its own pill — when
-                active it fills with its accent color, when inactive it's a
-                light tint of the same color. Labels are always visible so
-                the actions read at a glance instead of being icon-only. */}
-            <div className="flex items-center gap-2">
-              {([
-                { key: "ai", label: "Team", icon: MessageSquare, accent: "#7FAEE6", tint: "#EAF3FD" },
-                { key: "deliverables", label: "Deliverables", icon: Paperclip, accent: "#7FB38A", tint: "#EFF7EC" },
-                { key: "notes", label: "Notes", icon: FileText, accent: "#C9A968", tint: "#FAF3E2" },
-              ] as const).map(({ key, label, icon: Icon, accent, tint }) => {
-                const active = rightPanel === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => togglePanel(key)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
-                    style={
-                      active
-                        ? {
-                            backgroundColor: accent,
-                            color: "#FFFFFF",
-                            boxShadow: `0 2px 8px ${accent}40`,
-                          }
-                        : { backgroundColor: tint, color: accent }
-                    }
-                    title={label}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#7FB38A]/10 text-[#7FB38A]">
-              {goal.status}
-            </span>
+          {/* Action section. Lives in its own flex column with a fixed
+              width so the goal title/description on the left wraps before
+              colliding. The dropdown links are flow content (not absolute)
+              so the section's height grows with the menu and the progress
+              bar below stays clear. */}
+          <div ref={actionMenuRef} className="shrink-0 w-48 flex flex-col items-end gap-3">
+            <button
+              type="button"
+              onClick={() => setActionMenuOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6] active:scale-95 transition-all shadow-[0_2px_8px_rgba(0,122,255,0.25)]"
+            >
+              {t("action")}
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${actionMenuOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {actionMenuOpen && (
+              <div className="flex flex-col items-end gap-2.5">
+                {([
+                  { key: "ai", label: t("menuWorkTeam") },
+                  { key: "deliverables", label: t("menuFiles") },
+                  { key: "notes", label: t("menuNotes") },
+                ] as const).map(({ key, label }) => {
+                  const active = rightPanel === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        togglePanel(key);
+                        setActionMenuOpen(false);
+                      }}
+                      className={`text-sm font-semibold underline underline-offset-4 transition-colors whitespace-nowrap ${
+                        active
+                          ? "text-[#007AFF]"
+                          : "text-[#000000]/85 hover:text-[#000000]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -489,35 +544,34 @@ export default function GoalDetailPage() {
         <div className="mb-6 relative">
           <div
             aria-hidden
-            className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#7FAEE6] opacity-50 blur-xl"
+            className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#007AFF] opacity-50 blur-xl"
           />
-          <div className="relative rounded-2xl border-2 border-[#7FAEE6] bg-[#FFFDF9] p-8 text-center shadow-[0_8px_28px_rgba(127,174,230,0.18)]">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EAF3FD] text-[#7FAEE6] text-[11px] font-semibold uppercase tracking-wider mb-3">
+          <div className="relative rounded-2xl border-2 border-[#007AFF] bg-[#FFFDF9] p-8 text-center shadow-[0_8px_28px_rgba(0,122,255,0.18)]">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E6F2FF] text-[#007AFF] text-[11px] font-semibold uppercase tracking-wider mb-3">
               <Sparkles className="h-3 w-3" />
-              Next step
+              {t("nextStep")}
             </div>
-            <p className="text-base font-semibold text-[#2B2B2B]">Generate your weekly plan</p>
+            <p className="text-base font-semibold text-[#2B2B2B]">{t("generateTitle")}</p>
             <p className="text-xs text-[#9B948B] mt-1 mb-5">
-              Turn this roadmap into a personalized week of daily tasks
+              {t("generateSubtitle")}
             </p>
             <button
               onClick={() => setShowWeeklyWizard(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,122,255,0.35)]"
             >
               <Sparkles className="h-4 w-4" />
-              Generate with Team
+              {t("generateCta")}
             </button>
           </div>
         </div>
       )}
 
-      {/* Overall Progress — only meaningful once a weekly plan exists. */}
+      {/* Overall Progress — only meaningful once a weekly plan exists.
+          Percentage sits below the bar (right-aligned) so the open
+          Action menu in the page header doesn't overlap it. */}
       {hasTasks && (
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#2B2B2B]">This Week</h2>
-            <span className="text-sm font-semibold text-[#2B2B2B]">{progressPct}%</span>
-          </div>
+          <h2 className="text-base font-semibold text-[#2B2B2B] mb-4">{t("thisWeek")}</h2>
           <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
             <div className="h-2 bg-[#E7DED2] rounded-full overflow-hidden">
               <div
@@ -525,9 +579,12 @@ export default function GoalDetailPage() {
                 style={{ width: `${progressPct}%` }}
               />
             </div>
-            <p className="text-xs text-[#9B948B] mt-2">
-              {completedTasks} / {totalTasks} tasks completed
-            </p>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-[#9B948B]">
+                {t("tasksCompleted", { done: completedTasks, total: totalTasks })}
+              </p>
+              <span className="text-sm font-semibold text-[#2B2B2B]">{progressPct}%</span>
+            </div>
           </div>
         </div>
       )}
@@ -541,11 +598,11 @@ export default function GoalDetailPage() {
             otherwise. */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#2B2B2B]">Roadmap</h2>
+          <h2 className="text-base font-semibold text-[#2B2B2B]">{t("roadmap")}</h2>
           {!hasTasks ? (
             <button
               onClick={() => setShowAllPhases((v) => !v)}
-              className="text-xs text-[#7FAEE6] font-medium hover:underline"
+              className="text-xs text-[#007AFF] font-medium hover:underline"
             >
               {showAllPhases ? "Show current phase only" : `Show all ${phases.length} phases`}
             </button>
@@ -614,7 +671,7 @@ export default function GoalDetailPage() {
                       <EditableText
                         value={selectedPhase.title}
                         onSave={(next) => handleSavePhaseField(selectedPhase.id, "title", next)}
-                        placeholder="Phase title"
+                        placeholder={t("phaseTitlePlaceholder")}
                         className="text-base font-semibold text-[#2B2B2B]"
                       />
                     </h3>
@@ -623,7 +680,7 @@ export default function GoalDetailPage() {
                         value={selectedPhase.description || ""}
                         onSave={(next) => handleSavePhaseField(selectedPhase.id, "description", next)}
                         multiline
-                        placeholder="Describe this phase…"
+                        placeholder={t("phaseDescPlaceholder")}
                         emptyHint="Double-click to add a description…"
                         className="text-sm text-[#6F6A64]"
                       />
@@ -669,7 +726,7 @@ export default function GoalDetailPage() {
                   onClick={() => setSelectedPhaseId(phase.id)}
                   className={`flex w-full gap-3 rounded-xl border p-3 text-left transition-colors ${
                     isSelected
-                      ? "border-[#7FAEE6] bg-[#F8FBFF] shadow-[0_2px_10px_rgba(127,174,230,0.18)]"
+                      ? "border-[#007AFF] bg-[#F8FBFF] shadow-[0_2px_10px_rgba(0,122,255,0.18)]"
                       : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#DDD3C7] hover:bg-[#F8F5EF]"
                   }`}
                 >
@@ -694,7 +751,7 @@ export default function GoalDetailPage() {
                       <Clock className="h-3 w-3" />
                       {phase.estimated_weeks} week{phase.estimated_weeks !== 1 ? "s" : ""}
                       {isActive && (
-                        <span className="font-semibold text-[#7FAEE6]">· You are here</span>
+                        <span className="font-semibold text-[#007AFF]">· You are here</span>
                       )}
                     </div>
                   </div>
@@ -727,7 +784,7 @@ export default function GoalDetailPage() {
                       <EditableText
                         value={selectedPhase.title}
                         onSave={(next) => handleSavePhaseField(selectedPhase.id, "title", next)}
-                        placeholder="Phase title"
+                        placeholder={t("phaseTitlePlaceholder")}
                         className="text-base font-semibold text-[#2B2B2B]"
                       />
                     </h3>
@@ -736,7 +793,7 @@ export default function GoalDetailPage() {
                         value={selectedPhase.description || ""}
                         onSave={(next) => handleSavePhaseField(selectedPhase.id, "description", next)}
                         multiline
-                        placeholder="Describe this phase…"
+                        placeholder={t("phaseDescPlaceholder")}
                         emptyHint="Double-click to add a description…"
                         className="text-sm text-[#6F6A64]"
                       />
@@ -775,12 +832,12 @@ export default function GoalDetailPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-[#7FAEE6]" />
-              <h2 className="text-base font-semibold text-[#2B2B2B]">Weekly Schedule</h2>
+              <Calendar className="h-4 w-4 text-[#007AFF]" />
+              <h2 className="text-base font-semibold text-[#2B2B2B]">{t("weeklySchedule")}</h2>
             </div>
             <button
               onClick={() => setShowWeeklyWizard(true)}
-              className="flex items-center gap-1.5 text-xs text-[#7FAEE6] font-medium hover:underline"
+              className="flex items-center gap-1.5 text-xs text-[#007AFF] font-medium hover:underline"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Regenerate
@@ -796,7 +853,7 @@ export default function GoalDetailPage() {
             {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => (
               <DayCard
                 key={dayIdx}
-                dayName={DAY_NAMES_SHORT[dayIdx]}
+                dayName={tDays(DAY_KEYS[dayIdx])}
                 dayIndex={dayIdx}
                 date={weekDates[dayIdx]}
                 tasks={tasksByDay[dayIdx] || []}
@@ -892,7 +949,7 @@ export default function GoalDetailPage() {
 // Per-phase color used by the roadmap left rail. Cycles by index so any
 // number of phases gets a distinct hue without hand-coding per name.
 const PHASE_COLORS: { bg: string }[] = [
-  { bg: "#7FAEE6" }, // blue
+  { bg: "#007AFF" }, // blue
   { bg: "#C9A968" }, // gold
   { bg: "#9CC4A4" }, // green
   { bg: "#9B6B5C" }, // brown
@@ -917,6 +974,7 @@ function PhaseMilestoneList({
   onMove: (id: string, direction: "up" | "down") => void;
   onAdd: (title: string) => void;
 }) {
+  const t = useTranslations("goals.detail");
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -956,12 +1014,12 @@ function PhaseMilestoneList({
                 key={m.id}
                 className="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[#F8F5EF]"
               >
-                <Flag className="mt-1 h-4 w-4 shrink-0 text-[#7FAEE6]" />
+                <Flag className="mt-1 h-4 w-4 shrink-0 text-[#007AFF]" />
                 <div className="min-w-0 flex-1">
                   <EditableText
                     value={m.title}
                     onSave={(next) => onUpdate(m.id, next)}
-                    placeholder="Milestone title"
+                    placeholder={t("milestoneTitlePlaceholder")}
                     className="text-sm text-[#2B2B2B]"
                   />
                 </div>
@@ -970,7 +1028,7 @@ function PhaseMilestoneList({
                     type="button"
                     onClick={() => onMove(m.id, "up")}
                     disabled={isFirst}
-                    title="Move up"
+                    title={t("moveUp")}
                     className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#2B2B2B] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#9B948B]"
                   >
                     <ChevronUp className="h-3.5 w-3.5" />
@@ -979,7 +1037,7 @@ function PhaseMilestoneList({
                     type="button"
                     onClick={() => onMove(m.id, "down")}
                     disabled={isLast}
-                    title="Move down"
+                    title={t("moveDown")}
                     className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#2B2B2B] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#9B948B]"
                   >
                     <ChevronDown className="h-3.5 w-3.5" />
@@ -987,7 +1045,7 @@ function PhaseMilestoneList({
                   <button
                     type="button"
                     onClick={() => onDelete(m.id)}
-                    title="Delete"
+                    title={t("deleteTitle")}
                     className="rounded p-1 text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#D5847A]"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -1001,7 +1059,7 @@ function PhaseMilestoneList({
 
       {adding ? (
         <div className="flex items-start gap-2.5 rounded-lg px-2 py-1.5">
-          <Flag className="mt-1 h-4 w-4 shrink-0 text-[#7FAEE6]" />
+          <Flag className="mt-1 h-4 w-4 shrink-0 text-[#007AFF]" />
           <input
             ref={inputRef}
             type="text"
@@ -1023,8 +1081,8 @@ function PhaseMilestoneList({
               setAdding(false);
               setDraft("");
             }}
-            placeholder="New milestone…"
-            className="min-w-0 flex-1 rounded-md border border-[#7FAEE6] bg-[#FFFDF9] px-2 py-1 text-sm text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30"
+            placeholder={t("newMilestonePlaceholder")}
+            className="min-w-0 flex-1 rounded-md border border-[#007AFF] bg-[#FFFDF9] px-2 py-1 text-sm text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
           />
         </div>
       ) : (
@@ -1124,6 +1182,7 @@ function TaskItem({
   onDelete: (taskId: string) => void;
   onAskAI: (task: DailyTask) => void;
 }) {
+  const t = useTranslations("goals.detail");
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingTime, setEditingTime] = useState(false);
   const [titleDraft, setTitleDraft] = useState(task.title);
@@ -1163,7 +1222,7 @@ function TaskItem({
           {task.completed ? (
             <CheckCircle2 className="h-4 w-4 text-[#7FB38A] fill-[#7FB38A] stroke-white" />
           ) : (
-            <Circle className="h-4 w-4 text-[#9B948B] group-hover/item:text-[#7FAEE6] transition-colors" />
+            <Circle className="h-4 w-4 text-[#9B948B] group-hover/item:text-[#007AFF] transition-colors" />
           )}
         </button>
 
@@ -1175,7 +1234,7 @@ function TaskItem({
             onChange={(e) => setTimeDraft(e.target.value)}
             onBlur={commitTime}
             onKeyDown={(e) => { if (e.key === "Enter") commitTime(); if (e.key === "Escape") { setTimeDraft(task.time_slot || ""); setEditingTime(false); } }}
-            className="shrink-0 w-32 text-sm text-[#9B948B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none"
+            className="shrink-0 w-32 text-sm text-[#9B948B] bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1 py-0.5 outline-none"
           />
         ) : (
           task.time_slot && (
@@ -1197,7 +1256,7 @@ function TaskItem({
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setTitleDraft(task.title); setEditingTitle(false); } }}
-              className="text-sm text-[#2B2B2B] bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none w-full"
+              className="text-sm text-[#2B2B2B] bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1 py-0.5 outline-none w-full"
             />
           ) : (
             <p
@@ -1213,13 +1272,15 @@ function TaskItem({
           )}
         </div>
 
-        {/* Send to Team — always visible green triangle, matches ToDos. */}
+        {/* Send to Team — labeled "Start" in primary blue so the
+            call-to-action reads at a glance. */}
         <button
           onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
-          className="shrink-0 mt-0.5 text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] transition-colors"
-          title="Send to Team"
+          className="shrink-0 mt-0.5 flex items-center gap-1 text-[#007AFF] hover:text-[#0066D6] text-[13px] font-medium transition-colors"
+          title={t("sendToTeam")}
         >
-          ▶
+          Start
+          <span aria-hidden>▶</span>
         </button>
         {/* Delete — hover-only, since destructive actions don't need to advertise. */}
         <button

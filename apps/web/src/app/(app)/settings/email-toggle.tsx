@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { upsertUserTimezone } from "@/lib/db/actions";
 import { TIMEZONES } from "@/lib/timezones";
 
@@ -11,6 +12,8 @@ export function DailyEmailToggle({
   initialEnabled: boolean;
   initialTimezone: string;
 }) {
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const [enabled, setEnabled] = useState(initialEnabled);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [pending, startTransition] = useTransition();
@@ -32,7 +35,7 @@ export function DailyEmailToggle({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch {
         setEnabled(!next);
-        setError("Couldn't save. Try again.");
+        setError(tCommon("saveFailed"));
       }
     });
   };
@@ -49,68 +52,76 @@ export function DailyEmailToggle({
         window.setTimeout(() => setTimezoneSaved(false), 2000);
       } catch {
         setTimezone(previous);
-        setTimezoneError("Couldn't save. Try again.");
+        setTimezoneError(tCommon("saveFailed"));
       }
     });
   };
 
   return (
-    <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div>
-          <div className="text-sm font-medium text-[#2B2B2B]">Time zone</div>
-          <div className="mt-1 text-xs text-[#6F6A64]">
-            Used for daily summary emails and scheduled workflows.
+    <>
+      <section className="bg-white border border-[#E7DED2] rounded-2xl p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div>
+            <h2 className="text-base font-semibold text-[#2B2B2B]">
+              {t("timezoneTitle")}
+            </h2>
+            <p className="mt-1 text-sm text-[#6F6A64]">
+              {t("timezoneDescription")}
+            </p>
+            {timezoneError && (
+              <div className="mt-2 text-xs text-[#D5847A]">{timezoneError}</div>
+            )}
+            {timezoneSaved && (
+              <div className="mt-2 text-xs font-medium text-[#7FB38A]">{tCommon("saved")}</div>
+            )}
           </div>
-          {timezoneError && (
-            <div className="mt-2 text-xs text-[#D5847A]">{timezoneError}</div>
-          )}
-          {timezoneSaved && (
-            <div className="mt-2 text-xs font-medium text-[#7FB38A]">Saved</div>
-          )}
+
+          <select
+            value={timezone}
+            disabled={tzPending}
+            onChange={(e) => onTimezoneChange(e.target.value)}
+            className="w-full rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 text-sm text-[#2B2B2B] outline-none transition-colors hover:border-[#DDD3C7] focus:border-[#007AFF] disabled:opacity-60 sm:w-auto sm:min-w-64"
+          >
+            {TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
         </div>
+      </section>
 
-        <select
-          value={timezone}
-          disabled={tzPending}
-          onChange={(e) => onTimezoneChange(e.target.value)}
-          className="w-full rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 text-sm text-[#2B2B2B] outline-none transition-colors hover:border-[#DDD3C7] focus:border-[#7FAEE6] disabled:opacity-60 sm:w-auto sm:min-w-64"
-        >
-          {TIMEZONES.map((tz) => (
-            <option key={tz.value} value={tz.value}>
-              {tz.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mt-5 flex items-start justify-between gap-6 border-t border-[#F1ECE4] pt-5">
-        <div>
-          <div className="text-sm font-medium text-[#2B2B2B]">Daily summary email</div>
-          <div className="mt-1 text-xs text-[#6F6A64]">
-            Sent at 6 AM in your local timezone — today's items first, yesterday's wins below.
+      <section className="bg-white border border-[#E7DED2] rounded-2xl p-6">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h2 className="text-base font-semibold text-[#2B2B2B]">
+              {t("dailyEmailTitle")}
+            </h2>
+            <p className="mt-1 text-sm text-[#6F6A64]">
+              {t("dailyEmailDescription")}
+            </p>
+            {error && <div className="mt-2 text-xs text-[#D5847A]">{error}</div>}
           </div>
-          {error && <div className="mt-2 text-xs text-[#D5847A]">{error}</div>}
-        </div>
 
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          aria-label="Daily summary email"
-          disabled={pending}
-          onClick={() => onChange(!enabled)}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-60 ${
-            enabled ? "bg-[#7FAEE6]" : "bg-[#DDD3C7]"
-          }`}
-        >
-          <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-              enabled ? "translate-x-5" : "translate-x-0.5"
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label={t("dailyEmailLabel")}
+            disabled={pending}
+            onClick={() => onChange(!enabled)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-60 ${
+              enabled ? "bg-[#007AFF]" : "bg-[#DDD3C7]"
             }`}
-          />
-        </button>
-      </div>
-    </div>
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                enabled ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      </section>
+    </>
   );
 }
