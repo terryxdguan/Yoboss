@@ -64,8 +64,13 @@ export async function sendDailyDigestForUser(
     unsubUrl,
   });
 
+  // Resend reports API errors via `{ error }` rather than throwing (only
+  // network/runtime issues throw). Without inspecting both, a rejected send
+  // (unverified domain, bad From, blocked recipient) silently looks "sent".
+  // Re-throw so the cron route's catch surfaces the message in `errors[]`
+  // and bumps `counts.error`.
   try {
-    await getResend().emails.send({
+    const { error: resendError } = await getResend().emails.send({
       from: getEmailFrom(),
       to: user.email,
       subject,
@@ -77,9 +82,14 @@ export async function sendDailyDigestForUser(
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
+    if (resendError) {
+      throw new Error(
+        `Resend ${resendError.name ?? "send_error"}: ${resendError.message ?? "unknown"}`,
+      );
+    }
   } catch (err) {
     console.error("[daily-email] resend.send failed", { userId: user.id, err });
-    return "error";
+    throw err;
   }
 
   if (!opts.force) {
