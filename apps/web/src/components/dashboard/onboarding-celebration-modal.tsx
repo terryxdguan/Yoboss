@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ONBOARDING_ACTIVE_KEY } from "@/components/dashboard/onboarding-dashboard";
 
 // Pops once when the user lands on the regular dashboard with the
@@ -9,6 +10,7 @@ import { ONBOARDING_ACTIVE_KEY } from "@/components/dashboard/onboarding-dashboa
 // mount, shows the modal, and clears the flag so subsequent visits
 // don't re-trigger.
 export function OnboardingCelebrationModal() {
+  const t = useTranslations("dashboard.celebration");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -31,21 +33,20 @@ export function OnboardingCelebrationModal() {
         onClick={() => setOpen(false)}
       />
       <div className="relative w-full max-w-md rounded-2xl bg-[#FFFDF9] p-8 text-center shadow-[0_24px_64px_rgba(30,34,39,0.18)]">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#EAF3FD] text-[#7FAEE6]">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#E6F2FF] text-[#007AFF]">
           <Sparkles className="h-7 w-7" />
         </div>
         <h2 className="text-xl font-semibold text-[#2B2B2B]">
-          You&apos;re all set up!
+          {t("title")}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[#6F6A64]">
-          Goal, weekly plan, and a personal to-do — all done. From here on,
-          this is your day-to-day dashboard.
+          {t("body")}
         </p>
         <button
           onClick={() => setOpen(false)}
-          className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-[#7FAEE6] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6A9DDA]"
+          className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0066D6]"
         >
-          Continue
+          {t("cta")}
         </button>
       </div>
     </div>

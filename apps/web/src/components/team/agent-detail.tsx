@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { X, Flame, CheckCircle2, Circle, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AgentConfig } from "@/lib/types/agent";
 import { CATEGORY_LABELS } from "@/lib/types/agent";
 import { DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
@@ -17,6 +18,8 @@ interface AgentDetailProps {
 type Tab = "current" | "history";
 
 export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailProps) {
+  const t = useTranslations("team.detail");
+  const tList = useTranslations("team.list");
   const [tab, setTab] = useState<Tab>("current");
   const [confirmFire, setConfirmFire] = useState(false);
 
@@ -39,7 +42,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-[#2B2B2B]">{agent.label}</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7FAEE6]/10 text-[#7FAEE6]">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
             </div>
@@ -51,18 +54,18 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           {!isDefault && (
             confirmFire ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#D5847A]">Confirm?</span>
+                <span className="text-xs text-[#D5847A]">{t("fireConfirm")}</span>
                 <button
                   onClick={() => { onFire(); setConfirmFire(false); }}
                   className="px-3 py-1.5 rounded-lg bg-[#D5847A] text-white text-xs font-medium hover:bg-[#C06E64] transition-colors"
                 >
-                  Fire
+                  {t("fire")}
                 </button>
                 <button
                   onClick={() => setConfirmFire(false)}
                   className="px-3 py-1.5 rounded-lg border border-[#DDD3C7] text-xs text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
                 >
-                  Cancel
+                  {tList("fireCancel")}
                 </button>
               </div>
             ) : (
@@ -71,7 +74,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#D5847A] hover:bg-[#D5847A]/5 transition-colors"
               >
                 <Flame className="h-3.5 w-3.5" />
-                Fire
+                {t("fire")}
               </button>
             )
           )}
@@ -86,7 +89,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
 
       {/* Expertise */}
       <div className="px-6 py-5 border-b border-[#E7DED2]">
-        <h3 className="text-sm font-semibold text-[#2B2B2B] mb-3">Expertise</h3>
+        <h3 className="text-sm font-semibold text-[#2B2B2B] mb-3">{t("expertise")}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {agent.expertise.map((item, i) => (
             <div key={i} className="flex items-start gap-2 text-sm text-[#6F6A64]">
@@ -104,7 +107,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             onClick={() => setTab("current")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === "current"
-                ? "border-[#7FAEE6] text-[#7FAEE6]"
+                ? "border-[#007AFF] text-[#007AFF]"
                 : "border-transparent text-[#9B948B] hover:text-[#6F6A64]"
             }`}
           >
@@ -114,7 +117,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             onClick={() => setTab("history")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === "history"
-                ? "border-[#7FAEE6] text-[#7FAEE6]"
+                ? "border-[#007AFF] text-[#007AFF]"
                 : "border-transparent text-[#9B948B] hover:text-[#6F6A64]"
             }`}
           >
@@ -128,7 +131,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
         {tab === "current" ? (
           <div className="text-center py-6">
             <Circle className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
-            <p className="text-sm text-[#9B948B]">No active tasks</p>
+            <p className="text-sm text-[#9B948B]">{t("noActiveTasks")}</p>
             <p className="text-xs text-[#9B948B] mt-1">
               Start a conversation with {agent.label} to assign work
             </p>
@@ -136,7 +139,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
         ) : (
           <div className="text-center py-6">
             <Clock className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
-            <p className="text-sm text-[#9B948B]">No history yet</p>
+            <p className="text-sm text-[#9B948B]">{t("noHistory")}</p>
             <p className="text-xs text-[#9B948B] mt-1">
               Completed work will appear here
             </p>

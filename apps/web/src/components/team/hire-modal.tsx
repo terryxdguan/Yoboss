@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Search, UserPlus, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ALL_AGENTS } from "@/lib/ai/agent-registry";
 import type { AgentCategory } from "@/lib/types/agent";
 import { CATEGORY_LABELS } from "@/lib/types/agent";
@@ -34,6 +35,8 @@ const CATEGORY_DISPLAY: Record<string, string> = {
 };
 
 export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
+  const t = useTranslations("team.hireModal");
+  const tMarket = useTranslations("team.market");
   const [activeCategory, setActiveCategory] = useState<"all" | AgentCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -59,10 +62,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div>
-            <h2 className="text-lg font-semibold text-[#2B2B2B]">Hire Employees</h2>
-            <p className="text-sm text-[#6F6A64] mt-0.5">
-              Hire specialists to join your team
-            </p>
+            <h2 className="text-lg font-semibold text-[#2B2B2B]">{t("title")}</h2>
           </div>
           <button
             onClick={onClose}
@@ -80,8 +80,8 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search agents..."
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#F6F3EE] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
+              placeholder={t("searchPlaceholder")}
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#F6F3EE] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
             />
           </div>
         </div>
@@ -95,7 +95,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   activeCategory === cat
-                    ? "bg-[#7FAEE6] text-white"
+                    ? "bg-[#007AFF] text-white"
                     : "bg-[#F1ECE4] text-[#6F6A64] hover:bg-[#E7DED2]"
                 }`}
               >
@@ -109,7 +109,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           {filtered.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-sm text-[#9B948B]">No agents found</p>
+              <p className="text-sm text-[#9B948B]">{t("noResults")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -138,15 +138,15 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
                     {isHired ? (
                       <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#7FB38A]">
                         <Check className="h-3.5 w-3.5" />
-                        On your team
+                        {tMarket("alreadyHired")}
                       </div>
                     ) : (
                       <button
                         onClick={() => onHire(agent.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-[11px] font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#007AFF] text-white text-[11px] font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all"
                       >
                         <UserPlus className="h-3.5 w-3.5" />
-                        Hire
+                        {tMarket("hire")}
                       </button>
                     )}
                   </div>

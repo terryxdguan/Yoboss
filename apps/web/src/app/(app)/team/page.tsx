@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Flame, ChevronDown, ChevronRight, Circle, Clock } from "lucide-react";
 import Image from "next/image";
 import { DEFAULT_AGENTS, ALL_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
@@ -36,6 +37,7 @@ function AgentRow({
   onFire: () => void;
   onChat: () => void;
 }) {
+  const t = useTranslations("team.list");
   const [showExpertise, setShowExpertise] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [confirmFire, setConfirmFire] = useState(false);
@@ -47,7 +49,7 @@ function AgentRow({
         <div
           onClick={onChat}
           className="w-36 shrink-0 bg-[#F1ECE4] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
-          title={`Chat with ${agent.label}`}
+          title={t("chatWith", { name: agent.label })}
         >
           <Image
             src={agent.avatar || DEFAULT_AGENT_AVATAR}
@@ -65,7 +67,7 @@ function AgentRow({
             <div className="flex items-center gap-2">
               {/* Only show name for the first default agent (Eve) */}
               <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</h2>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7FAEE6]/10 text-[#7FAEE6]">
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#007AFF]/10 text-[#007AFF]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
             </div>
@@ -76,13 +78,13 @@ function AgentRow({
                     onClick={() => { onFire(); setConfirmFire(false); }}
                     className="px-2.5 py-1 rounded-lg bg-[#D5847A] text-white text-[11px] font-medium"
                   >
-                    Confirm
+                    {t("fireConfirm")}
                   </button>
                   <button
                     onClick={() => setConfirmFire(false)}
                     className="px-2.5 py-1 rounded-lg border border-[#DDD3C7] text-[11px] text-[#6F6A64]"
                   >
-                    Cancel
+                    {t("fireCancel")}
                   </button>
                 </div>
               ) : (
@@ -91,7 +93,7 @@ function AgentRow({
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-[#D5847A] hover:bg-[#D5847A]/5 transition-colors"
                 >
                   <Flame className="h-3 w-3" />
-                  Fire
+                  {t("fire")}
                 </button>
               )
             )}
@@ -102,9 +104,9 @@ function AgentRow({
             <p className="text-xs text-[#6F6A64] flex-1">{agent.description}</p>
             <button
               onClick={() => setShowExpertise(!showExpertise)}
-              className="shrink-0 flex items-center gap-0.5 text-[11px] text-[#7FAEE6] hover:underline mt-0.5"
+              className="shrink-0 flex items-center gap-0.5 text-[11px] text-[#007AFF] hover:underline mt-0.5"
             >
-              Expertise
+              {t("expertise")}
               {showExpertise ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
             </button>
           </div>
@@ -127,8 +129,8 @@ function AgentRow({
           <div className="flex items-center gap-4 text-[11px] border-t border-[#E7DED2] pt-2">
             <div className="flex items-center gap-1.5 text-[#9B948B]">
               <Circle className="h-3 w-3" />
-              <span>Current: </span>
-              <span className="text-[#6F6A64]">No active tasks</span>
+              <span>{t("currentLabel")} </span>
+              <span className="text-[#6F6A64]">{t("noActiveTasks")}</span>
             </div>
 
             {/* History — collapsible */}
@@ -137,14 +139,14 @@ function AgentRow({
               className="flex items-center gap-0.5 text-[#9B948B] hover:text-[#6F6A64] transition-colors"
             >
               <Clock className="h-3 w-3" />
-              <span>History</span>
+              <span>{t("history")}</span>
               {showHistory ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
             </button>
           </div>
 
           {showHistory && (
             <div className="mt-2 pt-2 border-t border-dashed border-[#E7DED2] text-[11px] text-[#9B948B]">
-              No history yet
+              {t("noHistory")}
             </div>
           )}
         </div>
@@ -155,6 +157,7 @@ function AgentRow({
 
 export default function TeamPage() {
   const router = useRouter();
+  const t = useTranslations("team.list");
   const [hiredIds, setHiredIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -182,7 +185,7 @@ export default function TeamPage() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-sm text-[#9B948B]">Loading...</div>
+        <div className="text-sm text-[#9B948B]">{t("loading")}</div>
       </div>
     );
   }
@@ -192,17 +195,17 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-[#2B2B2B]">Team</h1>
+          <h1 className="text-2xl font-semibold text-[#2B2B2B]">{t("title")}</h1>
           <p className="text-sm text-[#6F6A64] mt-1">
-            Your team — {team.length} members
+            {t("subtitle", { count: team.length })}
           </p>
         </div>
         <button
           onClick={() => router.push("/team/market")}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-medium hover:bg-[#0066D6] active:scale-[0.98] transition-all"
         >
           <Plus className="h-4 w-4" />
-          Hire
+          {t("hire")}
         </button>
       </div>
 

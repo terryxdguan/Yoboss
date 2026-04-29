@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Flag, ListChecks, RefreshCw, Users, ChevronDown, ChevronUp, ChevronRight, Clock, Package } from "lucide-react";
 import { DEFAULT_AGENTS, ALL_AGENTS } from "@/lib/ai/agent-registry";
 import { getWorkflowRunById } from "@/lib/db/actions";
@@ -30,6 +31,7 @@ function getTeamCount(): number {
 }
 
 export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
+  const t = useTranslations("dashboard.stats");
   const [showRuns, setShowRuns] = useState(false);
   const [teamCount, setTeamCount] = useState(DEFAULT_AGENTS.length);
   const [detailRun, setDetailRun] = useState<{ run: WorkflowRun; workflow: Workflow } | null>(null);
@@ -75,51 +77,51 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
         {/* Goals */}
         <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#EAF3FD] p-1.5 text-[#7FAEE6]">
+            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
               <Flag className="h-4 w-4" />
             </span>
             <span className="text-[10px] font-semibold text-[#7FB38A] bg-[rgba(77,139,106,0.10)] px-2 py-0.5 rounded-full">
-              {stats.goalProgressPercent}% Progress
+              {t("goalsProgress", { percent: stats.goalProgressPercent })}
             </span>
           </div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
-            Goals
+            {t("goals")}
           </p>
           <h3 className="text-2xl font-semibold text-[#2B2B2B]">
             {stats.activeGoals}
           </h3>
           <p className="text-xs text-[#6F6A64]">
-            Active of {stats.totalGoals} total
+            {t("goalsActiveOf", { total: stats.totalGoals })}
           </p>
         </div>
 
         {/* To-Dos */}
         <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#EAF3FD] p-1.5 text-[#7FAEE6]">
+            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
               <ListChecks className="h-4 w-4" />
             </span>
-            <span className="text-[10px] font-semibold text-[#7FAEE6] bg-[#EAF3FD] px-2 py-0.5 rounded-full">
-              Pending
+            <span className="text-[10px] font-semibold text-[#007AFF] bg-[#E6F2FF] px-2 py-0.5 rounded-full">
+              {t("todosPending")}
             </span>
           </div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
-            To-Dos
+            {t("todos")}
           </p>
           <h3 className="text-2xl font-semibold text-[#2B2B2B]">
             {totalPendingTodos}
           </h3>
           <div className="flex items-center gap-3 text-xs text-[#6F6A64]">
-            <span>{stats.pendingGoalTodos} from Goals</span>
+            <span>{t("todosFromGoals", { count: stats.pendingGoalTodos })}</span>
             <span className="text-[#DDD3C7]">|</span>
-            <span>{stats.pendingPersonalTodos} personal</span>
+            <span>{t("todosPersonal", { count: stats.pendingPersonalTodos })}</span>
           </div>
         </div>
 
         {/* Workflows */}
         <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#EAF3FD] p-1.5 text-[#7FAEE6]">
+            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
               <RefreshCw className="h-4 w-4" />
             </span>
             <button
@@ -130,47 +132,47 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                 backgroundColor: stats.todayRunCount > 0 ? "rgba(77,139,106,0.10)" : "#F1ECE4",
               }}
             >
-              {stats.todayRunCount} Runs Today
+              {t("workflowsRunsToday", { count: stats.todayRunCount })}
               {stats.todayRunCount > 0 && (
                 showRuns ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
               )}
             </button>
           </div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
-            Workflows
+            {t("workflows")}
           </p>
           <h3 className="text-2xl font-semibold text-[#2B2B2B]">
             {stats.totalWorkflows}
           </h3>
-          <p className="text-xs text-[#6F6A64]">Total automations</p>
+          <p className="text-xs text-[#6F6A64]">{t("workflowsTotal")}</p>
         </div>
 
         {/* Team */}
         <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#EAF3FD] p-1.5 text-[#7FAEE6]">
+            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
               <Users className="h-4 w-4" />
             </span>
             <span className="text-[10px] font-semibold text-[#6F6A64] bg-[#F1ECE4] px-2 py-0.5 rounded-full">
-              Active
+              {t("teamActive")}
             </span>
           </div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
-            Team
+            {t("team")}
           </p>
           <h3 className="text-2xl font-semibold text-[#2B2B2B]">
             {teamCount}
           </h3>
-          <p className="text-xs text-[#6F6A64]">Team members</p>
+          <p className="text-xs text-[#6F6A64]">{t("teamMembers")}</p>
         </div>
       </div>
 
       {/* Expandable today's workflow runs */}
       {showRuns && (
         <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
-          <h3 className="text-sm font-semibold text-[#2B2B2B] mb-2">Today&apos;s Workflow Runs</h3>
+          <h3 className="text-sm font-semibold text-[#2B2B2B] mb-2">{t("todaysRuns")}</h3>
           {stats.todayRuns.length === 0 ? (
-            <p className="text-xs text-[#9B948B] py-3 text-center">No runs today</p>
+            <p className="text-xs text-[#9B948B] py-3 text-center">{t("noRunsToday")}</p>
           ) : (
             <div className="divide-y divide-dashed divide-[#E7DED2] max-h-[240px] overflow-y-auto">
               {stats.todayRuns.map((run) => (
@@ -182,7 +184,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                     className={`h-2 w-2 rounded-full shrink-0 ${
                       run.status === "success" ? "bg-[#7FB38A]" :
                       run.status === "failed" ? "bg-[#D5847A]" :
-                      "bg-[#7FAEE6]"
+                      "bg-[#007AFF]"
                     }`}
                   />
                   <span className="text-sm font-medium text-[#2B2B2B] flex-1 truncate">
@@ -193,9 +195,9 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                   <button
                     onClick={() => handleViewDetails(run.id, run.workflowId)}
                     disabled={loadingRunId === run.id}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors shrink-0 disabled:opacity-50"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#E6F2FF] transition-colors shrink-0 disabled:opacity-50"
                   >
-                    View Detail
+                    {t("viewDetail")}
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                   {run.status === "success" && (
@@ -205,7 +207,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors shrink-0 disabled:opacity-50"
                     >
                       <Package className="h-3.5 w-3.5" />
-                      Deliverables
+                      {t("deliverables")}
                     </button>
                   )}
 

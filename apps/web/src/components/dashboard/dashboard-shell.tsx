@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { GoalChatPanel } from "@/components/goals/goal-chat-panel";
 import type { GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import type { DashboardTodayItem, DailyTask } from "@/lib/types/database";
@@ -12,11 +13,15 @@ interface DashboardShellProps {
   highPriorityItems: DashboardTodayItem[];
 }
 
-function buildChatContext(allItems: DashboardTodayItem[], highItems: DashboardTodayItem[]): GoalDetailChatContext {
+function buildChatContext(
+  allItems: DashboardTodayItem[],
+  highItems: DashboardTodayItem[],
+  t: (key: string, params?: Record<string, string | number>) => string
+): GoalDetailChatContext {
   const allPending = [...allItems, ...highItems].filter(i => !i.completed);
   return {
-    goalTitle: "Task Assistant",
-    goalDescription: "Help the user break down, plan, and complete their tasks",
+    goalTitle: t("taskAssistantGoalTitle"),
+    goalDescription: t("taskAssistantGoalDescription"),
     phases: [],
     weeklyTasks: allPending.map(i => ({
       dayOfWeek: 0,
@@ -24,7 +29,7 @@ function buildChatContext(allItems: DashboardTodayItem[], highItems: DashboardTo
       timeSlot: i.description || null,
       completed: i.completed,
     })),
-    weekSummary: `${allPending.length} pending tasks`,
+    weekSummary: t("weekSummaryPending", { count: allPending.length }),
   };
 }
 
@@ -46,6 +51,7 @@ function buildTaskContext(item: DashboardTodayItem): DailyTask {
 }
 
 export function DashboardShell({ children, allItems, highPriorityItems }: DashboardShellProps) {
+  const t = useTranslations("dashboard.chatPanel");
   const [chatItem, setChatItem] = useState<DashboardTodayItem | null>(null);
   const [addTodoOpener, setAddTodoOpener] = useState<(() => void) | null>(null);
   const router = useRouter();
@@ -88,9 +94,9 @@ export function DashboardShell({ children, allItems, highPriorityItems }: Dashbo
       {chatItem && (
         <GoalChatPanel
           goalId="__dashboard__"
-          goalContext={buildChatContext(allItems, highPriorityItems)}
+          goalContext={buildChatContext(allItems, highPriorityItems, t)}
           taskContext={buildTaskContext(chatItem)}
-          panelTitle="Task Assistant"
+          panelTitle={t("taskAssistantTitle")}
           onClose={() => setChatItem(null)}
         />
       )}

@@ -6,6 +6,7 @@ import { X, Send, Paperclip, FileText, Globe, Code, Download } from "lucide-reac
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTranslations } from "next-intl";
 import type { GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import type { DailyTask } from "@/lib/types/database";
 import {
@@ -102,6 +103,7 @@ function useResize(initialWidth: number, minWidth: number, maxWidth: number) {
 }
 
 export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panelTitle }: GoalChatPanelProps) {
+  const t = useTranslations("goals.chatPanel");
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
@@ -276,7 +278,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             throw new Error(
               (event.error as { message?: string })?.message ||
               (event.message as string) ||
-              "Something went wrong. Please try again."
+              t("errorGeneric")
             );
           }
 
@@ -293,10 +295,10 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           if (event.type === "content_block_start" && event.content_block?.type === "server_tool_use") {
             const toolName = event.content_block.name as string;
             const labels: Record<string, string> = {
-              web_search: "Searching the web...",
-              web_fetch: "Fetching webpage...",
-              bash_code_execution: "Running code...",
-              text_editor_code_execution: "Editing file...",
+              web_search: t("toolWebSearch"),
+              web_fetch: t("toolWebSearch"),
+              bash_code_execution: t("toolBash"),
+              text_editor_code_execution: t("toolEditor"),
             };
             const activity: ToolActivity = {
               type: toolName.includes("web_search") ? "web_search" : toolName.includes("web_fetch") ? "web_fetch" : "code_execution",
@@ -433,7 +435,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
         }
       }
     } catch (err) {
-      const rawMsg = err instanceof Error ? err.message : "Something went wrong";
+      const rawMsg = err instanceof Error ? err.message : t("errorGeneric");
       const isQuota = rawMsg.startsWith("QUOTA_EXCEEDED:");
       const msg = isQuota ? rawMsg.slice("QUOTA_EXCEEDED:".length) : rawMsg;
       setMessages((prev) =>
@@ -615,17 +617,17 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
       {/* Resize handle */}
       <div
         onMouseDown={onResizeMouseDown}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#7FAEE6]/20 active:bg-[#7FAEE6]/30 transition-colors z-10"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
       />
 
       {/* Header */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4]">
-            <Image src="/pink.png" alt="General Assistant" width={36} height={36} className="w-full h-full object-cover" />
+            <Image src="/pink.png" alt={t("agentLabel")} width={36} height={36} className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-[#2B2B2B] block truncate">General Assistant</span>
+            <span className="text-sm font-semibold text-[#2B2B2B] block truncate">{t("agentLabel")}</span>
             {panelTitle && (
               <span className="text-[10px] text-[#9B948B]">{panelTitle}</span>
             )}
@@ -644,13 +646,13 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
         {displayMessages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[90%] rounded-xl px-4 py-3 text-sm ${msg.role === "user"
-                ? "bg-[#7FAEE6] text-white"
+                ? "bg-[#007AFF] text-white"
                 : "bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
               {/* Agent name + timer for assistant messages */}
               {msg.role === "assistant" && (
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[10px] font-semibold text-[#6F6A64]">General Assistant</span>
+                  <span className="text-[10px] font-semibold text-[#6F6A64]">{t("agentLabel")}</span>
                   <LiveTimer active={isStreaming && msg === displayMessages[displayMessages.length - 1]} />
                 </div>
               )}
@@ -660,11 +662,11 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                   {msg.toolActivity.map((tool, i) => {
                     const isLatest = isStreaming && msg === displayMessages[displayMessages.length - 1] && i === msg.toolActivity!.length - 1;
                     return (
-                      <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7FAEE6]/10 text-[#7FAEE6]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
+                      <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#007AFF]/10 text-[#007AFF]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
                         {isLatest && (
                           <span className="relative flex h-2 w-2 shrink-0">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
                           </span>
                         )}
                         {tool.type === "web_search" || tool.type === "web_fetch" ? (
@@ -687,7 +689,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                       <img key={i} src={att.preview} alt="attachment" className="rounded-lg max-h-32 max-w-full object-cover" />
                     ) : (
                       <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F1ECE4] text-[10px] text-[#6F6A64]">
-                        <FileText className="h-3 w-3 text-[#7FAEE6]" />
+                        <FileText className="h-3 w-3 text-[#007AFF]" />
                         {att.filename}
                       </div>
                     )
@@ -706,18 +708,18 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                   )}
                   {msg.quotaExceeded && (
                     <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[12px] text-[#C9843D] space-y-1.5">
-                      <div>⚠️ 你本月的额度已用完，余额也已耗尽。</div>
+                      <div>{t("quotaExceeded")}</div>
                       <Link
                         href="/account"
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#C9843D] text-white text-[11px] font-medium hover:bg-[#B5742F] transition-colors"
                       >
-                        前往账户页购买 Credits →
+                        {t("quotaCta")}
                       </Link>
                     </div>
                   )}
                   {msg.interrupted && !msg.quotaExceeded && !(isStreaming && msg === displayMessages[displayMessages.length - 1]) && (
                     <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[11px] text-[#C9843D]">
-                      ⚠️ This response was interrupted. Send a new message to continue from here.
+                      {t("interrupted")}
                     </div>
                   )}
                 </div>
@@ -733,7 +735,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                       key={i}
                       href={`/api/ai/files/${f.fileId}`}
                       download={f.filename}
-                      className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
+                      className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
                     >
                       <Download className="h-3.5 w-3.5" />
                       {f.filename}
@@ -760,7 +762,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
       {/* Input area */}
       <div className="px-4 py-3">
-        <div className="rounded-xl border border-[#DDD3C7] bg-[#FFFDF9] focus-within:ring-2 focus-within:ring-[#7FAEE6]/30 focus-within:border-[#7FAEE6]/50 transition-all">
+        <div className="rounded-xl border border-[#DDD3C7] bg-[#FFFDF9] focus-within:ring-2 focus-within:ring-[#007AFF]/30 focus-within:border-[#007AFF]/50 transition-all">
           {/* Pending attachments preview */}
           {pendingAttachments.length > 0 && (
             <div className="px-3 pt-3 flex gap-2 flex-wrap">
@@ -770,7 +772,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                     <img src={att.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
                   ) : (
                     <div className="h-16 px-3 rounded-lg border border-[#E7DED2] bg-[#F6F3EE] flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#7FAEE6] shrink-0" />
+                      <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
                       <span className="text-[10px] text-[#6F6A64] max-w-[100px] truncate">{att.filename}</span>
                     </div>
                   )}
@@ -797,7 +799,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
                 handleSend();
               }
             }}
-            placeholder="Ask about your goal..."
+            placeholder={t("inputPlaceholder")}
             disabled={isStreaming}
             rows={3}
             className="w-full px-3 py-3 text-sm bg-transparent outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none leading-relaxed"
@@ -807,8 +809,8 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           <div className="flex items-center justify-between px-3 pb-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7FAEE6] hover:bg-[#F1ECE4] transition-colors"
-              title="Attach file"
+              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#007AFF] hover:bg-[#F1ECE4] transition-colors"
+              title={t("attachFile")}
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -823,9 +825,9 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             <button
               onClick={handleSend}
               disabled={(!inputText.trim() && pendingAttachments.length === 0) || isStreaming}
-              className="px-3 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-xs font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 rounded-lg bg-[#007AFF] text-white text-xs font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Send
+              {t("send")}
             </button>
           </div>
         </div>

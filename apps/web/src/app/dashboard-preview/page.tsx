@@ -164,7 +164,7 @@ export default function DashboardPreviewPage() {
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[232px_1fr]">
         <aside className="hidden border-r border-[#E7DED2] bg-[#FFFDF9]/55 px-4 py-5 lg:block">
           <div className="mb-8 flex items-center gap-2 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#7FAEE6] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#007AFF] text-white">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function DashboardPreviewPage() {
                 key={label}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${
                   active
-                    ? "bg-[#EAF3FD] text-[#2B2B2B]"
+                    ? "bg-[#E6F2FF] text-[#2B2B2B]"
                     : "text-[#6F6A64]"
                 }`}
               >
@@ -208,7 +208,7 @@ export default function DashboardPreviewPage() {
         <section className="min-w-0 px-4 py-5 md:px-8 lg:px-10">
           <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7FAEE6]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#007AFF]">
                 Dashboard
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-[32px]">
@@ -231,13 +231,13 @@ export default function DashboardPreviewPage() {
                 ref={roadmapSectionRef}
                 className={`rounded-lg border bg-[#FFFDF9] p-5 shadow-[0_8px_28px_rgba(43,43,43,0.05)] transition-colors ${
                   highlightRoadmap
-                    ? "border-[#7FAEE6] ring-4 ring-[#7FAEE6]/15"
+                    ? "border-[#007AFF] ring-4 ring-[#007AFF]/15"
                     : "border-[#D7CABB]"
                 }`}
               >
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#EAF3FD] px-3 py-1.5 text-xs font-semibold text-[#5E8FCE]">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#E6F2FF] px-3 py-1.5 text-xs font-semibold text-[#5E8FCE]">
                       <Sparkles className="h-3.5 w-3.5" />
                       Recommended first action
                     </div>
@@ -278,7 +278,7 @@ export default function DashboardPreviewPage() {
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                         roadmapCreated
                           ? "bg-[#EAF5EC] text-[#3F7C4A]"
-                          : "bg-[#7FAEE6] text-white"
+                          : "bg-[#007AFF] text-white"
                       }`}
                     >
                       {roadmapCreated ? "Roadmap created" : "Create roadmap"}
@@ -308,7 +308,7 @@ export default function DashboardPreviewPage() {
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                         weeklyPlanCreated
                           ? "bg-[#EAF5EC] text-[#3F7C4A]"
-                          : "bg-[#7FAEE6] text-white"
+                          : "bg-[#007AFF] text-white"
                       }`}
                     >
                       {weeklyPlanCreated
@@ -336,7 +336,7 @@ export default function DashboardPreviewPage() {
               <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <div className="mb-2 inline-flex rounded-full bg-[#EAF3FD] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
+                    <div className="mb-2 inline-flex rounded-full bg-[#E6F2FF] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
                       3-step setup
                     </div>
                     <h2 className="text-base font-semibold">
@@ -432,7 +432,7 @@ export default function DashboardPreviewPage() {
                           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-semibold text-[#7FAEE6]">
+                                <span className="text-[11px] font-semibold text-[#007AFF]">
                                   {task.time}
                                 </span>
                                 <span className="rounded bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] text-[#6F6A64]">
@@ -454,7 +454,7 @@ export default function DashboardPreviewPage() {
                               className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
                                 blocked
                                   ? "bg-[#EDE8E1] text-[#9B948B]"
-                                  : "bg-[#EAF3FD] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
+                                  : "bg-[#E6F2FF] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
                               }`}
                             >
                               {actionLabel}
@@ -497,7 +497,7 @@ export default function DashboardPreviewPage() {
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                         todoItemCreated
                           ? "bg-[#EAF5EC] text-[#3F7C4A]"
-                          : "bg-[#7FAEE6] text-white"
+                          : "bg-[#007AFF] text-white"
                       }`}
                     >
                       {todoItemCreated
@@ -542,7 +542,7 @@ export default function DashboardPreviewPage() {
                         className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-3"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EAF3FD] text-[#7FAEE6]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2FF] text-[#007AFF]">
                             <Icon className="h-4 w-4" />
                           </div>
                           <div>

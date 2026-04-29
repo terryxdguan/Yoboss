@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { AskQuestionCard } from "./ask-question-card";
 import { LiveTimer } from "@/components/ui/live-timer";
 import type { ChatMessage as ChatMessageType, AskQuestionData, UserAnswer } from "@/lib/types/goal-chat";
@@ -17,19 +18,17 @@ interface ChatMessageProps {
   isStreaming?: boolean;
 }
 
-// Goal Coach is always General Assistant. Keep the label/avatar inline (rather
-// than importing from agent-registry) so this file has no runtime dep on the
-// agent catalogue — it's a presentational component.
-const AGENT_LABEL = "Assistant";
 const AGENT_AVATAR = "/pink.png";
 
 export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps) {
+  const t = useTranslations("goals.chatMessage");
+  const AGENT_LABEL = t("agentLabel");
   // User message: right-aligned blue bubble, no avatar
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%]">
-          <div className="bg-[#7FAEE6] text-white rounded-lg px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+          <div className="bg-[#007AFF] text-white rounded-lg px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
           </div>
         </div>
@@ -92,14 +91,14 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
                     key={i}
                     className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
                       isLatest
-                        ? "bg-[#7FAEE6]/15 text-[#7FAEE6] shadow-[0_0_12px_rgba(127,174,230,0.2)]"
+                        ? "bg-[#007AFF]/15 text-[#007AFF] shadow-[0_0_12px_rgba(0,122,255,0.2)]"
                         : "bg-[#F1ECE4] text-[#6F6A64]"
                     }`}
                   >
                     {isLatest && (
                       <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
                       </span>
                     )}
                     {tool.label}
@@ -114,14 +113,14 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
               silent for many seconds. Live char count so users see
               concrete progress instead of a frozen-looking spinner. */}
           {showDraftingCard && (
-            <div className="mt-1 mb-2 flex items-center gap-3 rounded-lg bg-[#7FAEE6]/8 border border-[#7FAEE6]/25 px-3.5 py-2.5">
-              <Loader2 className="h-4 w-4 text-[#7FAEE6] animate-spin shrink-0" />
+            <div className="mt-1 mb-2 flex items-center gap-3 rounded-lg bg-[#007AFF]/8 border border-[#007AFF]/25 px-3.5 py-2.5">
+              <Loader2 className="h-4 w-4 text-[#007AFF] animate-spin shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[#2B2B2B]">
-                  Drafting your plan…
+                  {t("drafting")}
                 </p>
                 <p className="text-xs text-[#6F6A64] tabular-nums">
-                  {(latestActivity?.draftingChars ?? 0).toLocaleString()} characters generated
+                  {t("draftingChars", { count: latestActivity?.draftingChars ?? 0 })}
                 </p>
               </div>
             </div>
@@ -139,22 +138,22 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
             <div className="flex items-center gap-3 py-0.5">
               <div className="flex items-center gap-1">
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce"
                   style={{ animationDelay: "0ms" }}
                 />
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce"
                   style={{ animationDelay: "150ms" }}
                 />
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce"
                   style={{ animationDelay: "300ms" }}
                 />
               </div>
-              <span className="text-sm text-[#7FAEE6] font-medium animate-pulse">
+              <span className="text-sm text-[#007AFF] font-medium animate-pulse">
                 {latestActivity
-                  ? `${AGENT_LABEL} is working…`
-                  : `${AGENT_LABEL} is thinking…`}
+                  ? t("working", { label: AGENT_LABEL })
+                  : t("thinking", { label: AGENT_LABEL })}
               </span>
             </div>
           ) : null}
@@ -172,14 +171,14 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
         {/* Plan generated indicator */}
         {message.toolUse?.name === "create_goal_plan" && (
           <div className="mt-2 border border-[#7FB38A] bg-[#7FB38A]/5 rounded-lg px-4 py-3 text-sm text-[#7FB38A] font-medium">
-            Plan generated — review it below
+            {t("planGenerated")}
           </div>
         )}
 
         {/* Weekly plan generated indicator */}
         {message.toolUse?.name === "create_weekly_plan" && (
           <div className="mt-2 border border-[#7FB38A] bg-[#7FB38A]/5 rounded-lg px-4 py-3 text-sm text-[#7FB38A] font-medium">
-            Weekly plan generated — review below
+            {t("weeklyPlanGenerated")}
           </div>
         )}
       </div>

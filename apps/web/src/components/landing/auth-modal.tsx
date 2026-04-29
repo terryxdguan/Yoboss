@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Eye, EyeOff, Check, AlertCircle, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/db/client";
 
 interface AuthModalProps {
@@ -21,16 +22,25 @@ interface PasswordStrength {
   checks: { label: string; passed: boolean }[];
 }
 
-function getPasswordStrength(password: string): PasswordStrength {
+function getPasswordStrength(
+  password: string,
+  t: (key: string) => string
+): PasswordStrength {
   const checks = [
-    { label: "At least 8 characters", passed: password.length >= 8 },
-    { label: "Contains uppercase letter", passed: /[A-Z]/.test(password) },
-    { label: "Contains lowercase letter", passed: /[a-z]/.test(password) },
-    { label: "Contains number", passed: /[0-9]/.test(password) },
+    { label: t("passwordCheckLength"), passed: password.length >= 8 },
+    { label: t("passwordCheckUpper"), passed: /[A-Z]/.test(password) },
+    { label: t("passwordCheckLower"), passed: /[a-z]/.test(password) },
+    { label: t("passwordCheckNumber"), passed: /[0-9]/.test(password) },
   ];
   const score = checks.filter((c) => c.passed).length;
-  const labels = ["Too weak", "Weak", "Fair", "Good", "Strong"];
-  const colors = ["#D5847A", "#D5847A", "#D4B06A", "#7FAEE6", "#7FB38A"];
+  const labels = [
+    t("passwordTooWeak"),
+    t("passwordWeak"),
+    t("passwordFair"),
+    t("passwordGood"),
+    t("passwordStrong"),
+  ];
+  const colors = ["#D5847A", "#D5847A", "#D4B06A", "#007AFF", "#7FB38A"];
   return { score, label: labels[score], color: colors[score], checks };
 }
 
@@ -40,6 +50,8 @@ export function AuthModal({
   initialMode = "signup",
   onSignupConfirmationSent,
 }: AuthModalProps) {
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -76,13 +88,13 @@ export function AuthModal({
 
   if (!open) return null;
 
-  const passwordStrength = getPasswordStrength(password);
+  const passwordStrength = getPasswordStrength(password, t);
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const validateEmail = (value: string) => {
     setEmail(value);
     if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      setEmailError("Please enter a valid email address");
+      setEmailError(t("emailInvalid"));
     } else {
       setEmailError("");
     }
@@ -131,7 +143,7 @@ export function AuthModal({
 
       if (err) {
         if (err.message.includes("already registered")) {
-          setError("This email is already registered. Try logging in instead.");
+          setError(t("errorAlreadyRegistered"));
         } else {
           setError(err.message);
         }
@@ -152,11 +164,9 @@ export function AuthModal({
 
       if (err) {
         if (err.message.includes("Invalid login credentials")) {
-          setError("Wrong email or password. Please try again.");
+          setError(t("errorBadCredentials"));
         } else if (err.message.includes("Email not confirmed")) {
-          setError(
-            "Please confirm your email first. Check your inbox for the confirmation link."
-          );
+          setError(t("errorEmailNotConfirmed"));
         } else {
           setError(err.message);
         }
@@ -189,12 +199,10 @@ export function AuthModal({
           </button>
 
           <h2 className="text-2xl font-bold text-[#2B2B2B] mb-1">
-            {mode === "signup" ? "Create your account" : "Welcome back"}
+            {mode === "signup" ? t("createAccount") : t("welcomeBack")}
           </h2>
           <p className="text-sm text-[#6F6A64] mb-6">
-            {mode === "signup"
-              ? "Sign up to start achieving your goals"
-              : "Log in to continue your progress"}
+            {mode === "signup" ? t("signupSubtitle") : t("loginSubtitle")}
           </p>
 
           {/* Google */}
@@ -209,12 +217,12 @@ export function AuthModal({
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
             </svg>
-            Continue with Google
+            {t("continueGoogle")}
           </button>
 
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-[#E7DED2]" />
-            <span className="text-xs text-[#9B948B]">or</span>
+            <span className="text-xs text-[#9B948B]">{tCommon("or")}</span>
             <div className="flex-1 h-px bg-[#E7DED2]" />
           </div>
 
@@ -223,7 +231,7 @@ export function AuthModal({
             {/* Email */}
             <div>
               <label className="block text-sm text-[#6F6A64] mb-1.5">
-                Email
+                {t("emailLabel")}
               </label>
               <input
                 type="email"
@@ -234,9 +242,9 @@ export function AuthModal({
                     ? "border-[#D5847A] focus:ring-[#D5847A]/40"
                     : email && isValidEmail
                       ? "border-[#7FB38A] focus:ring-[#7FB38A]/40"
-                      : "border-[#DDD3C7] focus:ring-[#7FAEE6]/40"
+                      : "border-[#DDD3C7] focus:ring-[#007AFF]/40"
                 }`}
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
                 required
               />
               {emailError && (
@@ -250,18 +258,18 @@ export function AuthModal({
             {/* Password */}
             <div>
               <label className="block text-sm text-[#6F6A64] mb-1.5">
-                Password
+                {t("passwordLabel")}
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-[#DDD3C7] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/40 focus:border-transparent bg-[#FFFDF9]"
+                  className="w-full border border-[#DDD3C7] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9]"
                   placeholder={
                     mode === "signup"
-                      ? "Create a strong password"
-                      : "Enter your password"
+                      ? t("passwordCreatePlaceholder")
+                      : t("passwordEnterPlaceholder")
                   }
                   required
                   minLength={mode === "signup" ? 8 : 1}
@@ -336,38 +344,38 @@ export function AuthModal({
                 loading ||
                 (mode === "signup" ? !canSubmitSignup : !canSubmitLogin)
               }
-              className="w-full bg-[#7FAEE6] text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-[#007AFF] text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading
                 ? mode === "signup"
-                  ? "Creating account..."
-                  : "Logging in..."
+                  ? t("submitSigningup")
+                  : t("submitLoggingin")
                 : mode === "signup"
-                  ? "Sign Up"
-                  : "Log In"}
+                  ? t("submitSignup")
+                  : t("submitLogin")}
             </button>
           </form>
 
           <p className="text-sm text-[#6F6A64] text-center mt-6">
             {mode === "signup" ? (
               <>
-                Already have an account?{" "}
+                {t("haveAccount")}{" "}
                 <button
                   onClick={() => setMode("login")}
-                  className="text-[#7FAEE6] font-medium hover:underline"
+                  className="text-[#007AFF] font-medium hover:underline"
                 >
-                  Log in
+                  {t("switchToLogin")}
                 </button>
               </>
             ) : (
               <>
-                Don&apos;t have an account?{" "}
+                {t("noAccount")}{" "}
                 <button
                   onClick={() => setMode("signup")}
-                  className="text-[#7FAEE6] font-medium hover:underline"
+                  className="text-[#007AFF] font-medium hover:underline"
                 >
-                  Sign up
+                  {t("switchToSignup")}
                 </button>
               </>
             )}

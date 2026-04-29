@@ -1,10 +1,30 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isLocale, LOCALE_COOKIE } from "@/i18n/config";
+import { pickLocaleFromAcceptLanguage } from "@/i18n/detect";
+
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  // Locale detection: pick from cookie first, otherwise Accept-Language.
+  // Always (re)set the cookie so subsequent requests are stable and the
+  // client switcher can read it.
+  const existingLocale = request.cookies.get(LOCALE_COOKIE)?.value;
+  const resolvedLocale = isLocale(existingLocale)
+    ? existingLocale
+    : pickLocaleFromAcceptLanguage(request.headers.get("accept-language"));
+  if (existingLocale !== resolvedLocale) {
+    supabaseResponse.cookies.set(LOCALE_COOKIE, resolvedLocale, {
+      maxAge: ONE_YEAR_SECONDS,
+      path: "/",
+      sameSite: "lax",
+      httpOnly: false,
+    });
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +41,16 @@ export async function middleware(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           });
+          // Re-apply locale cookie on the new response object since
+          // NextResponse.next() above replaced it.
+          if (existingLocale !== resolvedLocale) {
+            supabaseResponse.cookies.set(LOCALE_COOKIE, resolvedLocale, {
+              maxAge: ONE_YEAR_SECONDS,
+              path: "/",
+              sameSite: "lax",
+              httpOnly: false,
+            });
+          }
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

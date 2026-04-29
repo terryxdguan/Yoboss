@@ -113,7 +113,7 @@ export function EditableText({
       onKeyDown: handleKeyDown,
       onBlur: commit,
       placeholder,
-      className: `${className} bg-[#FFFDF9] border border-[#7FAEE6] rounded-md px-2 py-1 -mx-2 focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 w-full`,
+      className: `${className} bg-[#FFFDF9] border border-[#007AFF] rounded-md px-2 py-1 -mx-2 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 w-full`,
     };
     if (multiline) {
       return (

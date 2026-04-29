@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,10 +12,6 @@ import {
 } from "lucide-react";
 import type { DashboardOnboarding } from "@/lib/db/actions";
 import { clearPendingGoal, getPendingGoal, setPendingGoal } from "@/lib/pending-goal";
-import {
-  EXAMPLES as GOAL_EXAMPLES,
-  GOAL_PLACEHOLDER,
-} from "@/components/landing/example-goals";
 
 // Marker that survives a navigation to /todos and back. The celebration
 // modal on the regular dashboard reads it to know whether to fire (i.e.
@@ -23,26 +20,23 @@ export const ONBOARDING_ACTIVE_KEY = "yoboss-onboarding-active";
 
 type StepId = "roadmap" | "weekly-plan" | "todo-item";
 
-const employeeModes = [
-  {
-    icon: MessageSquare,
-    label: "Strategist",
-    description: "Clarifies fuzzy goals and turns them into a concrete plan.",
-    items: [
-      "Asks the right questions and surfaces constraints.",
-      "Breaks goals into phases, tasks, and next actions.",
-    ],
-  },
-  {
-    icon: FileText,
-    label: "Doer",
-    description: "Takes over once the task is clear.",
-    items: [
-      "Drafts research briefs, files, and handoffs.",
-      "Runs code and orchestrates multi-step workflows.",
-    ],
-  },
-];
+const EXAMPLE_KEYS = [
+  "exampleLose",
+  "exampleJob",
+  "exampleMarathon",
+  "exampleLanguage",
+  "exampleShop",
+  "exampleTrip",
+] as const;
+
+const EXAMPLE_TEXT_LANDING_KEYS = [
+  "lose",
+  "job",
+  "marathon",
+  "language",
+  "shop",
+  "trip",
+] as const;
 
 interface OnboardingDashboardProps {
   onboarding: DashboardOnboarding;
@@ -50,7 +44,24 @@ interface OnboardingDashboardProps {
 
 export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
   const router = useRouter();
+  const t = useTranslations("dashboard.onboarding");
+  const tExamples = useTranslations("landing.examples");
   const [goalText, setGoalText] = useState("");
+
+  const employeeModes = [
+    {
+      icon: MessageSquare,
+      label: t("modeStrategistLabel"),
+      description: t("modeStrategistDesc"),
+      items: [t("modeStrategistItem1"), t("modeStrategistItem2")],
+    },
+    {
+      icon: FileText,
+      label: t("modeDoerLabel"),
+      description: t("modeDoerDesc"),
+      items: [t("modeDoerItem1"), t("modeDoerItem2")],
+    },
+  ];
 
   // Each step's done state is derived from its own count so the user can
   // complete steps in any order (e.g. add a personal to-do first, before
@@ -101,13 +112,15 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
 
   const handleStep3 = () => router.push("/todos");
 
+  const placeholder = t("goalPlaceholder");
+
   const handleGoalKeyDown = (
     e: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
     // Tab: autofill placeholder when empty (mirrors landing page).
     if (e.key === "Tab" && !goalText.trim()) {
       e.preventDefault();
-      setGoalText(GOAL_PLACEHOLDER);
+      setGoalText(placeholder);
       return;
     }
     // Enter (no shift): submit.
@@ -132,42 +145,39 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
   }> = [
     {
       id: "roadmap",
-      label: "Step 1",
-      tag: "Goal",
-      title: "Create your first goal roadmap",
-      detailPending:
-        "Start from a goal and let your team turn it into a roadmap.",
-      detailDone: "Roadmap created — open the goal to refine it any time.",
-      actionPending: "Start",
-      actionDone: "Review",
+      label: t("step1Label"),
+      tag: t("step1Tag"),
+      title: t("step1Title"),
+      detailPending: t("step1Pending"),
+      detailDone: t("step1Done"),
+      actionPending: t("step1ActionStart"),
+      actionDone: t("actionReview"),
       done: step1Done,
       locked: false,
       onClick: handleStep1,
     },
     {
       id: "weekly-plan",
-      label: "Step 2",
-      tag: "Plan",
-      title: "Create your first weekly plan",
-      detailPending: step1Done
-        ? "Open your goal and generate a weekly plan."
-        : "Requires your first roadmap.",
-      detailDone: "Weekly plan ready — daily tasks have been generated.",
-      actionPending: step1Done ? "Open" : "Locked",
-      actionDone: "Review",
+      label: t("step2Label"),
+      tag: t("step2Tag"),
+      title: t("step2Title"),
+      detailPending: step1Done ? t("step2PendingReady") : t("step2PendingLocked"),
+      detailDone: t("step2Done"),
+      actionPending: step1Done ? t("step2ActionOpen") : t("step2ActionLocked"),
+      actionDone: t("actionReview"),
       done: step2Done,
       locked: !step1Done,
       onClick: handleStep2,
     },
     {
       id: "todo-item",
-      label: "Step 3",
-      tag: "To-Do",
-      title: "Create your first personal to-do",
-      detailPending: "Open the To-Dos page and add one personal task.",
-      detailDone: "Personal to-do added.",
-      actionPending: "Open To-Dos",
-      actionDone: "Review",
+      label: t("step3Label"),
+      tag: t("step3Tag"),
+      title: t("step3Title"),
+      detailPending: t("step3Pending"),
+      detailDone: t("step3Done"),
+      actionPending: t("step3ActionOpen"),
+      actionDone: t("actionReview"),
       done: step3Done,
       locked: false,
       onClick: handleStep3,
@@ -184,10 +194,10 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
             <section className="relative">
               <div
                 aria-hidden
-                className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#7FAEE6] opacity-50 blur-xl"
+                className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#007AFF] opacity-50 blur-xl"
               />
 
-              <div className="relative rounded-2xl border-2 border-[#7FAEE6] bg-[#FFFDF9] p-5 shadow-[0_8px_28px_rgba(127,174,230,0.18)]">
+              <div className="relative rounded-2xl border-2 border-[#007AFF] bg-[#FFFDF9] p-5 shadow-[0_8px_28px_rgba(0,122,255,0.18)]">
               {/* Top row: copy on the left, planner illustration on the right.
                   Image container is wider than tall (2:1) and uses object-cover
                   to crop the whitespace baked into the PNG so the figure sits
@@ -195,10 +205,10 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-2xl font-semibold leading-tight text-[#2B2B2B] md:text-3xl">
-                    Welcome. Start with one goal you want to do
+                    {t("welcomeTitle")}
                   </h2>
                   <p className="mt-1.5 text-sm text-[#6F6A64] md:text-base">
-                    Describe your goal and we&apos;ll help you create an actionable plan
+                    {t("welcomeSubtitle")}
                   </p>
                 </div>
                 <div className="hidden h-24 w-48 shrink-0 overflow-hidden md:block lg:h-28 lg:w-56">
@@ -215,26 +225,33 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
               {/* Unified input: textarea + Tab hint + submit feel like one block */}
               <div className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] p-3">
                 <textarea
-                  aria-label="Your goal"
+                  aria-label={t("goalAriaLabel")}
                   value={goalText}
                   onChange={(e) => setGoalText(e.target.value)}
                   onKeyDown={handleGoalKeyDown}
-                  placeholder={GOAL_PLACEHOLDER}
+                  placeholder={placeholder}
                   className="min-h-[72px] w-full resize-none bg-transparent px-2 py-1.5 text-base text-[#2B2B2B] outline-none placeholder:text-[#9B948B]"
                 />
                 <div className="flex items-center justify-between gap-3 px-1 pt-1">
                   <span className="text-xs text-[#9B948B]">
-                    Press{" "}
-                    <kbd className="rounded border border-[#E7DED2] bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] font-medium text-[#6F6A64]">
-                      Tab
-                    </kbd>{" "}
-                    to autofill the example text
+                    {(() => {
+                      const [before, after] = t("goalHint", { key: "__KEY__" }).split("__KEY__");
+                      return (
+                        <>
+                          {before}
+                          <kbd className="rounded border border-[#E7DED2] bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] font-medium text-[#6F6A64]">
+                            Tab
+                          </kbd>
+                          {after}
+                        </>
+                      );
+                    })()}
                   </span>
                   <button
                     onClick={handleStep1}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7FAEE6] px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6A9DDA]"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#007AFF] px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0066D6]"
                   >
-                    Create roadmap
+                    {t("createRoadmap")}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -242,16 +259,19 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
 
               {/* 6 starter chips — click fills textarea with the full prompt */}
               <div className="mt-3 flex flex-wrap gap-2">
-                {GOAL_EXAMPLES.map((ex) => (
-                  <button
-                    key={ex.title}
-                    type="button"
-                    onClick={() => setGoalText(ex.text)}
-                    className="rounded-full border border-[#E7DED2] bg-[#FFFDF9] px-3 py-1 text-xs text-[#6F6A64] transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF] hover:text-[#2B2B2B]"
-                  >
-                    {ex.title}
-                  </button>
-                ))}
+                {EXAMPLE_KEYS.map((labelKey, i) => {
+                  const exKey = EXAMPLE_TEXT_LANDING_KEYS[i];
+                  return (
+                    <button
+                      key={labelKey}
+                      type="button"
+                      onClick={() => setGoalText(tExamples(`${exKey}.text`))}
+                      className="rounded-full border border-[#E7DED2] bg-[#FFFDF9] px-3 py-1 text-xs text-[#6F6A64] transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF] hover:text-[#2B2B2B]"
+                    >
+                      {t(labelKey)}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -260,15 +280,14 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
           {/* Today's next steps */}
           <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
             <div className="mb-4">
-              <div className="mb-2 inline-flex rounded-full bg-[#EAF3FD] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
-                3-step setup
+              <div className="mb-2 inline-flex rounded-full bg-[#E6F2FF] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
+                {t("stepsBadge")}
               </div>
               <h2 className="text-base font-semibold text-[#2B2B2B]">
-                Today&apos;s next steps
+                {t("stepsTitle")}
               </h2>
               <p className="mt-1 text-sm text-[#6F6A64]">
-                Each step opens the real workflow. Status updates
-                automatically once the step is complete.
+                {t("stepsSubtitle")}
               </p>
             </div>
 
@@ -304,11 +323,11 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold text-[#7FAEE6]">
+                            <span className="text-[11px] font-semibold text-[#007AFF]">
                               {step.label}
                             </span>
                             <span className="rounded bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] text-[#6F6A64]">
-                              {step.locked ? "Locked" : step.tag}
+                              {step.locked ? t("stepStatusLocked") : step.tag}
                             </span>
                             <span
                               className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
@@ -317,7 +336,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                                   : "bg-[#FBF1E5] text-[#A77F3D]"
                               }`}
                             >
-                              {step.done ? "Done" : "Pending"}
+                              {step.done ? t("stepStatusDone") : t("stepStatusPending")}
                             </span>
                           </div>
                           <p
@@ -337,7 +356,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                           className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
                             step.locked
                               ? "bg-[#EDE8E1] text-[#9B948B]"
-                              : "bg-[#EAF3FD] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
+                              : "bg-[#E6F2FF] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
                           }`}
                         >
                           {action}
@@ -375,18 +394,17 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-[#2B2B2B]">
-                    Employee
+                    {t("employeeTitle")}
                   </h2>
                   <p className="text-xs text-[#9B948B]">
-                    A teammate for planning and execution.
+                    {t("employeeSubtitle")}
                   </p>
                 </div>
               </div>
             </div>
 
             <p className="mb-4 text-sm leading-relaxed text-[#6F6A64]">
-              Use it first to think through unclear goals, then hand over
-              concrete work that needs output, research, or automation.
+              {t("employeeBody")}
             </p>
 
             <div className="space-y-3">
@@ -398,7 +416,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                     className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EAF3FD] text-[#7FAEE6]">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2FF] text-[#007AFF]">
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>

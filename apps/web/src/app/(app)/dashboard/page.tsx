@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/db/server";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getDashboardData, getWorkflows, getTodoTags } from "@/lib/db/actions";
 import { DashboardStats } from "@/components/dashboard/stats";
 import { DashboardTodayItems } from "@/components/dashboard/today-items";
@@ -26,6 +27,8 @@ export default async function TodayPage() {
 
   if (!user) redirect("/");
 
+  const t = await getTranslations("dashboard");
+
   const [data, allWorkflows, todoTags] = await Promise.all([
     getDashboardData(),
     getWorkflows(),
@@ -47,10 +50,10 @@ export default async function TodayPage() {
       <div className="space-y-8">
         <div className="flex items-baseline gap-3">
           <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">
-            Dashboard
+            {t("title")}
           </h1>
           <p className="text-sm text-[#9B948B]">
-            Overview of today&apos;s progress, tasks, and team activity
+            {t("subtitle")}
           </p>
         </div>
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   LayoutGrid,
@@ -13,19 +14,22 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
-  { href: "/goals", icon: Flag, label: "Goals" },
-  { href: "/todos", icon: ListChecks, label: "To-Dos" },
-  { href: "/team", icon: UsersRound, label: "Team" },
+type NavKey = "dashboard" | "goals" | "todos" | "team" | "workflows";
+
+const NAV_ITEMS: Array<{ href: string; icon: typeof LayoutGrid; key: NavKey }> = [
+  { href: "/dashboard", icon: LayoutGrid, key: "dashboard" },
+  { href: "/goals", icon: Flag, key: "goals" },
+  { href: "/todos", icon: ListChecks, key: "todos" },
+  { href: "/team", icon: UsersRound, key: "team" },
 ];
 
-const ADVANCED_ITEMS = [
-  { href: "/workflows", icon: GitBranch, label: "Workflows" },
+const ADVANCED_ITEMS: Array<{ href: string; icon: typeof LayoutGrid; key: NavKey }> = [
+  { href: "/workflows", icon: GitBranch, key: "workflows" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -60,7 +64,7 @@ export function Sidebar() {
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">
-                    {item.label}
+                    {t(item.key)}
                   </span>
                 </Link>
               </div>
@@ -70,7 +74,7 @@ export function Sidebar() {
 
         <div className="mt-8 border-t border-[#E7DED2] pt-4">
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9B948B] opacity-0 transition-opacity group-hover:opacity-100">
-            Advanced
+            {t("advanced")}
           </p>
           <div className="space-y-1">
             {ADVANCED_ITEMS.map((item) => {
@@ -91,7 +95,7 @@ export function Sidebar() {
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">
-                    {item.label}
+                    {t(item.key)}
                   </span>
                 </Link>
               );
@@ -108,7 +112,7 @@ export function Sidebar() {
           >
             <LogOut className="h-5 w-5 shrink-0" />
             <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-sm">
-              Logout
+              {t("logout")}
             </span>
           </button>
         </div>

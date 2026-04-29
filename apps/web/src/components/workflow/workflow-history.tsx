@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   X,
   Check,
@@ -45,6 +46,7 @@ function totalDuration(run: WorkflowRun): number {
 }
 
 export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
+  const t = useTranslations("workflows.history");
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailRun, setDetailRun] = useState<WorkflowRun | null>(null);
@@ -125,7 +127,7 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F1ECE4] flex items-center justify-center">
                 <Clock className="h-6 w-6 text-[#9B948B]" />
               </div>
-              <p className="text-sm font-medium text-[#2B2B2B]">No runs yet</p>
+              <p className="text-sm font-medium text-[#2B2B2B]">{t("noRuns")}</p>
               <p className="text-xs text-[#9B948B] mt-1">
                 Run this workflow to see execution history
               </p>
@@ -188,7 +190,7 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setDetailRun(run)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
                         >
                           View Detail
                           <ChevronRight className="h-3.5 w-3.5" />
@@ -196,15 +198,15 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
                         <button
                           onClick={() => setDeliverablesRun(run)}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
-                          title="Deliverables"
+                          title={t("deliverables")}
                         >
                           <Package className="h-3.5 w-3.5" />
-                          Deliverables
+                          {t("deliverables")}
                         </button>
                         <button
                           onClick={() => handleDelete(run.id)}
                           className="p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
-                          title="Delete run"
+                          title={t("deleteRun")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

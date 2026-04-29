@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   getTodos, addTodo, updateTodo, deleteTodo, reorderTodos,
   getTodoTags, addTodoTag, updateTodoTag, deleteTodoTag, reorderTodoTags,
@@ -29,17 +30,14 @@ const COLUMN_COLORS = [
   { band: "border-[#D8D0C6] bg-[#F8F5EF]", text: "text-[#6F6A64]" }, // stone
 ];
 
-function formatDeadline(d: string): string {
-  const date = new Date(d);
-  const month = date.toLocaleString("en", { month: "short" });
-  const day = date.getDate();
-  const year = date.getFullYear();
-  const h = date.getHours();
-  const mins = date.getMinutes();
-  if (h === 0 && mins === 0) return `${month} ${day}, ${year}`;
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const ap = h >= 12 ? "PM" : "AM";
-  return `${month} ${day}, ${year} ${h12}:${String(mins).padStart(2, "0")}${ap}`;
+function formatDeadline(d: string, locale: string): string {
+  return new Date(d).toLocaleString(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function isOverdue(item: TodoItem): boolean {
@@ -47,16 +45,13 @@ function isOverdue(item: TodoItem): boolean {
   return new Date(item.deadline) < new Date();
 }
 
-function formatDeadlineShort(d: string): string {
-  const date = new Date(d);
-  const month = date.toLocaleString("en", { month: "short" });
-  const day = date.getDate();
-  const h = date.getHours();
-  const mins = date.getMinutes();
-  if (h === 0 && mins === 0) return `${month} ${day}`;
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const ap = h >= 12 ? "PM" : "AM";
-  return `${month} ${day} ${h12}:${String(mins).padStart(2, "0")}${ap}`;
+function formatDeadlineShort(d: string, locale: string): string {
+  return new Date(d).toLocaleString(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 /* ── TodoCard ── */
@@ -87,6 +82,8 @@ function TodoCard({
   onDragStartCard: () => void;
   onDragEndCard: () => void;
 }) {
+  const t = useTranslations("todos");
+  const locale = useLocale();
   const overdue = isOverdue(item);
   const [editingDeadline, setEditingDeadline] = useState(false);
   const [editingText, setEditingText] = useState(false);
@@ -133,13 +130,13 @@ function TodoCard({
       }}
       className="relative rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 group/card hover:border-[#DDD3C7] transition-colors cursor-grab active:cursor-grabbing"
     >
-      {insertBefore && <div className="absolute -top-1.5 left-0 right-0 h-0.5 bg-[#7FAEE6] rounded-full z-10 pointer-events-none" />}
-      {insertAfter && <div className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-[#7FAEE6] rounded-full z-10 pointer-events-none" />}
+      {insertBefore && <div className="absolute -top-1.5 left-0 right-0 h-0.5 bg-[#007AFF] rounded-full z-10 pointer-events-none" />}
+      {insertAfter && <div className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-[#007AFF] rounded-full z-10 pointer-events-none" />}
       {/* Row 1: checkbox + title + actions */}
       <div className="flex items-start gap-2">
         <button
           onClick={onToggle}
-          className="w-[18px] h-[18px] mt-0.5 rounded-full border-2 border-[#DDD3C7] hover:border-[#7FAEE6] shrink-0 flex items-center justify-center transition-colors"
+          className="w-[18px] h-[18px] mt-0.5 rounded-full border-2 border-[#DDD3C7] hover:border-[#007AFF] shrink-0 flex items-center justify-center transition-colors"
         />
         {editingText ? (
           <input
@@ -151,7 +148,7 @@ function TodoCard({
               if (e.key === "Enter") commitTextEdit();
               if (e.key === "Escape") { setEditText(item.text); setEditingText(false); }
             }}
-            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#7FAEE6] rounded px-1.5 py-0.5 outline-none"
+            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#007AFF] rounded px-1.5 py-0.5 outline-none"
           />
         ) : (
           <span
@@ -163,10 +160,11 @@ function TodoCard({
         )}
         <button
           onClick={onSendToAI}
-          className="text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
-          title="Send to Team"
+          className="shrink-0 flex items-center gap-1 text-[#007AFF] hover:text-[#0066D6] text-[13px] font-medium transition-colors"
+          title={t("sendToTeam")}
         >
-          ▶
+          {t("start")}
+          <span aria-hidden>▶</span>
         </button>
         <button
           onClick={onDelete}
@@ -180,8 +178,8 @@ function TodoCard({
       <div className="mt-1.5 ml-[26px] flex items-center gap-2 text-xs">
         {editingDeadline ? (
           <span className="relative inline-block">
-            <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#7FAEE6] text-[#6F6A64] inline-block">
-              {item.deadline ? formatDeadline(item.deadline) : formatDeadline(new Date().toISOString())}
+            <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#007AFF] text-[#6F6A64] inline-block">
+              {item.deadline ? formatDeadline(item.deadline, locale) : formatDeadline(new Date().toISOString(), locale)}
             </span>
             <DateTimePicker
               value={item.deadline ?? null}
@@ -196,7 +194,7 @@ function TodoCard({
               className={`flex items-center gap-1 hover:opacity-80 whitespace-nowrap ${overdue ? "text-[#D5847A] font-medium" : "text-[#9B948B]"}`}
             >
               {overdue ? "⏰" : "📅"}
-              <span>{formatDeadline(item.deadline)}</span>
+              <span>{formatDeadline(item.deadline, locale)}</span>
             </button>
             <button
               onClick={() => onUpdate({ deadline: null })}
@@ -210,7 +208,7 @@ function TodoCard({
             onClick={() => setEditingDeadline(true)}
             className="text-[#DDD3C7] hover:text-[#9B948B] transition-colors"
           >
-            + deadline
+            {t("addDeadline")}
           </button>
         )}
 
@@ -222,9 +220,9 @@ function TodoCard({
           onChange={(e) => onUpdate({ priority: e.target.value as TodoItem["priority"] })}
           className="text-[11px] px-1 py-0.5 rounded bg-transparent border border-transparent hover:border-[#E7DED2] text-[#9B948B] outline-none cursor-pointer"
         >
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
+          <option value="high">{t("priorityHigh")}</option>
+          <option value="medium">{t("priorityMedium")}</option>
+          <option value="low">{t("priorityLow")}</option>
         </select>
       </div>
     </div>
@@ -249,6 +247,7 @@ function ColumnHeader({
   onDragStart?: () => void;
   onDragEnd?: () => void;
 }) {
+  const t = useTranslations("todos");
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(tag.name);
 
@@ -268,7 +267,7 @@ function ColumnHeader({
           <button
             draggable
             aria-label={`Drag ${tag.name} category`}
-            title="Drag to reorder"
+            title={t("dragReorder")}
             onDragStart={(e) => {
               e.dataTransfer.setData("application/x-todo-tag-id", tag.id);
               e.dataTransfer.effectAllowed = "move";
@@ -320,6 +319,8 @@ function ColumnHeader({
 
 /* ── Main ── */
 export default function TodosPage() {
+  const t = useTranslations("todos");
+  const locale = useLocale();
   const [items, setItems] = useState<TodoItem[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [chatTask, setChatTask] = useState<TodoItem | null>(null);
@@ -341,10 +342,10 @@ export default function TodosPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    Promise.all([getTodos(), getTodoTags()]).then(([todos, t]) => {
+    Promise.all([getTodos(), getTodoTags()]).then(([todos, fetchedTags]) => {
       setItems(todos);
-      setTags(t);
-      if (t.length > 0) setNewTag(t[0].name);
+      setTags(fetchedTags);
+      if (fetchedTags.length > 0) setNewTag(fetchedTags[0].name);
       setLoading(false);
     });
   }, []);
@@ -475,7 +476,7 @@ export default function TodosPage() {
     tag,
     items: pendingItems.filter((i) => i.tag === tag.name).sort((a, b) => a.sort_order - b.sort_order),
   }));
-  const knownTagNames = new Set(sortedTags.map((t) => t.name));
+  const knownTagNames = new Set(sortedTags.map((tagItem) => tagItem.name));
   const untaggedItems = pendingItems.filter((i) => !knownTagNames.has(i.tag)).sort((a, b) => a.sort_order - b.sort_order);
   if (untaggedItems.length > 0) {
     columnsByTag.push({
@@ -490,13 +491,13 @@ export default function TodosPage() {
       <div className={`${showChat ? "flex-1 min-w-0 px-6 md:px-8 pb-12" : "w-full"}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-[#2B2B2B]">Personal To-Dos</h1>
+        <h1 className="text-2xl font-semibold text-[#2B2B2B]">{t("title")}</h1>
       </div>
 
       {/* Section 1: Quick Add — labeled grid, 5 columns at xl, wraps below */}
       <section className="mb-6 rounded-lg border border-[#D7CABB] bg-[#FFFDF9] p-4 shadow-[0_8px_24px_rgba(43,43,43,0.04)]">
         <div className="mb-3">
-          <h2 className="text-lg font-semibold text-[#2B2B2B]">Add a new to-do item</h2>
+          <h2 className="text-lg font-semibold text-[#2B2B2B]">{t("addSection")}</h2>
         </div>
 
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(320px,1fr)_150px_220px_180px_auto]">
@@ -506,7 +507,7 @@ export default function TodosPage() {
               htmlFor="quick-add-task"
               className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]"
             >
-              Task
+              {t("fieldTask")}
             </label>
             <input
               id="quick-add-task"
@@ -514,7 +515,7 @@ export default function TodosPage() {
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              placeholder="What needs to be done?"
+              placeholder={t("fieldTaskPlaceholder")}
               className="mt-0.5 w-full bg-transparent text-sm text-[#2B2B2B] outline-none placeholder:text-[#9B948B]"
             />
           </div>
@@ -525,7 +526,7 @@ export default function TodosPage() {
               htmlFor="quick-add-category"
               className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]"
             >
-              Category
+              {t("fieldCategory")}
             </label>
             <select
               id="quick-add-category"
@@ -533,8 +534,8 @@ export default function TodosPage() {
               onChange={(e) => setNewTag(e.target.value)}
               className="mt-0.5 w-full bg-transparent text-sm font-medium text-[#2B2B2B] outline-none"
             >
-              {sortedTags.map((t) => (
-                <option key={t.id} value={t.name}>{t.name}</option>
+              {sortedTags.map((tagItem) => (
+                <option key={tagItem.id} value={tagItem.name}>{tagItem.name}</option>
               ))}
             </select>
           </div>
@@ -542,11 +543,12 @@ export default function TodosPage() {
           {/* Priority pills */}
           <div className="rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-3 py-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
-              Priority
+              {t("fieldPriority")}
             </p>
             <div className="mt-1.5 grid grid-cols-3 gap-1">
               {(["high", "medium", "low"] as const).map((p) => {
                 const active = newPriority === p;
+                const label = p === "high" ? t("priorityHigh") : p === "medium" ? t("priorityMedium") : t("priorityLow");
                 return (
                   <button
                     key={p}
@@ -556,7 +558,7 @@ export default function TodosPage() {
                     }`}
                   >
                     <span className={`h-2 w-2 rounded-full ${PRIORITY_DOT[p]}`} />
-                    {p[0].toUpperCase() + p.slice(1)}
+                    {label}
                   </button>
                 );
               })}
@@ -566,7 +568,7 @@ export default function TodosPage() {
           {/* Deadline */}
           <div className="relative rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-3 py-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
-              Deadline
+              {t("fieldDeadline")}
             </p>
             <div className="mt-0.5 flex items-center justify-between gap-2">
               <button
@@ -575,13 +577,13 @@ export default function TodosPage() {
                   newDeadline ? "text-[#2B2B2B]" : "text-[#9B948B]"
                 }`}
               >
-                {newDeadline ? formatDeadlineShort(newDeadline) : "Set deadline"}
+                {newDeadline ? formatDeadlineShort(newDeadline, locale) : t("setDeadline")}
               </button>
               {newDeadline && (
                 <button
                   onClick={() => setNewDeadline(null)}
                   className="shrink-0 text-[#9B948B] hover:text-[#D5847A]"
-                  aria-label="Clear deadline"
+                  aria-label={t("clearDeadline")}
                 >
                   ✕
                 </button>
@@ -600,17 +602,17 @@ export default function TodosPage() {
           <button
             onClick={handleAdd}
             disabled={!newText.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7FAEE6] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6A9DDA] disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0066D6] disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
-            Add Task
+            {t("addTask")}
           </button>
         </div>
       </section>
 
       {/* Section 2 header: title (left) + Add Category + Pending/Done (right) */}
       <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h2 className="text-base font-semibold text-[#2B2B2B]">ToDos Board</h2>
+        <h2 className="text-base font-semibold text-[#2B2B2B]">{t("boardTitle")}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {activeStatus === "pending" && (
             addingTag ? (
@@ -623,42 +625,42 @@ export default function TodosPage() {
                     if (e.key === "Enter") handleAddTag();
                     if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); }
                   }}
-                  placeholder="Category name"
-                  className="w-32 rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-2 py-1 text-xs text-[#2B2B2B] outline-none focus:border-[#7FAEE6]"
+                  placeholder={t("categoryNamePlaceholder")}
+                  className="w-32 rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-2 py-1 text-xs text-[#2B2B2B] outline-none focus:border-[#007AFF]"
                 />
-                <button onClick={handleAddTag} className="px-1 text-xs text-[#7FAEE6]">✓</button>
+                <button onClick={handleAddTag} className="px-1 text-xs text-[#007AFF]">✓</button>
                 <button onClick={() => { setAddingTag(false); setNewTagName(""); }} className="px-1 text-xs text-[#9B948B]">✕</button>
               </div>
             ) : (
               <button
                 onClick={() => setAddingTag(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#7FAEE6] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6A9DDA]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#007AFF] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0066D6]"
               >
                 <Plus className="h-4 w-4" />
-                Add category
+                {t("addCategory")}
               </button>
             )
           )}
-          <div className="flex rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-1">
+          <div className="flex items-center rounded-full bg-[#F5F5F5] p-0.5">
             <button
               onClick={() => setActiveStatus("pending")}
-              className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                 activeStatus === "pending"
-                  ? "bg-[#FFFDF9] text-[#2B2B2B] shadow-sm"
-                  : "text-[#6F6A64]"
+                  ? "bg-[#69B2FF] text-white"
+                  : "text-[#000000]/60 hover:text-[#000000]/80"
               }`}
             >
-              Pending {pendingItems.length}
+              {t("pendingTab", { count: pendingItems.length })}
             </button>
             <button
               onClick={() => setActiveStatus("done")}
-              className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                 activeStatus === "done"
-                  ? "bg-[#FFFDF9] text-[#2B2B2B] shadow-sm"
-                  : "text-[#6F6A64]"
+                  ? "bg-[#69B2FF] text-white"
+                  : "text-[#000000]/60 hover:text-[#000000]/80"
               }`}
             >
-              Done {doneItems.length}
+              {t("doneTab", { count: doneItems.length })}
             </button>
           </div>
         </div>
@@ -666,7 +668,7 @@ export default function TodosPage() {
 
       {/* Content */}
       {loading && (
-        <div className="text-center py-12 text-sm text-[#9B948B]">Loading...</div>
+        <div className="text-center py-12 text-sm text-[#9B948B]">{t("loading")}</div>
       )}
 
       {/* PENDING: Kanban columns */}
@@ -679,7 +681,7 @@ export default function TodosPage() {
               <div
                 key={tag.id}
                 className={`relative rounded-lg border bg-[#FFFDF9] p-3 ${
-                  isTagDropTarget ? "border-[#7FAEE6] ring-2 ring-[#7FAEE6]/20" : "border-[#E7DED2]"
+                  isTagDropTarget ? "border-[#007AFF] ring-2 ring-[#007AFF]/20" : "border-[#E7DED2]"
                 }`}
                 onDragOver={(e) => {
                   // Tag drag-over: highlight whole column as drop target.
@@ -769,7 +771,7 @@ export default function TodosPage() {
       {!loading && activeStatus === "done" && (
         <div>
           {doneItems.length === 0 && (
-            <div className="text-center py-12 text-sm text-[#9B948B]">No completed items</div>
+            <div className="text-center py-12 text-sm text-[#9B948B]">{t("emptyDone")}</div>
           )}
           {doneItems.length > 0 && (
             <div className="mb-3 flex items-center gap-3">
@@ -780,13 +782,13 @@ export default function TodosPage() {
                 }}
                 className={`w-[18px] h-[18px] rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
                   selectedDone.size === doneItems.length && doneItems.length > 0
-                    ? "bg-[#7FAEE6] border-[#7FAEE6] text-white"
-                    : "border-[#DDD3C7] hover:border-[#7FAEE6]"
+                    ? "bg-[#007AFF] border-[#007AFF] text-white"
+                    : "border-[#DDD3C7] hover:border-[#007AFF]"
                 }`}
               >
                 {selectedDone.size === doneItems.length && doneItems.length > 0 && <span className="text-[10px]">✓</span>}
               </button>
-              <span className="text-xs text-[#9B948B]">Select all</span>
+              <span className="text-xs text-[#9B948B]">{t("selectAll")}</span>
               {selectedDone.size > 0 && (
                 <button
                   onClick={() => {
@@ -795,7 +797,7 @@ export default function TodosPage() {
                   }}
                   className="text-xs px-3 py-1 rounded-lg bg-[#D5847A] text-white hover:bg-[#C06E64] transition-colors"
                 >
-                  Delete selected ({selectedDone.size})
+                  {t("deleteSelected", { count: selectedDone.size })}
                 </button>
               )}
             </div>
@@ -810,7 +812,7 @@ export default function TodosPage() {
                 setSelectedDone(next);
               }}
               className={`flex items-center gap-3 px-4 py-2.5 border-b border-[#E7DED2] hover:bg-[#F1ECE4]/50 transition-colors group cursor-pointer ${
-                selectedDone.has(item.id) ? "bg-[#7FAEE6]/5" : ""
+                selectedDone.has(item.id) ? "bg-[#007AFF]/5" : ""
               }`}
             >
               <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[item.priority]}`} />
@@ -839,8 +841,8 @@ export default function TodosPage() {
         <GoalChatPanel
           goalId="__todo__"
           goalContext={{
-            goalTitle: "Task Assistant",
-            goalDescription: "Help the user break down, plan, and complete their TODO tasks",
+            goalTitle: t("chatTitle"),
+            goalDescription: t("chatGoalDescription"),
             phases: [],
             weeklyTasks: items.filter((i) => !i.completed).map((i) => ({
               dayOfWeek: 0,
@@ -848,7 +850,7 @@ export default function TodosPage() {
               timeSlot: null,
               completed: i.completed,
             })),
-            weekSummary: `${items.filter((i) => !i.completed).length} pending, ${items.filter((i) => i.completed).length} done`,
+            weekSummary: t("chatSummary", { pending: items.filter((i) => !i.completed).length, done: items.filter((i) => i.completed).length }),
           }}
           taskContext={chatTask ? {
             id: chatTask.id,
@@ -863,7 +865,7 @@ export default function TodosPage() {
             sort_order: chatTask.sort_order,
           } : undefined}
           onClose={() => { setShowChat(false); setChatTask(null); }}
-          panelTitle="Task Assistant"
+          panelTitle={t("chatTitle")}
         />
       )}
     </div>

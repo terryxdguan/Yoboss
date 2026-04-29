@@ -7,7 +7,7 @@ const C = {
   fg: "#2B2B2B",
   muted: "#6F6A64",
   faint: "#9B948B",
-  primary: "#7FAEE6",
+  primary: "#007AFF",
   primaryFg: "#FFFDF9",
   sage: "#8DCB96",
   border: "#DDD3C7",

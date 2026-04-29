@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Settings, Check, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { getUnreadNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/db/actions";
 import type { Notification } from "@/lib/types/notification";
+import { LanguageSwitcher } from "@/components/common/language-switcher";
 
 interface TopNavProps {
   userAvatar?: string | null;
@@ -14,6 +16,7 @@ interface TopNavProps {
 
 export function TopNav({ userAvatar, userName }: TopNavProps) {
   const router = useRouter();
+  const t = useTranslations("nav");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -44,7 +47,7 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
 
   return (
     <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-[#E7DED2] bg-[#F6F3EE]/90 backdrop-blur-xl shadow-[0_6px_18px_rgba(30,34,39,0.04)]">
-      <div className="max-w-[1440px] mx-auto h-full px-6 md:px-8 flex items-center justify-between">
+      <div className="h-full pl-6 pr-6 md:pl-7 md:pr-8 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-[22px] font-semibold tracking-tight text-[#2B2B2B] hover:opacity-80 transition-opacity">
             YoBoss
@@ -52,6 +55,9 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
+          {/* Language */}
+          <LanguageSwitcher />
+
           {/* Notifications */}
           <div className="relative">
             <button
@@ -69,20 +75,20 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
                 <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
                 <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-[#FFFDF9] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
-                    <h3 className="text-sm font-semibold text-[#2B2B2B]">Notifications</h3>
+                    <h3 className="text-sm font-semibold text-[#2B2B2B]">{t("notifications")}</h3>
                     {notifications.length > 0 && (
                       <button
                         onClick={handleMarkAllRead}
-                        className="text-[10px] font-medium text-[#7FAEE6] hover:underline"
+                        className="text-[10px] font-medium text-[#007AFF] hover:underline"
                       >
-                        Mark all read
+                        {t("markAllRead")}
                       </button>
                     )}
                   </div>
                   <div className="max-h-64 overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="py-8 text-center text-xs text-[#9B948B]">
-                        No new notifications
+                        {t("noNew")}
                       </div>
                     ) : (
                       notifications.map((n) => (
@@ -133,7 +139,7 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
 
 function AvatarImg({ src, name, size }: { src?: string | null; name?: string; size: number }) {
   const [failed, setFailed] = useState(false);
-  const cls = `rounded-full object-cover border border-[#E7DED2] hover:ring-2 hover:ring-[#7FAEE6]/30 transition-shadow`;
+  const cls = `rounded-full object-cover border border-[#E7DED2] hover:ring-2 hover:ring-[#007AFF]/30 transition-shadow`;
 
   if (src && !failed) {
     return (
@@ -150,7 +156,7 @@ function AvatarImg({ src, name, size }: { src?: string | null; name?: string; si
 
   return (
     <div
-      className={`bg-[#7FAEE6] flex items-center justify-center text-white text-xs font-semibold border border-[#E7DED2] hover:ring-2 hover:ring-[#7FAEE6]/30 transition-shadow rounded-full`}
+      className={`bg-[#007AFF] flex items-center justify-center text-white text-xs font-semibold border border-[#E7DED2] hover:ring-2 hover:ring-[#007AFF]/30 transition-shadow rounded-full`}
       style={{ width: size, height: size }}
     >
       {(name || "U").charAt(0).toUpperCase()}

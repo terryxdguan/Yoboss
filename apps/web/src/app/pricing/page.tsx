@@ -3,67 +3,63 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Zap } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { getBillingState } from "@/lib/db/actions";
 
 type TierId = "free" | "basic" | "pro";
 
-const TIERS_DISPLAY: Array<{
+const TIERS: Array<{
   id: TierId;
-  name: string;
+  nameKey: "tierFreeName" | "tierBasicName" | "tierProName";
   price: string;
-  priceLabel: string;
-  allowance: string;
-  features: string[];
+  priceLabelKey: "tierFreePriceLabel" | "tierBasicPriceLabel" | "tierProPriceLabel";
+  allowanceKey: "tierFreeAllowance" | "tierBasicAllowance" | "tierProAllowance";
+  featureKeys: string[];
   highlight?: boolean;
 }> = [
   {
     id: "free",
-    name: "Free",
+    nameKey: "tierFreeName",
     price: "$0",
-    priceLabel: "forever",
-    allowance: "$5 / month",
-    features: [
-      "All core features",
-      "Goal planning & weekly schedules",
-      "Personal to-do list",
-      "Basic team members",
-    ],
+    priceLabelKey: "tierFreePriceLabel",
+    allowanceKey: "tierFreeAllowance",
+    featureKeys: ["tierFreeF1", "tierFreeF2", "tierFreeF3", "tierFreeF4"],
   },
   {
     id: "basic",
-    name: "Basic",
+    nameKey: "tierBasicName",
     price: "$9.99",
-    priceLabel: "per month",
-    allowance: "$15 / month",
-    features: [
-      "Everything in Free",
-      "3× usage allowance",
-      "Priority support",
-    ],
+    priceLabelKey: "tierBasicPriceLabel",
+    allowanceKey: "tierBasicAllowance",
+    featureKeys: ["tierBasicF1", "tierBasicF2", "tierBasicF3"],
   },
   {
     id: "pro",
-    name: "Pro",
+    nameKey: "tierProName",
     price: "$19.99",
-    priceLabel: "per month",
-    allowance: "$40 / month",
-    features: [
-      "Everything in Basic",
-      "8× usage allowance",
-      "Unlimited workflows",
-      "Advanced agent templates",
-    ],
+    priceLabelKey: "tierProPriceLabel",
+    allowanceKey: "tierProAllowance",
+    featureKeys: ["tierProF1", "tierProF2", "tierProF3", "tierProF4"],
     highlight: true,
   },
 ];
 
-const CREDIT_PACKS_DISPLAY = [
-  { id: "small" as const, name: "Small", price: "$5", credits: "$5 credits", bonus: null },
-  { id: "medium" as const, name: "Medium", price: "$20", credits: "$22 credits", bonus: "+10%" },
-  { id: "large" as const, name: "Large", price: "$50", credits: "$60 credits", bonus: "+20%" },
+const CREDIT_PACKS: Array<{
+  id: "small" | "medium" | "large";
+  nameKey: "packSmall" | "packMedium" | "packLarge";
+  price: string;
+  creditsAmount: string;
+  bonus: string | null;
+}> = [
+  { id: "small", nameKey: "packSmall", price: "$5", creditsAmount: "$5", bonus: null },
+  { id: "medium", nameKey: "packMedium", price: "$20", creditsAmount: "$22", bonus: "+10%" },
+  { id: "large", nameKey: "packLarge", price: "$50", creditsAmount: "$60", bonus: "+20%" },
 ];
 
 export default function PricingPage() {
+  const t = useTranslations("pricing");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState<string | null>(null);
   const [currentTier, setCurrentTier] = useState<TierId>("free");
   const [hasActiveSub, setHasActiveSub] = useState(false);
@@ -99,7 +95,7 @@ export default function PricingPage() {
       const res = await fetch("/api/billing/portal", { method: "POST" });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else alert(data.error || "Failed to open portal");
+      else alert(data.error || t("portalFailed"));
     } finally {
       setLoading(null);
     }
@@ -119,7 +115,7 @@ export default function PricingPage() {
       // that as an internal Next.js route and silently does nothing. Use a
       // hard nav, same pattern as the portal handler above.
       if (data.url) window.location.href = data.url;
-      else alert(data.error || "Checkout failed");
+      else alert(data.error || t("checkoutFailed"));
     } finally {
       setLoading(null);
     }
@@ -132,33 +128,38 @@ export default function PricingPage() {
     href?: string;
   } {
     if (!billingLoaded) {
-      return { label: "Loading…", disabled: true };
+      return { label: tCommon("loading"), disabled: true };
     }
+    const tierName =
+      tierId === "basic"
+        ? t("tierBasicName")
+        : tierId === "pro"
+          ? t("tierProName")
+          : t("tierFreeName");
+
     // Public visitor (not signed in): every tier CTA points at sign-up.
     if (!signedIn) {
       if (tierId === "free") {
-        return { label: "Sign up — it's free", disabled: false, href: "/" };
+        return { label: t("ctaSignupFree"), disabled: false, href: "/" };
       }
-      const tierName = tierId === "basic" ? "Basic" : "Pro";
-      return { label: `Sign up to get ${tierName}`, disabled: false, href: "/" };
+      return { label: t("ctaSignupTier", { tier: tierName }), disabled: false, href: "/" };
     }
     if (tierId === currentTier) {
-      return { label: "Current Plan", disabled: true };
+      return { label: t("ctaCurrent"), disabled: true };
     }
 
-    const tierName = tierId === "basic" ? "Basic" : tierId === "pro" ? "Pro" : "Free";
-    const portalLoadingLabel = loading === "portal" ? "Loading…" : null;
+    const portalLoadingLabel = loading === "portal" ? tCommon("loading") : null;
 
     // Free user (no active subscription) paths
     if (!hasActiveSub) {
       if (tierId === "free") {
         // Free → Free never happens (caught by "currentTier" check above)
         // but guard against the edge case of data inconsistency.
-        return { label: "Current Plan", disabled: true };
+        return { label: t("ctaCurrent"), disabled: true };
       }
       // Free → Basic/Pro: normal checkout flow
       return {
-        label: loading === tierId ? "Loading…" : `Upgrade to ${tierName}`,
+        label: loading === tierId ? tCommon("loading") : t("ctaUpgradeTo", { tier: tierName }),
         disabled: loading === tierId,
         onClick: () => startCheckout("subscription", tierId),
       };
@@ -167,16 +168,14 @@ export default function PricingPage() {
     // Paid user paths — all plan changes go through the Stripe portal,
     // but the label should describe the action, not the tool.
     if (tierId === "free") {
-      // Paid → Free = cancel subscription
       return {
-        label: portalLoadingLabel ?? "Cancel subscription",
+        label: portalLoadingLabel ?? t("ctaCancel"),
         disabled: loading === "portal",
         onClick: openPortal,
       };
     }
-    // Paid → other paid tier = switch plan (could be upgrade or downgrade)
     return {
-      label: portalLoadingLabel ?? `Switch to ${tierName}`,
+      label: portalLoadingLabel ?? t("ctaSwitchTo", { tier: tierName }),
       disabled: loading === "portal",
       onClick: openPortal,
     };
@@ -184,134 +183,136 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-[#F6F3EE]">
-      {/* Minimal nav. The page lives outside (app)/, so it has no
-          AppShell sidebar — give logged-in visitors a way back, and
-          public visitors a way home. */}
       <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold tracking-tighter text-[#2B2B2B]">
           YoBoss
         </Link>
-        {signedIn ? (
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        ) : (
-          <Link
-            href="/"
-            className="text-sm text-[#7FAEE6] hover:text-[#6A9DDA] font-semibold"
-          >
-            Sign up →
-          </Link>
-        )}
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher />
+          {signedIn ? (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t("back")}
+            </Link>
+          ) : (
+            <Link
+              href="/"
+              className="text-sm text-[#007AFF] hover:text-[#0066D6] font-semibold"
+            >
+              {t("signupArrow")}
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-[#2B2B2B] mb-3">Simple, transparent pricing</h1>
-        <p className="text-lg text-[#6F6A64]">Start free. Upgrade when you need more capacity.</p>
-      </div>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-[#2B2B2B] mb-3">{t("title")}</h1>
+          <p className="text-lg text-[#6F6A64]">{t("subtitle")}</p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-        {TIERS_DISPLAY.map((tier) => {
-          const cta = getCtaState(tier.id);
-          const isCurrent = tier.id === currentTier;
-          return (
-            <div
-              key={tier.id}
-              className={`rounded-2xl border p-8 relative ${
-                isCurrent
-                  ? "border-[#7FB38A] bg-[#F3F8F3]"
-                  : tier.highlight
-                  ? "border-[#7FAEE6] bg-[#EAF3FD] shadow-lg"
-                  : "border-[#E7DED2] bg-[#FFFDF9]"
-              }`}
-            >
-              {isCurrent && (
-                <span className="absolute -top-3 left-6 inline-block text-xs font-semibold text-white bg-[#7FB38A] px-2 py-0.5 rounded-full">
-                  CURRENT PLAN
-                </span>
-              )}
-              {!isCurrent && tier.highlight && (
-                <span className="inline-block text-xs font-semibold text-white bg-[#7FAEE6] px-2 py-0.5 rounded-full mb-3">
-                  MOST POPULAR
-                </span>
-              )}
-              <h2 className="text-2xl font-bold text-[#2B2B2B]">{tier.name}</h2>
-              <div className="mt-2 mb-1">
-                <span className="text-4xl font-bold text-[#2B2B2B]">{tier.price}</span>
-                <span className="text-sm text-[#6F6A64] ml-2">{tier.priceLabel}</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          {TIERS.map((tier) => {
+            const cta = getCtaState(tier.id);
+            const isCurrent = tier.id === currentTier;
+            return (
+              <div
+                key={tier.id}
+                className={`rounded-2xl border p-8 relative ${
+                  isCurrent
+                    ? "border-[#7FB38A] bg-[#F3F8F3]"
+                    : tier.highlight
+                    ? "border-[#007AFF] bg-[#E6F2FF] shadow-lg"
+                    : "border-[#E7DED2] bg-[#FFFDF9]"
+                }`}
+              >
+                {isCurrent && (
+                  <span className="absolute -top-3 left-6 inline-block text-xs font-semibold text-white bg-[#7FB38A] px-2 py-0.5 rounded-full">
+                    {t("currentPlan")}
+                  </span>
+                )}
+                {!isCurrent && tier.highlight && (
+                  <span className="inline-block text-xs font-semibold text-white bg-[#007AFF] px-2 py-0.5 rounded-full mb-3">
+                    {t("mostPopular")}
+                  </span>
+                )}
+                <h2 className="text-2xl font-bold text-[#2B2B2B]">{t(tier.nameKey)}</h2>
+                <div className="mt-2 mb-1">
+                  <span className="text-4xl font-bold text-[#2B2B2B]">{tier.price}</span>
+                  <span className="text-sm text-[#6F6A64] ml-2">{t(tier.priceLabelKey)}</span>
+                </div>
+                <p className="text-sm font-semibold text-[#7FB38A] mb-6">{t(tier.allowanceKey)}</p>
+                <ul className="space-y-2 mb-8">
+                  {tier.featureKeys.map((fk) => (
+                    <li key={fk} className="flex items-start gap-2 text-sm text-[#2B2B2B]">
+                      <Check className="h-4 w-4 text-[#7FB38A] mt-0.5 shrink-0" />
+                      {t(fk)}
+                    </li>
+                  ))}
+                </ul>
+                {cta.href ? (
+                  <Link
+                    href={cta.href}
+                    className="block text-center w-full py-2.5 rounded-lg font-semibold text-sm transition-colors bg-[#007AFF] text-white hover:bg-[#0066D6]"
+                  >
+                    {cta.label}
+                  </Link>
+                ) : (
+                  <button
+                    onClick={cta.onClick}
+                    disabled={cta.disabled}
+                    className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                      cta.disabled
+                        ? "bg-[#F1ECE4] text-[#9B948B] cursor-not-allowed"
+                        : "bg-[#007AFF] text-white hover:bg-[#0066D6]"
+                    }`}
+                  >
+                    {cta.label}
+                  </button>
+                )}
               </div>
-              <p className="text-sm font-semibold text-[#7FB38A] mb-6">{tier.allowance}</p>
-              <ul className="space-y-2 mb-8">
-                {tier.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-[#2B2B2B]">
-                    <Check className="h-4 w-4 text-[#7FB38A] mt-0.5 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              {cta.href ? (
-                <Link
-                  href={cta.href}
-                  className="block text-center w-full py-2.5 rounded-lg font-semibold text-sm transition-colors bg-[#7FAEE6] text-white hover:bg-[#6A9DDA]"
-                >
-                  {cta.label}
-                </Link>
-              ) : (
-                <button
-                  onClick={cta.onClick}
-                  disabled={cta.disabled}
-                  className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                    cta.disabled
-                      ? "bg-[#F1ECE4] text-[#9B948B] cursor-not-allowed"
-                      : "bg-[#7FAEE6] text-white hover:bg-[#6A9DDA]"
-                  }`}
-                >
-                  {cta.label}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
 
-      <div className="border-t border-[#E7DED2] pt-12">
-        <div className="flex items-center gap-2 mb-2 justify-center">
-          <Zap className="h-5 w-5 text-[#7FAEE6]" />
-          <h2 className="text-2xl font-bold text-[#2B2B2B]">Need more? Top up with credits.</h2>
+        <div className="border-t border-[#E7DED2] pt-12">
+          <div className="flex items-center gap-2 mb-2 justify-center">
+            <Zap className="h-5 w-5 text-[#007AFF]" />
+            <h2 className="text-2xl font-bold text-[#2B2B2B]">{t("creditsTitle")}</h2>
+          </div>
+          <p className="text-center text-sm text-[#6F6A64] mb-8">{t("creditsSubtitle")}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            {CREDIT_PACKS.map((pack) => (
+              <div key={pack.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6 text-center">
+                <h3 className="text-lg font-bold text-[#2B2B2B]">{t(pack.nameKey)}</h3>
+                <div className="text-3xl font-bold my-2">{pack.price}</div>
+                <p className="text-sm text-[#7FB38A] font-semibold">{t("packCredits", { amount: pack.creditsAmount })}</p>
+                {pack.bonus && (
+                  <p className="text-xs text-[#D4B06A] mb-3">{t("packBonus", { percent: pack.bonus })}</p>
+                )}
+                {signedIn ? (
+                  <button
+                    onClick={() => startCheckout("credits", pack.id)}
+                    disabled={loading === pack.id}
+                    className="mt-4 w-full py-2 rounded-lg bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6]"
+                  >
+                    {loading === pack.id ? tCommon("loading") : t("buy")}
+                  </button>
+                ) : (
+                  <Link
+                    href="/"
+                    className="block text-center mt-4 w-full py-2 rounded-lg bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6]"
+                  >
+                    {t("signupToBuy")}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <p className="text-center text-sm text-[#6F6A64] mb-8">Credits never expire and stack on top of your monthly allowance.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-          {CREDIT_PACKS_DISPLAY.map((pack) => (
-            <div key={pack.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6 text-center">
-              <h3 className="text-lg font-bold text-[#2B2B2B]">{pack.name}</h3>
-              <div className="text-3xl font-bold my-2">{pack.price}</div>
-              <p className="text-sm text-[#7FB38A] font-semibold">{pack.credits}</p>
-              {pack.bonus && <p className="text-xs text-[#D4B06A] mb-3">{pack.bonus} bonus</p>}
-              {signedIn ? (
-                <button
-                  onClick={() => startCheckout("credits", pack.id)}
-                  disabled={loading === pack.id}
-                  className="mt-4 w-full py-2 rounded-lg bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA]"
-                >
-                  {loading === pack.id ? "Loading..." : "Buy"}
-                </button>
-              ) : (
-                <Link
-                  href="/"
-                  className="block text-center mt-4 w-full py-2 rounded-lg bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA]"
-                >
-                  Sign up to buy
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
       </div>
     </div>
   );

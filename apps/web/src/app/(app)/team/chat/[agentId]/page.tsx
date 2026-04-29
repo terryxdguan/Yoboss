@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Plus,
@@ -75,6 +76,7 @@ function genId() {
 export default function AgentChatPage() {
   const { agentId } = useParams<{ agentId: string }>();
   const router = useRouter();
+  const t = useTranslations("team.chat");
 
   const agent = [...DEFAULT_AGENTS, ...ALL_AGENTS].find((a) => a.id === agentId);
 
@@ -572,9 +574,9 @@ export default function AgentChatPage() {
   if (!agent) {
     return (
       <div className="text-center py-24">
-        <p className="text-[#6F6A64]">Employee not found</p>
-        <button onClick={() => router.push("/team")} className="text-sm text-[#7FAEE6] mt-2 hover:underline">
-          Back to Team
+        <p className="text-[#6F6A64]">{t("notFound")}</p>
+        <button onClick={() => router.push("/team")} className="text-sm text-[#007AFF] mt-2 hover:underline">
+          {t("back")}
         </button>
       </div>
     );
@@ -593,7 +595,7 @@ export default function AgentChatPage() {
             className="flex items-center gap-1.5 text-xs text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-3"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Team
+            {t("back")}
           </button>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#E7DED2] shrink-0">
@@ -610,24 +612,24 @@ export default function AgentChatPage() {
         <div className="px-3 py-2">
           <button
             onClick={handleNewSession}
-            className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#7FAEE6] hover:bg-[#7FAEE6]/5 transition-colors"
+            className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#007AFF]/5 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            New Chat
+            {t("newChat")}
           </button>
         </div>
 
         {/* Session List */}
         <div className="flex-1 overflow-y-auto px-2">
           {loading ? (
-            <p className="text-xs text-[#9B948B] text-center py-4">Loading...</p>
+            <p className="text-xs text-[#9B948B] text-center py-4">{t("loading")}</p>
           ) : (
             sessions.map((session) => (
               <div
                 key={session.id}
                 className={`group flex items-center gap-1 px-2 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${
                   activeSessionId === session.id
-                    ? "bg-[#7FAEE6]/10 text-[#2B2B2B]"
+                    ? "bg-[#007AFF]/10 text-[#2B2B2B]"
                     : "text-[#6F6A64] hover:bg-[#E7DED2]/50"
                 }`}
                 onClick={() => setActiveSessionId(session.id)}
@@ -640,7 +642,7 @@ export default function AgentChatPage() {
                     onChange={(e) => setEditTitleText(e.target.value)}
                     onBlur={() => handleTitleSave(session.id)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleTitleSave(session.id); if (e.key === "Escape") setEditingTitleId(null); }}
-                    className="flex-1 text-xs bg-[#FFFDF9] border border-[#7FAEE6]/40 rounded px-1 py-0.5 outline-none"
+                    className="flex-1 text-xs bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1 py-0.5 outline-none"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
@@ -674,7 +676,7 @@ export default function AgentChatPage() {
           {messages.length === 0 && !isStreaming && (
             <div className="text-center py-16">
               <MessageSquare className="h-10 w-10 text-[#E7DED2] mx-auto mb-3" />
-              <p className="text-sm text-[#9B948B]">Start a conversation with {displayName}</p>
+              <p className="text-sm text-[#9B948B]">{t("emptyConversation", { name: displayName })}</p>
             </div>
           )}
 
@@ -682,7 +684,7 @@ export default function AgentChatPage() {
             <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm ${
                 msg.role === "user"
-                  ? "bg-[#7FAEE6] text-white"
+                  ? "bg-[#007AFF] text-white"
                   : "bg-[#F6F3EE] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
                 {/* Agent name + timer for assistant messages */}
@@ -698,11 +700,11 @@ export default function AgentChatPage() {
                     {msg.toolActivity.map((tool, i) => {
                       const isLatest = isStreaming && msg === messages[messages.length - 1] && i === msg.toolActivity!.length - 1;
                       return (
-                        <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7FAEE6]/10 text-[#7FAEE6]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
+                        <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#007AFF]/10 text-[#007AFF]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
                           {isLatest && (
                             <span className="relative flex h-2 w-2 shrink-0">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
                             </span>
                           )}
                           {tool.type === "web_search" || tool.type === "web_fetch" ? (
@@ -724,7 +726,7 @@ export default function AgentChatPage() {
                         <img key={i} src={att.preview} alt="attachment" className="rounded-lg max-h-32 max-w-full object-cover" />
                       ) : (
                         <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F1ECE4] text-[10px] text-[#6F6A64]">
-                          <FileText className="h-3 w-3 text-[#7FAEE6]" />
+                          <FileText className="h-3 w-3 text-[#007AFF]" />
                           {att.filename}
                         </div>
                       )
@@ -766,7 +768,7 @@ export default function AgentChatPage() {
                         key={i}
                         href={f.isDataUri ? f.fileId : `/api/ai/files/${f.fileId}`}
                         download={f.filename}
-                        className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
+                        className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
                       >
                         <Download className="h-3.5 w-3.5" />
                         {f.filename}
@@ -823,7 +825,7 @@ export default function AgentChatPage() {
           </div>
 
           <div
-            className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] focus-within:ring-2 focus-within:ring-[#7FAEE6]/30 focus-within:border-[#7FAEE6]/50 transition-all flex flex-col"
+            className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] focus-within:ring-2 focus-within:ring-[#007AFF]/30 focus-within:border-[#007AFF]/50 transition-all flex flex-col"
             style={{ height: inputHeight }}
           >
             {/* Pending attachments */}
@@ -835,7 +837,7 @@ export default function AgentChatPage() {
                       <img src={att.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
                     ) : (
                       <div className="h-16 px-3 rounded-lg border border-[#E7DED2] bg-[#F6F3EE] flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-[#7FAEE6] shrink-0" />
+                        <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
                         <span className="text-[10px] text-[#6F6A64] max-w-[100px] truncate">{att.filename}</span>
                       </div>
                     )}
@@ -859,7 +861,7 @@ export default function AgentChatPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
               }}
-              placeholder={`Type a message... (Enter to send)`}
+              placeholder={t("inputPlaceholder")}
               disabled={isStreaming}
               className="flex-1 w-full px-4 py-3 text-sm bg-transparent outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none leading-relaxed"
             />
@@ -868,8 +870,8 @@ export default function AgentChatPage() {
             <div className="flex items-center justify-between px-3 pb-2 shrink-0">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7FAEE6] hover:bg-[#E7DED2] transition-colors"
-                title="Attach file"
+                className="p-1.5 rounded-md text-[#9B948B] hover:text-[#007AFF] hover:bg-[#E7DED2] transition-colors"
+                title={t("attachFile")}
               >
                 <Paperclip className="h-4 w-4" />
               </button>
@@ -877,9 +879,9 @@ export default function AgentChatPage() {
               <button
                 onClick={handleSend}
                 disabled={(!inputText.trim() && pendingAttachments.length === 0) || isStreaming}
-                className="px-4 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-xs font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40"
+                className="px-4 py-1.5 rounded-lg bg-[#007AFF] text-white text-xs font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all disabled:opacity-40"
               >
-                Send
+                {t("send")}
               </button>
             </div>
           </div>

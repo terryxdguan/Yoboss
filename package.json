@@ -4,5 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/*"
-  ]
+  ],
+  "dependencies": {
+    "next-intl": "^4.11.0"
+  }
 }

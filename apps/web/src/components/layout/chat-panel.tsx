@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { X, Send } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface ChatPanelProps {
@@ -10,6 +11,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ open, onClose }: ChatPanelProps) {
+  const t = useTranslations("coachChat");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -46,12 +48,12 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
           <span className="text-sm font-medium text-[#2B2B2B]">
-            YoBoss Coach
+            {t("title")}
           </span>
           <button
             onClick={onClose}
             className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-            aria-label="Close chat"
+            aria-label={t("closeAria")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -61,7 +63,7 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
           <div className="max-w-[85%]">
             <div className="bg-[#F1ECE4] rounded-md px-3 py-2.5">
               <p className="text-sm leading-relaxed text-[#2B2B2B]">
-                Hi! I&apos;m your YoBoss coach. What goal are you working toward?
+                {t("greeting")}
               </p>
             </div>
           </div>
@@ -72,7 +74,7 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Type a message..."
+              placeholder={t("inputPlaceholder")}
               className="flex-1 text-sm bg-transparent outline-none placeholder:text-[#9B948B] text-[#2B2B2B]"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -81,8 +83,8 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
               }}
             />
             <button
-              className="p-1.5 text-[#7FAEE6] hover:text-[#6A9DDA] transition-colors"
-              aria-label="Send message"
+              className="p-1.5 text-[#007AFF] hover:text-[#0066D6] transition-colors"
+              aria-label={t("sendAria")}
             >
               <Send className="h-4 w-4" />
             </button>

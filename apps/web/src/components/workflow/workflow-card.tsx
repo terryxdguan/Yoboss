@@ -4,6 +4,12 @@ import { useState } from "react";
 import { Play, Clock, Pencil, Trash2, Heart, CalendarClock } from "lucide-react";
 import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
 import { formatScheduleLabel } from "@/lib/utils/schedule";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Workflow } from "@/lib/types/workflow";
 
 interface WorkflowCardProps {
@@ -86,14 +92,14 @@ export function WorkflowCard({
         {visibleLabels.map((label, i) => (
           <span
             key={i}
-            className="text-[10px] text-[#6F6A64] bg-[#EAF3FD] px-2 py-0.5 rounded-md"
+            className="text-[10px] text-[#6F6A64] bg-[#E6F2FF] px-2 py-0.5 rounded-md"
           >
             {label}
           </span>
         ))}
         {hiddenCount > 0 && (
           <span
-            className="text-[10px] text-[#7FAEE6] bg-[#EAF3FD] px-2 py-0.5 rounded-md cursor-pointer hover:bg-[#7FAEE6] hover:text-white transition-colors relative"
+            className="text-[10px] text-[#007AFF] bg-[#E6F2FF] px-2 py-0.5 rounded-md cursor-pointer hover:bg-[#007AFF] hover:text-white transition-colors relative"
             onMouseEnter={() => setShowAllAgents(true)}
             onMouseLeave={() => setShowAllAgents(false)}
           >
@@ -127,10 +133,10 @@ export function WorkflowCard({
           className="flex items-center gap-2 mt-3 w-full text-left group/status"
         >
           <span className="relative w-2 h-2 shrink-0">
-            <span className="absolute inset-0 rounded-full bg-[#7FAEE6] animate-ping opacity-75" />
-            <span className="relative block w-2 h-2 rounded-full bg-[#7FAEE6]" />
+            <span className="absolute inset-0 rounded-full bg-[#007AFF] animate-ping opacity-75" />
+            <span className="relative block w-2 h-2 rounded-full bg-[#007AFF]" />
           </span>
-          <span className="text-[10px] text-[#7FAEE6] font-medium group-hover/status:underline">
+          <span className="text-[10px] text-[#007AFF] font-medium group-hover/status:underline">
             Running — click to view progress
           </span>
         </button>
@@ -150,66 +156,94 @@ export function WorkflowCard({
       ) : null}
 
       {workflow.schedule_enabled && workflow.schedule_cron && (
-        <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-medium text-[#7FAEE6]">
+        <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-medium text-[#007AFF]">
           <CalendarClock className="h-3 w-3" />
           {formatScheduleLabel(workflow.schedule_cron)}
         </div>
       )}
 
-      {/* Actions — unified for all workflows */}
-      <div className="flex items-center gap-1 mt-4 pt-3 border-t border-[#E7DED2]">
-        <button
-          onClick={onRun}
-          disabled={workflow.status === "running"}
-          className="p-1.5 rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors shadow-[0_2px_6px_rgba(127,174,230,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
-          title={workflow.status === "running" ? "Running..." : workflow.topic ? "Run" : "Run (will ask for topic)"}
-        >
-          <Play className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={onHistory}
-          className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-          title="History"
-        >
-          <Clock className="h-3.5 w-3.5" />
-        </button>
-        {onSchedule && (
-          <button
-            onClick={onSchedule}
-            className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-            title="Schedule"
-          >
-            <CalendarClock className="h-3.5 w-3.5" />
-          </button>
-        )}
-        <button
-          onClick={onEdit}
-          className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-          title="Edit"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        {onFavorite && (
-          <button
-            onClick={onFavorite}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isFavorite
-                ? "text-[#D5847A] hover:bg-[#D5847A]/10"
-                : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
-            }`}
-            title={isFavorite ? "Unfavorite" : "Favorite"}
-          >
-            <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-[#D5847A]" : ""}`} />
-          </button>
-        )}
-        <button
-          onClick={onDelete}
-          className="ml-auto p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
-          title="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      {/* Actions — unified for all workflows. Each icon button is wrapped
+          in Tooltip so the meaning shows instantly on hover (the icons
+          alone aren't self-explanatory — esp. Clock vs CalendarClock). */}
+      <TooltipProvider delay={150}>
+        <div className="flex items-center gap-1 mt-4 pt-3 border-t border-[#E7DED2]">
+          <Tooltip>
+            <TooltipTrigger
+              onClick={onRun}
+              disabled={workflow.status === "running"}
+              className="p-1.5 rounded-lg bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors shadow-[0_2px_6px_rgba(0,122,255,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Play className="h-3.5 w-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>
+              {workflow.status === "running"
+                ? "Running…"
+                : workflow.topic
+                ? "Run"
+                : "Run (will ask for topic)"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              onClick={onHistory}
+              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            >
+              <Clock className="h-3.5 w-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>Run history</TooltipContent>
+          </Tooltip>
+          {onSchedule && (
+            <Tooltip>
+              <TooltipTrigger
+                onClick={onSchedule}
+                className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {workflow.schedule_enabled && workflow.schedule_cron
+                  ? "Edit schedule"
+                  : "Schedule"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger
+              onClick={onEdit}
+              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>Edit workflow</TooltipContent>
+          </Tooltip>
+          {onFavorite && (
+            <Tooltip>
+              <TooltipTrigger
+                onClick={onFavorite}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isFavorite
+                    ? "text-[#D5847A] hover:bg-[#D5847A]/10"
+                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
+                }`}
+              >
+                <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-[#D5847A]" : ""}`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                {isFavorite ? "Unfavorite" : "Favorite"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger
+              onClick={onDelete}
+              className="ml-auto p-1.5 rounded-lg text-[#9B948B] hover:text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>Delete workflow</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }

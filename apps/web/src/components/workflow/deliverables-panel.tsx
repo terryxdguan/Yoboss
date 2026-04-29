@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Package,
   Download,
@@ -96,6 +97,7 @@ export function DeliverablesButton({
   run?: WorkflowRun | null;
   items?: DeliverableItem[];
 }) {
+  const tWf = useTranslations("workflows.deliverables");
   const [open, setOpen] = useState(false);
 
   const items = itemsProp || (run ? extractDeliverablesFromRun(run) : []);
@@ -109,7 +111,7 @@ export function DeliverablesButton({
         <Package className="h-3.5 w-3.5" />
         Deliverables
         {items.length > 0 && (
-          <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#7FAEE6]/10 text-[#7FAEE6]">
+          <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
             {items.length}
           </span>
         )}
@@ -125,7 +127,7 @@ export function DeliverablesButton({
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-[#7FAEE6]" />
+                <Package className="h-4 w-4 text-[#007AFF]" />
                 <h3 className="text-sm font-semibold text-[#2B2B2B]">
                   Deliverables
                 </h3>
@@ -153,7 +155,7 @@ export function DeliverablesButton({
                   <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F1ECE4] flex items-center justify-center">
                     <FileText className="h-5 w-5 text-[#9B948B]" />
                   </div>
-                  <p className="text-sm text-[#6F6A64]">No files generated</p>
+                  <p className="text-sm text-[#6F6A64]">{tWf("noFiles")}</p>
                   <p className="text-xs text-[#9B948B] mt-1">
                     Files created during workflow execution will appear here
                   </p>
@@ -169,10 +171,10 @@ export function DeliverablesButton({
                       >
                         {/* File icon */}
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#7FAEE6]/10"}`}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
                         >
                           <FileText
-                            className={`h-4 w-4 ${status.expired ? "text-[#D5847A]" : "text-[#7FAEE6]"}`}
+                            className={`h-4 w-4 ${status.expired ? "text-[#D5847A]" : "text-[#007AFF]"}`}
                           />
                         </div>
 
@@ -186,7 +188,7 @@ export function DeliverablesButton({
                             <a
                               href={`/api/ai/files/${item.fileId}`}
                               download={item.filename}
-                              className="text-sm font-medium text-[#7FAEE6] hover:underline truncate block"
+                              className="text-sm font-medium text-[#007AFF] hover:underline truncate block"
                             >
                               {item.filename}
                             </a>
@@ -228,8 +230,8 @@ export function DeliverablesButton({
                               <a
                                 href={`/api/ai/files/${item.fileId}`}
                                 download={item.filename}
-                                className="p-1.5 rounded-lg text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
-                                title="Download"
+                                className="p-1.5 rounded-lg text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
+                                title={tWf("download")}
                               >
                                 <Download className="h-3.5 w-3.5" />
                               </a>
@@ -257,6 +259,7 @@ export function DeliverablesModal({
   run: WorkflowRun;
   onClose: () => void;
 }) {
+  const tWf = useTranslations("workflows.deliverables");
   const items = extractDeliverablesFromRun(run);
 
   return (
@@ -272,12 +275,12 @@ export function DeliverablesModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#E7DED2]">
           <div className="flex items-center gap-2">
-            <Package className="h-4.5 w-4.5 text-[#7FAEE6]" />
+            <Package className="h-4.5 w-4.5 text-[#007AFF]" />
             <h3 className="text-base font-semibold text-[#2B2B2B]">
               Deliverables
             </h3>
             {items.length > 0 && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7FAEE6]/10 text-[#7FAEE6]">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
                 {items.length} file{items.length !== 1 ? "s" : ""}
               </span>
             )}
@@ -324,10 +327,10 @@ export function DeliverablesModal({
                   >
                     {/* File icon */}
                     <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#7FAEE6]/10"}`}
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
                     >
                       <FileText
-                        className={`h-4.5 w-4.5 ${status.expired ? "text-[#D5847A]" : "text-[#7FAEE6]"}`}
+                        className={`h-4.5 w-4.5 ${status.expired ? "text-[#D5847A]" : "text-[#007AFF]"}`}
                       />
                     </div>
 
@@ -341,7 +344,7 @@ export function DeliverablesModal({
                         <a
                           href={`/api/ai/files/${item.fileId}`}
                           download={item.filename}
-                          className="text-sm font-medium text-[#7FAEE6] hover:underline truncate block"
+                          className="text-sm font-medium text-[#007AFF] hover:underline truncate block"
                         >
                           {item.filename}
                         </a>
@@ -383,7 +386,7 @@ export function DeliverablesModal({
                           <a
                             href={`/api/ai/files/${item.fileId}`}
                             download={item.filename}
-                            className="p-1.5 rounded-lg text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
+                            className="p-1.5 rounded-lg text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
                             title="Download"
                           >
                             <Download className="h-3.5 w-3.5" />

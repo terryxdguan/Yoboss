@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Calendar, Globe, Check, BarChart3, CreditCard, Sparkles } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -16,7 +17,7 @@ import type { UserQuota, AiUsageRecord } from "@/lib/types/database";
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   free: { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", label: "Free" },
   basic: { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", label: "Basic" },
-  pro: { bg: "bg-[#7FAEE6]/10", text: "text-[#7FAEE6]", label: "Pro" },
+  pro: { bg: "bg-[#007AFF]/10", text: "text-[#007AFF]", label: "Pro" },
   team: { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", label: "Team" },
 };
 
@@ -58,6 +59,8 @@ function shortModel(model: string): string {
 }
 
 export default function AccountPage() {
+  const t = useTranslations("account");
+  const locale = useLocale();
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -199,11 +202,11 @@ export default function AccountPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">Account</h1>
-          <p className="mt-1 text-sm text-[#6F6A64]">Your profile and usage</p>
+          <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">{t("title")}</h1>
+          <p className="mt-1 text-sm text-[#6F6A64]">{t("subtitle")}</p>
         </div>
         <div className="flex items-center justify-center py-20">
-          <div className="h-6 w-6 border-2 border-[#7FAEE6] border-t-transparent rounded-full animate-spin" />
+          <div className="h-6 w-6 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -213,8 +216,8 @@ export default function AccountPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">Account</h1>
-        <p className="mt-1 text-sm text-[#6F6A64]">Your profile and usage</p>
+        <h1 className="text-[32px] font-semibold tracking-tight text-[#2B2B2B]">{t("title")}</h1>
+        <p className="mt-1 text-sm text-[#6F6A64]">{t("subtitle")}</p>
       </div>
 
       {/* Section 1: Profile Card */}
@@ -237,10 +240,11 @@ export default function AccountPage() {
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>
-                  Member since{" "}
-                  {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-                    : "—"}
+                  {t("memberSince", {
+                    date: user?.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString(locale, { month: "short", year: "numeric" })
+                      : "—",
+                  })}
                 </span>
               </div>
 
@@ -261,7 +265,7 @@ export default function AccountPage() {
                 {tzSaved && (
                   <span className="flex items-center gap-0.5 text-[#7FB38A] font-medium">
                     <Check className="h-3 w-3" />
-                    Saved
+                    {t("saved")}
                   </span>
                 )}
               </div>
@@ -273,22 +277,22 @@ export default function AccountPage() {
       {/* Section: Subscription & Billing */}
       <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7FAEE6]/10">
-            <CreditCard className="h-4 w-4 text-[#7FAEE6]" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#007AFF]/10">
+            <CreditCard className="h-4 w-4 text-[#007AFF]" />
           </div>
-          <h2 className="text-sm font-semibold text-[#2B2B2B]">Subscription & Billing</h2>
+          <h2 className="text-sm font-semibold text-[#2B2B2B]">{t("billingTitle")}</h2>
         </div>
 
         {/* Checkout result banner */}
         {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && (
           <div className="mb-4 rounded-lg border border-[#7FB38A]/30 bg-[#7FB38A]/10 px-4 py-2.5 flex items-center gap-2">
             <Check className="h-4 w-4 text-[#7FB38A]" />
-            <span className="text-sm text-[#2B2B2B]">Payment successful. Your plan is active.</span>
+            <span className="text-sm text-[#2B2B2B]">{t("checkoutSuccess")}</span>
           </div>
         )}
         {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "cancelled" && (
           <div className="mb-4 rounded-lg border border-[#D4B06A]/30 bg-[#D4B06A]/10 px-4 py-2.5 flex items-center gap-2">
-            <span className="text-sm text-[#2B2B2B]">Checkout cancelled. No charges were made.</span>
+            <span className="text-sm text-[#2B2B2B]">{t("checkoutCancelled")}</span>
           </div>
         )}
 
@@ -296,20 +300,20 @@ export default function AccountPage() {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#6F6A64]">Current Plan</span>
+              <span className="text-xs text-[#6F6A64]">{t("currentPlan")}</span>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${tierStyle.bg} ${tierStyle.text}`}>
                 {tierStyle.label}
               </span>
               {cancelAtPeriodEnd && (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#D4B06A]/10 text-[#C99442]">
-                  Canceling
+                  {t("canceling")}
                 </span>
               )}
             </div>
             {subscriptionPeriodEnd && (
               <p className="text-xs text-[#9B948B] mt-1">
-                {cancelAtPeriodEnd ? "Cancels " : "Renews "}
-                {new Date(subscriptionPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                {cancelAtPeriodEnd ? `${t("cancels")} ` : `${t("renews")} `}
+                {new Date(subscriptionPeriodEnd).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}
               </p>
             )}
           </div>
@@ -324,16 +328,16 @@ export default function AccountPage() {
             {tier === "free" ? (
               <a
                 href="/pricing"
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] transition-colors"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
               >
-                Upgrade Plan
+                {t("upgradePlan")}
               </a>
             ) : (
               <a
                 href="/pricing"
-                className="px-3 py-1.5 text-xs font-medium text-[#7FAEE6] hover:text-[#6A9DDA] hover:underline transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-[#007AFF] hover:text-[#0066D6] hover:underline transition-colors"
               >
-                View plans
+                {t("viewPlans")}
               </a>
             )}
             {hasStripeCustomer && (
@@ -342,7 +346,7 @@ export default function AccountPage() {
                 disabled={portalLoading}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50"
               >
-                {portalLoading ? "Loading..." : "Manage"}
+                {portalLoading ? t("loading") : t("manage")}
               </button>
             )}
           </div>
@@ -351,9 +355,9 @@ export default function AccountPage() {
         <div className="space-y-4">
           <div>
             <div className="mb-1.5 flex items-center justify-between text-xs">
-              <span className="font-medium text-[#6F6A64]">Monthly Allowance</span>
+              <span className="font-medium text-[#6F6A64]">{t("monthlyAllowance")}</span>
               <span className="font-semibold text-[#2B2B2B]">
-                {formatCost(allowanceUsed)} / {formatCost(monthlyAllowance)} used
+                {t("usedOf", { used: formatCost(allowanceUsed), total: formatCost(monthlyAllowance) })}
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
@@ -371,20 +375,20 @@ export default function AccountPage() {
                   <Sparkles className="h-5 w-5 text-[#D4B06A]" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-[#6F6A64]">Credits</p>
+                  <p className="text-xs font-medium text-[#6F6A64]">{t("credits")}</p>
                   <p className="text-2xl font-bold text-[#2B2B2B]">
-                    {formatCost(creditsUsed)} / {formatCost(creditsTotal)} used
+                    {t("usedOf", { used: formatCost(creditsUsed), total: formatCost(creditsTotal) })}
                   </p>
                   <p className="mt-0.5 text-xs text-[#9B948B]">
-                    {formatCost(creditsBalance)} remaining
+                    {t("remaining", { amount: formatCost(creditsBalance) })}
                   </p>
                 </div>
               </div>
               <a
                 href="/pricing"
-                className="inline-flex justify-center rounded-lg border border-[#7FAEE6] px-3.5 py-1.5 text-xs font-semibold text-[#7FAEE6] transition-colors hover:bg-[#EAF3FD]"
+                className="inline-flex justify-center rounded-lg border border-[#007AFF] px-3.5 py-1.5 text-xs font-semibold text-[#007AFF] transition-colors hover:bg-[#E6F2FF]"
               >
-                Buy Credits
+                {t("buyCredits")}
               </a>
             </div>
 
@@ -401,16 +405,16 @@ export default function AccountPage() {
       {/* Section 2: Usage History */}
       <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7FAEE6]/10">
-            <BarChart3 className="h-4 w-4 text-[#7FAEE6]" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#007AFF]/10">
+            <BarChart3 className="h-4 w-4 text-[#007AFF]" />
           </div>
-          <h2 className="text-sm font-semibold text-[#2B2B2B]">Usage History</h2>
+          <h2 className="text-sm font-semibold text-[#2B2B2B]">{t("usageHistoryTitle")}</h2>
         </div>
 
         {usage.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-sm text-[#6F6A64]">No usage recorded yet.</p>
-            <p className="text-xs text-[#9B948B] mt-1">Usage will appear here after your first conversation.</p>
+            <p className="text-sm text-[#6F6A64]">{t("noUsage")}</p>
+            <p className="text-xs text-[#9B948B] mt-1">{t("noUsageHint")}</p>
           </div>
         ) : (
           <>
@@ -418,11 +422,11 @@ export default function AccountPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-[#E7DED2]">
-                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold">Date</th>
-                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold">Route</th>
-                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold">Model</th>
-                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold text-right">Tokens (in/out)</th>
-                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold text-right">Cost</th>
+                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold">{t("colDate")}</th>
+                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold">{t("colRoute")}</th>
+                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold">{t("colModel")}</th>
+                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold text-right">{t("colTokens")}</th>
+                    <th className="pb-2.5 text-[11px] uppercase tracking-[0.08em] text-[#9B948B] font-semibold text-right">{t("colCost")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -446,9 +450,9 @@ export default function AccountPage() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="px-4 py-2 text-xs font-medium text-[#7FAEE6] hover:bg-[#7FAEE6]/5 rounded-lg transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-medium text-[#007AFF] hover:bg-[#007AFF]/5 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {loadingMore ? "Loading..." : "Load more"}
+                  {loadingMore ? t("loading") : t("loadMore")}
                 </button>
               </div>
             )}
@@ -475,7 +479,7 @@ function AccountAvatar({ src, name }: { src?: string | null; name?: string }) {
   }
 
   return (
-    <div className="h-16 w-16 rounded-full bg-[#7FAEE6] flex items-center justify-center text-white text-xl font-semibold shrink-0">
+    <div className="h-16 w-16 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-xl font-semibold shrink-0">
       {(name || "U").charAt(0).toUpperCase()}
     </div>
   );

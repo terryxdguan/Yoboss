@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   useGoalSession,
   type UseGoalSessionInitialDraft,
@@ -116,6 +117,7 @@ type GoalWizardPanelProps = GoalCreationProps | WeeklyPlanningProps;
 // ---------------------------------------------------------------
 
 export function GoalWizardPanel(props: GoalWizardPanelProps) {
+  const t = useTranslations("goals.wizard");
   // Default to the max width so the panel feels generous on first open;
   // the user can still drag the handle leftward to anything ≥ 360.
   const { width, onMouseDown } = useResize(720, 360, 720);
@@ -135,13 +137,13 @@ export function GoalWizardPanel(props: GoalWizardPanelProps) {
     >
       <div
         onMouseDown={onMouseDown}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#7FAEE6]/20 active:bg-[#7FAEE6]/30 transition-colors z-10"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
       />
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <h2 className="text-sm font-semibold text-[#2B2B2B]">
           {props.intent === "goal-creation"
-            ? "Plan with Team"
-            : "Plan this week"}
+            ? t("headerCreate")
+            : t("headerWeekly")}
         </h2>
         <button
           onClick={props.onClose}
@@ -176,6 +178,7 @@ function GoalCreationBody({
   autoStart,
   onGoalCreated,
 }: GoalCreationProps) {
+  const t = useTranslations("goals.wizard");
   const [goalText, setGoalText] = useState(initialGoalText ?? "");
   const [submittedGoal, setSubmittedGoal] = useState(
     autoStart && initialGoalText ? initialGoalText : "",
@@ -211,10 +214,10 @@ function GoalCreationBody({
       <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-[#2B2B2B]">
-            What&apos;s the next thing you want to do?
+            {t("landingTitle")}
           </h3>
           <p className="text-xs text-[#6F6A64] mt-1">
-            Describe your goal and we&apos;ll help you create an actionable plan.
+            {t("landingSubtitle")}
           </p>
         </div>
         <GoalDraftList onResume={resume} refreshKey={draftListRefresh} />
@@ -264,6 +267,7 @@ function GoalCreationChat({
     editPlan,
   } = useGoalSession({ initialDraft });
 
+  const t = useTranslations("goals.wizard");
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -312,7 +316,7 @@ function GoalCreationChat({
           className="flex items-center gap-1.5 text-xs text-[#6F6A64] hover:text-[#2B2B2B] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back
+          {t("back")}
         </button>
       </div>
 
@@ -350,14 +354,14 @@ function GoalCreationChat({
                 handleSend();
               }
             }}
-            placeholder="Type a message..."
+            placeholder={t("messagePlaceholder")}
             disabled={isStreaming}
-            className="flex-1 border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/40 focus:border-transparent bg-[#FFFDF9] disabled:opacity-50"
+            className="flex-1 border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9] disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={!inputText.trim() || isStreaming}
-            className="h-9 w-9 flex items-center justify-center rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-9 w-9 flex items-center justify-center rounded-lg bg-[#007AFF] text-white hover:bg-[#0066D6] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -423,11 +427,7 @@ function WeeklyPlanningBody({
   }, [goalId]);
 
   if (!sessionId) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-sm text-[#9B948B]">
-        {saveError ? saveError : "Loading session…"}
-      </div>
-    );
+    return <WeeklyPlanningLoading saveError={saveError} />;
   }
 
   return (
@@ -448,6 +448,25 @@ function WeeklyPlanningBody({
         onWeeklyPlanSaved();
       }}
     />
+  );
+}
+
+function SaveFailedToast({ error }: { error: string }) {
+  const t = useTranslations("goals.wizard");
+  return (
+    <div className="absolute bottom-4 right-4 left-4 z-[70] rounded-xl border border-[#E5A79D] bg-[#FFF4F1] px-4 py-3 shadow-[0_12px_32px_rgba(30,34,39,0.12)]">
+      <p className="text-sm font-medium text-[#A8503F]">{t("saveFailed")}</p>
+      <p className="text-xs text-[#6F6A64] mt-1">{error}</p>
+    </div>
+  );
+}
+
+function WeeklyPlanningLoading({ saveError }: { saveError: string | null }) {
+  const t = useTranslations("goals.wizard");
+  return (
+    <div className="flex-1 flex items-center justify-center text-sm text-[#9B948B]">
+      {saveError ? saveError : t("loadingSession")}
+    </div>
   );
 }
 
@@ -601,12 +620,7 @@ function WeeklyPlanningChat({
         />
       )}
 
-      {saveError && (
-        <div className="absolute bottom-4 right-4 left-4 z-[70] rounded-xl border border-[#E5A79D] bg-[#FFF4F1] px-4 py-3 shadow-[0_12px_32px_rgba(30,34,39,0.12)]">
-          <p className="text-sm font-medium text-[#A8503F]">Save failed</p>
-          <p className="text-xs text-[#6F6A64] mt-1">{saveError}</p>
-        </div>
-      )}
+      {saveError && <SaveFailedToast error={saveError} />}
     </>
   );
 }

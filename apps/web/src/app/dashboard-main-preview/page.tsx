@@ -115,7 +115,7 @@ export default function DashboardMainPreviewPage() {
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[232px_1fr]">
         <aside className="hidden border-r border-[#E7DED2] bg-[#FFFDF9]/60 px-4 py-5 lg:block">
           <div className="mb-8 flex items-center gap-2 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#7FAEE6] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#007AFF] text-white">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -135,7 +135,7 @@ export default function DashboardMainPreviewPage() {
                 key={label}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${
                   active
-                    ? "bg-[#EAF3FD] text-[#2B2B2B]"
+                    ? "bg-[#E6F2FF] text-[#2B2B2B]"
                     : "text-[#6F6A64]"
                 }`}
               >
@@ -160,7 +160,7 @@ export default function DashboardMainPreviewPage() {
               AI capacity today
             </p>
             <div className="mt-3 h-2 rounded-full bg-[#F1ECE4]">
-              <div className="h-2 w-[68%] rounded-full bg-[#7FAEE6]" />
+              <div className="h-2 w-[68%] rounded-full bg-[#007AFF]" />
             </div>
             <p className="mt-2 text-xs text-[#6F6A64]">
               4 active runs, 2 waiting for review
@@ -171,7 +171,7 @@ export default function DashboardMainPreviewPage() {
         <section className="min-w-0 px-4 py-5 md:px-8 lg:px-10">
           <header className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7FAEE6]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#007AFF]">
                 Dashboard
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-[32px]">
@@ -187,7 +187,7 @@ export default function DashboardMainPreviewPage() {
                 Ask AI
                 <MessageSquare className="h-4 w-4" />
               </button>
-              <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7FAEE6] px-4 py-2.5 text-sm font-semibold text-white">
+              <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-4 py-2.5 text-sm font-semibold text-white">
                 Create task
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -209,7 +209,7 @@ export default function DashboardMainPreviewPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
                     {label}
                   </p>
-                  <Icon className="h-4 w-4 text-[#7FAEE6]" />
+                  <Icon className="h-4 w-4 text-[#007AFF]" />
                 </div>
                 <p className="mt-3 text-2xl font-semibold">{value}</p>
               </div>
@@ -241,7 +241,7 @@ export default function DashboardMainPreviewPage() {
                       key={item.title}
                       className="group flex w-full items-center gap-3 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-3 text-left transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F6F3EE] text-[#7FAEE6]">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F6F3EE] text-[#007AFF]">
                         <Play className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -310,7 +310,7 @@ export default function DashboardMainPreviewPage() {
                       <p className="mt-3 text-xs leading-relaxed text-[#6F6A64]">
                         {goal.next}
                       </p>
-                      <p className="mt-2 text-[11px] font-semibold text-[#7FAEE6]">
+                      <p className="mt-2 text-[11px] font-semibold text-[#007AFF]">
                         {goal.weekly}
                       </p>
                     </button>
@@ -326,7 +326,7 @@ export default function DashboardMainPreviewPage() {
                       A compact view of where your effort is going this week.
                     </p>
                   </div>
-                  <CalendarDays className="h-5 w-5 text-[#7FAEE6]" />
+                  <CalendarDays className="h-5 w-5 text-[#007AFF]" />
                 </div>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
                   {schedule.map((day) => (
@@ -343,7 +343,7 @@ export default function DashboardMainPreviewPage() {
                           {day.day}
                         </p>
                         {day.active && (
-                          <span className="h-2 w-2 rounded-full bg-[#7FAEE6]" />
+                          <span className="h-2 w-2 rounded-full bg-[#007AFF]" />
                         )}
                       </div>
                       <p className="mt-2 text-sm font-semibold">{day.label}</p>
@@ -373,7 +373,7 @@ export default function DashboardMainPreviewPage() {
                       className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-3"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EAF3FD] text-[#7FAEE6]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2FF] text-[#007AFF]">
                           <Icon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1">

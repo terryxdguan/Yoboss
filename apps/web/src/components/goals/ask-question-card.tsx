@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AskQuestionData, UserAnswer } from "@/lib/types/goal-chat";
 
 interface AskQuestionCardProps {
@@ -15,6 +16,7 @@ export function AskQuestionCard({
   onAnswer,
   disabled = false,
 }: AskQuestionCardProps) {
+  const t = useTranslations("goals.askQuestion");
   const [selected, setSelected] = useState<string[]>([]);
   const [otherText, setOtherText] = useState("");
   const [showOther, setShowOther] = useState(false);
@@ -69,7 +71,7 @@ export function AskQuestionCard({
               disabled={disabled}
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all border ${
                 isSelected
-                  ? "bg-[#EAF3FD] border-[#7FAEE6] text-[#2B2B2B]"
+                  ? "bg-[#E6F2FF] border-[#007AFF] text-[#2B2B2B]"
                   : "bg-[#F1ECE4] border-transparent text-[#2B2B2B] hover:border-[#DDD3C7]"
               } ${disabled ? "opacity-60 cursor-default" : "cursor-pointer"}`}
             >
@@ -79,7 +81,7 @@ export function AskQuestionCard({
                     data.allow_multiple ? "" : "-full"
                   } border ${
                     isSelected
-                      ? "bg-[#7FAEE6] border-[#7FAEE6]"
+                      ? "bg-[#007AFF] border-[#007AFF]"
                       : "border-[#DDD3C7] bg-[#FFFDF9]"
                   }`}
                   style={{ width: 18, height: 18 }}
@@ -99,7 +101,7 @@ export function AskQuestionCard({
               disabled={disabled}
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all border ${
                 showOther
-                  ? "bg-[#EAF3FD] border-[#7FAEE6] text-[#2B2B2B]"
+                  ? "bg-[#E6F2FF] border-[#007AFF] text-[#2B2B2B]"
                   : "bg-[#F1ECE4] border-transparent text-[#2B2B2B] hover:border-[#DDD3C7]"
               } ${disabled ? "opacity-60 cursor-default" : "cursor-pointer"}`}
             >
@@ -109,14 +111,14 @@ export function AskQuestionCard({
                     data.allow_multiple ? "" : "-full"
                   } border ${
                     showOther
-                      ? "bg-[#7FAEE6] border-[#7FAEE6]"
+                      ? "bg-[#007AFF] border-[#007AFF]"
                       : "border-[#DDD3C7] bg-[#FFFDF9]"
                   }`}
                   style={{ width: 18, height: 18 }}
                 >
                   {showOther && <Check className="h-3 w-3 text-white" />}
                 </span>
-                Other
+                {t("other")}
               </span>
             </button>
             {showOther && (
@@ -124,8 +126,8 @@ export function AskQuestionCard({
                 type="text"
                 value={otherText}
                 onChange={(e) => setOtherText(e.target.value)}
-                placeholder="Type your answer..."
-                className="w-full border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7FAEE6]/40 focus:border-transparent bg-[#FFFDF9]"
+                placeholder={t("otherPlaceholder")}
+                className="w-full border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9]"
                 disabled={disabled}
               />
             )}
@@ -137,9 +139,9 @@ export function AskQuestionCard({
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="bg-[#7FAEE6] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#6A9DDA] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-[#007AFF] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Continue
+          {t("continue")}
         </button>
       )}
     </div>

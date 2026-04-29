@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { X, FileText, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { getGoalNote, upsertGoalNote } from "@/lib/db/actions";
 
 interface NotesPanelProps {
@@ -10,6 +11,7 @@ interface NotesPanelProps {
 }
 
 export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
+  const t = useTranslations("goals.notes");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -64,15 +66,15 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-[#7FAEE6]" />
-          <span className="text-sm font-medium text-[#2B2B2B]">Notes</span>
+          <FileText className="h-4 w-4 text-[#007AFF]" />
+          <span className="text-sm font-medium text-[#2B2B2B]">{t("title")}</span>
           {saveStatus === "saving" && (
-            <span className="text-[10px] text-[#9B948B]">Saving...</span>
+            <span className="text-[10px] text-[#9B948B]">{t("saving")}</span>
           )}
           {saveStatus === "saved" && (
             <span className="text-[10px] text-[#7FB38A] flex items-center gap-0.5">
               <Check className="h-3 w-3" />
-              Saved
+              {t("saved")}
             </span>
           )}
         </div>
@@ -87,14 +89,14 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
       {/* Editor */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-[#9B948B]">Loading...</p>
+          <p className="text-sm text-[#9B948B]">{t("loading")}</p>
         </div>
       ) : (
         <textarea
           value={content}
           onChange={(e) => handleChange(e.target.value)}
           onBlur={handleBlur}
-          placeholder="Write your notes here...&#10;&#10;Supports plain text and markdown formatting."
+          placeholder={t("placeholder")}
           className="flex-1 px-4 py-4 text-sm text-[#2B2B2B] bg-transparent outline-none resize-none placeholder:text-[#9B948B] leading-relaxed"
           autoFocus
         />

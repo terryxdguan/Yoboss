@@ -12,28 +12,35 @@ import {
   MessageCircle,
   Wallet,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { GoalInput } from "./goal-input";
 import { ExampleGoals } from "./example-goals";
 import { AuthModal } from "./auth-modal";
+import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { createClient } from "@/lib/db/client";
 import { setPendingGoal } from "@/lib/pending-goal";
 
-function friendlyAuthError(error: string, description: string | null): string {
+function friendlyAuthError(
+  error: string,
+  description: string | null,
+  t: (key: string) => string
+): string {
   // Supabase is consistent about returning the original wording in
-  // error_description. We only special-case the most common paths so the
-  // message reads like English instead of debug output.
+  // error_description. We special-case the most common paths so the
+  // message reads naturally in the active locale.
   const desc = description || "";
   if (/expired/i.test(error) || /expired/i.test(desc)) {
-    return "Your confirmation link has expired. Sign up again to receive a fresh link.";
+    return t("authErrorExpired");
   }
   if (/access_denied/i.test(error) || /invalid|consumed|used/i.test(desc)) {
-    return "That confirmation link is no longer valid. Sign up again to receive a fresh link.";
+    return t("authErrorInvalid");
   }
   if (description) return description;
-  return "Something went wrong while signing you in. Please try again.";
+  return t("authErrorGeneric");
 }
 
 export function LandingPage() {
+  const t = useTranslations("landing");
   const [goalText, setGoalText] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
   // Tracks which mode the modal should open in — set BEFORE setAuthOpen(true)
@@ -60,7 +67,7 @@ export function LandingPage() {
     const err = params.get("error");
     if (!err) return;
     const description = params.get("error_description");
-    const friendly = friendlyAuthError(err, description);
+    const friendly = friendlyAuthError(err, description, t);
     setAuthError(friendly);
     params.delete("error");
     params.delete("error_code");
@@ -70,14 +77,14 @@ export function LandingPage() {
       (params.toString() ? `?${params}` : "") +
       window.location.hash;
     window.history.replaceState(null, "", cleaned);
-  }, []);
+  }, [t]);
 
   // Auto-dismiss the signup toast after 8s. Owned by the parent because
   // the modal unmounts immediately on signup success.
   useEffect(() => {
     if (!signupToastEmail) return;
-    const t = setTimeout(() => setSignupToastEmail(null), 8000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSignupToastEmail(null), 8000);
+    return () => clearTimeout(timer);
   }, [signupToastEmail]);
 
   const openAuth = (mode: "login" | "signup") => {
@@ -97,8 +104,22 @@ export function LandingPage() {
     openAuth("signup");
   };
 
+  const features: Array<{
+    icon: typeof Flag;
+    titleKey: string;
+    bodyKey: string;
+    color: string;
+  }> = [
+    { icon: Flag, titleKey: "feature1Title", bodyKey: "feature1Body", color: "#007AFF" },
+    { icon: Calendar, titleKey: "feature2Title", bodyKey: "feature2Body", color: "#7FB38A" },
+    { icon: Users, titleKey: "feature3Title", bodyKey: "feature3Body", color: "#C9A968" },
+    { icon: FileText, titleKey: "feature4Title", bodyKey: "feature4Body", color: "#D5847A" },
+    { icon: MessageCircle, titleKey: "feature5Title", bodyKey: "feature5Body", color: "#9B6B5C" },
+    { icon: Wallet, titleKey: "feature6Title", bodyKey: "feature6Body", color: "#7FB3B3" },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#F6F3EE] text-[#2B2B2B] selection:bg-[#EAF3FD] selection:text-[#7FAEE6]">
+    <div className="min-h-screen bg-[#F6F3EE] text-[#2B2B2B] selection:bg-[#E6F2FF] selection:text-[#007AFF]">
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 bg-[#F6F3EE]/80 backdrop-blur-md">
         <div className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto font-medium tracking-tight">
@@ -108,40 +129,41 @@ export function LandingPage() {
             </span>
             <div className="hidden md:flex items-center gap-6">
               <a
-                className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
+                className="text-[#6F6A64] hover:text-[#007AFF] transition-colors duration-200"
                 href="#features"
               >
-                Features
+                {t("navFeatures")}
               </a>
               <a
-                className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200"
+                className="text-[#6F6A64] hover:text-[#007AFF] transition-colors duration-200"
                 href="/pricing"
               >
-                Pricing
+                {t("navPricing")}
               </a>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             {loggedIn ? (
               <a
                 href="/dashboard"
-                className="bg-[#7FAEE6] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all"
+                className="bg-[#007AFF] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#0066D6] active:scale-95 transition-all"
               >
-                Dashboard
+                {t("ctaDashboard")}
               </a>
             ) : (
               <>
                 <button
                   onClick={() => openAuth("login")}
-                  className="text-[#6F6A64] hover:text-[#7FAEE6] transition-colors duration-200 active:scale-95 px-4 py-2"
+                  className="text-[#6F6A64] hover:text-[#007AFF] transition-colors duration-200 active:scale-95 px-4 py-2"
                 >
-                  Login
+                  {t("ctaLogin")}
                 </button>
                 <button
                   onClick={() => openAuth("signup")}
-                  className="bg-[#7FAEE6] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all"
+                  className="bg-[#007AFF] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#0066D6] active:scale-95 transition-all"
                 >
-                  Sign Up
+                  {t("ctaSignup")}
                 </button>
               </>
             )}
@@ -157,20 +179,20 @@ export function LandingPage() {
             <div className="overflow-hidden max-h-[280px] md:max-h-[340px]">
               <img
                 src="/hero-illustration.png"
-                alt="YoBoss — Your team planning and executing together"
+                alt={t("heroAlt")}
                 className="w-full h-auto object-cover object-top"
               />
             </div>
             {/* Attribution badge — sits above the green (headphones)
                 character. Positioned in % so it tracks the image as it
                 scales down on narrower viewports. */}
-            <span className="absolute right-[2%] top-[28%] z-20 inline-flex items-center rounded-full border border-[#7FAEE6]/40 bg-[#FFFDF9] px-2.5 py-1 text-[10px] md:text-xs font-medium text-[#5E8FCE] shadow-[0_2px_8px_rgba(127,174,230,0.18)] whitespace-nowrap">
-              Powered by Claude Opus 4.7
+            <span className="absolute right-[2%] top-[28%] z-20 inline-flex items-center rounded-full border border-[#007AFF]/40 bg-[#FFFDF9] px-2.5 py-1 text-[10px] md:text-xs font-medium text-[#5E8FCE] shadow-[0_2px_8px_rgba(0,122,255,0.18)] whitespace-nowrap">
+              {t("heroBadge")}
             </span>
           </div>
 
           <p className="text-xl md:text-2xl text-[#2B2B2B] mb-4 max-w-4xl mx-auto whitespace-nowrap">
-            Describe your goal and your digital employees plan &amp; execute
+            {t("heroTagline")}
           </p>
 
           <GoalInput
@@ -186,54 +208,16 @@ export function LandingPage() {
         <section id="features" className="max-w-6xl mx-auto px-6 mt-24 mb-20 scroll-mt-24">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-[#2B2B2B] mb-3">
-              Everything you need to actually finish what you start
+              {t("featuresTitle")}
             </h2>
             <p className="text-base text-[#6F6A64] max-w-2xl mx-auto">
-              YoBoss turns one big goal into a phased roadmap, a weekly schedule, and a small
-              team of digital employees that ship real work alongside you.
+              {t("featuresSubtitle")}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                icon: Flag,
-                title: "Turn any ambition into a clear plan",
-                body: "Tell your team where you want to land. They come back with a phased roadmap and milestones you can edit, reorder, or rip up. The blank-page problem, solved.",
-                color: "#7FAEE6",
-              },
-              {
-                icon: Calendar,
-                title: "Your week, planned every Monday",
-                body: "Every Monday your team drafts the week — concrete tasks slotted into real time blocks. Miss a day? They re-plan around it, no guilt trip.",
-                color: "#7FB38A",
-              },
-              {
-                icon: Users,
-                title: "A team of specialists",
-                body: "Hire General Assistant, Content Writer, Market Researcher, and more. Each one ships output you can download.",
-                color: "#C9A968",
-              },
-              {
-                icon: FileText,
-                title: "Real files, not just chat",
-                body: "Ask for a pitch deck, an interview script, or a spreadsheet — your team writes the code, runs it, and hands you the file.",
-                color: "#D5847A",
-              },
-              {
-                icon: MessageCircle,
-                title: "A team that remembers everything",
-                body: "Every conversation about your goal lives in one shared space. Your team always knows your roadmap, this week's plan, and what you shipped yesterday — so you never re-explain.",
-                color: "#9B6B5C",
-              },
-              {
-                icon: Wallet,
-                title: "Pay only for what you use",
-                body: "Free tier covers casual use. Upgrade or top up with credits — no surprise bills, full visibility on usage.",
-                color: "#7FB3B3",
-              },
-            ].map(({ icon: Icon, title, body, color }) => (
+            {features.map(({ icon: Icon, titleKey, bodyKey, color }) => (
               <div
-                key={title}
+                key={titleKey}
                 className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-6 text-left hover:border-[#DDD3C7] hover:shadow-[0_8px_24px_rgba(30,34,39,0.06)] transition-all"
               >
                 <div
@@ -242,8 +226,8 @@ export function LandingPage() {
                 >
                   <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-semibold text-[#2B2B2B] mb-1.5">{title}</h3>
-                <p className="text-sm text-[#6F6A64] leading-relaxed">{body}</p>
+                <h3 className="text-base font-semibold text-[#2B2B2B] mb-1.5">{t(titleKey)}</h3>
+                <p className="text-sm text-[#6F6A64] leading-relaxed">{t(bodyKey)}</p>
               </div>
             ))}
           </div>
@@ -254,12 +238,12 @@ export function LandingPage() {
           <div className="flex items-center justify-between px-8 py-2 w-full max-w-7xl mx-auto">
             <span className="text-xs font-semibold text-[#2B2B2B]">YoBoss</span>
             <div className="flex items-center gap-6">
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#features">Features</a>
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/pricing">Pricing</a>
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/privacy">Privacy</a>
-              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/terms">Terms</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="#features">{t("navFeatures")}</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/pricing">{t("navPricing")}</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/privacy">{t("footerPrivacy")}</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/terms">{t("footerTerms")}</a>
             </div>
-            <span className="text-xs text-[#9B948B]">&copy; 2026 YoBoss</span>
+            <span className="text-xs text-[#9B948B]">{t("footerCopyright")}</span>
           </div>
         </footer>
       </main>
@@ -280,7 +264,7 @@ export function LandingPage() {
           <AlertCircle className="h-5 w-5 text-[#D5847A] mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-[#2B2B2B] mb-0.5">
-              Sign-in didn&apos;t go through
+              {t("authErrorTitle")}
             </p>
             <p className="text-sm text-[#6F6A64]">{authError}</p>
           </div>
@@ -303,10 +287,10 @@ export function LandingPage() {
           <Check className="h-5 w-5 text-[#7FB38A] mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-[#2B2B2B] mb-0.5">
-              Check your email
+              {t("signupToastTitle")}
             </p>
             <p className="text-sm text-[#6F6A64] break-all">
-              We sent a confirmation link to {signupToastEmail}.
+              {t("signupToastBody", { email: signupToastEmail })}
             </p>
           </div>
           <button

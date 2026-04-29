@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import type { ChatSession } from "@/lib/types/database";
 import {
   listOpenGoalDrafts,
@@ -29,10 +30,27 @@ interface GoalDraftListProps {
  *  loading the messages on click, not in the list fetch, since the list
  *  query only reads chat_sessions). */
 export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) {
+  const t = useTranslations("goals.wizard");
+  const locale = useLocale();
   const [drafts, setDrafts] = useState<ChatSession[] | null>(null);
   const [resumingId, setResumingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const formatRelative = (iso: string): string => {
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    const diffSec = Math.round((now - then) / 1000);
+    if (diffSec < 60) return t("draftJustNow");
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) return t("draftMinutes", { count: diffMin });
+    const diffHr = Math.round(diffMin / 60);
+    if (diffHr < 24) return t("draftHours", { count: diffHr });
+    const diffDay = Math.round(diffHr / 24);
+    if (diffDay === 1) return t("draftYesterday");
+    if (diffDay < 7) return t("draftDays", { count: diffDay });
+    return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric" });
+  };
 
   const fetchDrafts = useCallback(async () => {
     try {
@@ -54,7 +72,7 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
     try {
       const loaded = await loadDraftSession(sessionId);
       if (!loaded) {
-        setError("Draft not found");
+        setError(t("draftNotFound"));
         await fetchDrafts();
         return;
       }
@@ -66,7 +84,7 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
       });
     } catch (err) {
       console.error("[GoalDraftList] resume failed:", err);
-      setError(err instanceof Error ? err.message : "Failed to load draft");
+      setError(err instanceof Error ? err.message : t("draftLoadFailed"));
     } finally {
       setResumingId(null);
     }
@@ -82,7 +100,7 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
       await fetchDrafts();
     } catch (err) {
       console.error("[GoalDraftList] delete failed:", err);
-      setError(err instanceof Error ? err.message : "Failed to delete draft");
+      setError(err instanceof Error ? err.message : t("draftDeleteFailed"));
     } finally {
       setDeletingId(null);
     }
@@ -96,16 +114,16 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
     <div className="max-w-2xl mx-auto mb-6 text-left">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-xs font-semibold text-[#6F6A64] uppercase tracking-wide">
-          Continue a draft
+          {t("draftListTitle")}
         </h2>
         <span className="text-xs text-[#9B948B]">
-          {drafts.length} in progress
+          {t("draftListInProgress", { count: drafts.length })}
         </span>
       </div>
       <div className="space-y-2">
         {drafts.map((draft) => {
-          const title = draft.title || "Untitled draft";
-          const updated = formatRelativeTime(draft.updated_at);
+          const title = draft.title || t("draftUntitled");
+          const updated = formatRelative(draft.updated_at);
           const isResuming = resumingId === draft.id;
           const isDeleting = deletingId === draft.id;
           // If the session was created long enough ago that it probably
@@ -127,7 +145,7 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
                   {looksAbandoned && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#C9843D] bg-[#C9843D]/10 px-1.5 py-0.5 rounded">
                       <AlertTriangle className="h-2.5 w-2.5" />
-                      interrupted
+                      {t("draftInterrupted")}
                     </span>
                   )}
                 </div>
@@ -136,15 +154,15 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
               <button
                 onClick={() => handleResume(draft.id)}
                 disabled={isResuming || isDeleting}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#007AFF] text-white hover:bg-[#0066D6] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {isResuming ? "Loading..." : "Continue"}
+                {isResuming ? t("draftLoading") : t("draftContinue")}
               </button>
               <button
                 onClick={() => handleDelete(draft.id)}
                 disabled={isResuming || isDeleting}
                 className="p-1.5 text-[#9B948B] hover:text-[#D5847A] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Delete draft"
+                aria-label={t("draftDeleteAria")}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -159,23 +177,3 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
   );
 }
 
-/** "5m ago", "2h ago", "yesterday", "Apr 10" — keeps the list scannable
- *  without pulling in a date-fns dependency just for relative strings. */
-function formatRelativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const now = Date.now();
-  const diffMs = now - then;
-  const diffSec = Math.round(diffMs / 1000);
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.round(diffHr / 24);
-  if (diffDay === 1) return "yesterday";
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}

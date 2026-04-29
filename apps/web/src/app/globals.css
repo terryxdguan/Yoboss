@@ -56,19 +56,19 @@
   --card-foreground: #2B2B2B;
   --popover: #FFFDF9;
   --popover-foreground: #2B2B2B;
-  --primary: #7FAEE6;
+  --primary: #007AFF;
   --primary-foreground: #FFFDF9;
   --secondary: #F1ECE4;
   --secondary-foreground: #2B2B2B;
   --muted: #F1ECE4;
   --muted-foreground: #6F6A64;
-  --accent: #7FAEE6;
+  --accent: #007AFF;
   --accent-foreground: #FFFDF9;
   --destructive: #D5847A;
   --border: #DDD3C7;
   --input: #E7DED2;
-  --ring: #7FAEE6;
-  --chart-1: #7FAEE6;
+  --ring: #007AFF;
+  --chart-1: #007AFF;
   --chart-2: #8DCB96;
   --chart-3: #DDBE73;
   --chart-4: #E9A7A0;
@@ -76,12 +76,12 @@
   --radius: 0.5rem;
   --sidebar: #F1ECE4;
   --sidebar-foreground: #2B2B2B;
-  --sidebar-primary: #7FAEE6;
+  --sidebar-primary: #007AFF;
   --sidebar-primary-foreground: #FFFDF9;
-  --sidebar-accent: #EAF3FD;
+  --sidebar-accent: #E6F2FF;
   --sidebar-accent-foreground: #2B2B2B;
   --sidebar-border: #E7DED2;
-  --sidebar-ring: #7FAEE6;
+  --sidebar-ring: #007AFF;
 
   /* YoBoss custom tokens */
   --bg-page: #F6F3EE;
@@ -96,9 +96,9 @@
   --border-light: #E7DED2;
   --border-default: #DDD3C7;
   --border-strong: #CFC3B5;
-  --accent-blue: #7FAEE6;
-  --accent-blue-hover: #6A9DDA;
-  --accent-soft: #EAF3FD;
+  --accent-blue: #007AFF;
+  --accent-blue-hover: #0066D6;
+  --accent-soft: #E6F2FF;
   --success: #7FB38A;
   --success-soft: #EAF5EC;
   --warning: #D4B06A;
@@ -232,7 +232,7 @@
   padding: 0;
 }
 .prose-chat blockquote {
-  border-left: 3px solid #7FAEE6;
+  border-left: 3px solid #007AFF;
   padding-left: 0.75em;
   margin: 0.5em 0;
   color: #6F6A64;
@@ -261,6 +261,6 @@
   font-weight: 600;
 }
 .prose-chat a {
-  color: #7FAEE6;
+  color: #007AFF;
   text-decoration: underline;
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Users, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { DEFAULT_AGENTS, ALL_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import type { AgentConfig } from "@/lib/types/agent";
 
@@ -20,6 +21,7 @@ function loadHiredIds(): string[] {
 
 export function DashboardTeam() {
   const router = useRouter();
+  const t = useTranslations("dashboard.team");
   const [hiredIds, setHiredIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -44,22 +46,22 @@ export function DashboardTeam() {
     <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-6 shadow-[0_4px_16px_rgba(30,34,39,0.04)]">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-xl font-semibold text-[#2B2B2B]">Team</h2>
-          <p className="text-sm text-[#9B948B]">Your team — quick access to chat.</p>
+          <h2 className="text-xl font-semibold text-[#2B2B2B]">{t("title")}</h2>
+          <p className="text-sm text-[#9B948B]">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push("/team/market")}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7FAEE6] text-white text-xs font-semibold hover:bg-[#6A9DDA] active:scale-95 transition-all shadow-[0_2px_8px_rgba(127,174,230,0.25)]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#007AFF] text-white text-xs font-semibold hover:bg-[#0066D6] active:scale-95 transition-all shadow-[0_2px_8px_rgba(0,122,255,0.25)]"
           >
             <Plus className="h-3.5 w-3.5" />
-            Hire new
+            {t("hireNew")}
           </button>
           <button
             onClick={() => router.push("/team")}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFDF9] text-[#7FAEE6] border border-[#7FAEE6]/40 text-xs font-semibold hover:bg-[#EAF3FD] active:scale-95 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFDF9] text-[#007AFF] border border-[#007AFF]/40 text-xs font-semibold hover:bg-[#E6F2FF] active:scale-95 transition-all"
           >
-            View All
+            {t("viewAll")}
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -72,13 +74,13 @@ export function DashboardTeam() {
           <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F1ECE4] flex items-center justify-center">
             <Users className="h-5 w-5 text-[#9B948B]" />
           </div>
-          <p className="text-sm text-[#6F6A64]">No team members yet</p>
+          <p className="text-sm text-[#6F6A64]">{t("empty")}</p>
           <button
             onClick={() => router.push("/team/market")}
-            className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-semibold hover:bg-[#6A9DDA] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(127,174,230,0.35)]"
+            className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,122,255,0.35)]"
           >
             <Plus className="h-4 w-4" />
-            Hire your first team member
+            {t("hireFirst")}
           </button>
         </div>
       ) : (

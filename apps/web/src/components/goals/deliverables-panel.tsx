@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import type { GoalDeliverable } from "@/lib/types/database";
 import { getGoalDeliverables } from "@/lib/db/actions";
 
@@ -33,40 +34,33 @@ function expiresAtMs(d: GoalDeliverable): number {
   return new Date(d.created_at).getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000;
 }
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Days remaining until expiry, "1 day left" / "29 days left" / "<1 day left".
- *  Caller should check `expMs <= now` separately to render the "Expired"
- *  badge — this function never returns that string. */
-function fmtCountdown(expMs: number, now: number): string {
-  const diff = expMs - now;
-  if (diff < DAY_MS) return "<1 day left";
-  // Ceil so a freshly-generated file (≈30 d minus a few ms) reads "30 days
-  // left", not "29".
-  const days = Math.ceil(diff / DAY_MS);
-  return `${days} ${days === 1 ? "day" : "days"} left`;
-}
 
 function fileTypeIcon(fileType: string | null) {
   if (!fileType) return <File className="h-4 w-4 text-[#9B948B]" />;
-  if (fileType.startsWith("image/")) return <ImageIcon className="h-4 w-4 text-[#7FAEE6]" />;
+  if (fileType.startsWith("image/")) return <ImageIcon className="h-4 w-4 text-[#007AFF]" />;
   if (fileType.includes("pdf") || fileType.includes("document")) return <FileText className="h-4 w-4 text-[#D5847A]" />;
   return <File className="h-4 w-4 text-[#9B948B]" />;
 }
 
 export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
+  const t = useTranslations("goals.deliverables");
+  const locale = useLocale();
   const [deliverables, setDeliverables] = useState<GoalDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("created");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  const fmtCountdown = (expMs: number, now: number): string => {
+    const diff = expMs - now;
+    if (diff < DAY_MS) return t("lessThanDay");
+    const days = Math.ceil(diff / DAY_MS);
+    return t("daysLeft", { count: days });
+  };
 
   useEffect(() => {
     getGoalDeliverables(goalId).then((data) => {
@@ -115,8 +109,8 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2] shrink-0">
         <div className="flex items-center gap-2">
-          <Paperclip className="h-4 w-4 text-[#7FAEE6]" />
-          <span className="text-sm font-medium text-[#2B2B2B]">Deliverables</span>
+          <Paperclip className="h-4 w-4 text-[#007AFF]" />
+          <span className="text-sm font-medium text-[#2B2B2B]">{t("title")}</span>
         </div>
         <button
           onClick={onClose}
@@ -129,22 +123,22 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
       {/* Table */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <p className="text-sm text-[#9B948B] text-center py-8">Loading…</p>
+          <p className="text-sm text-[#9B948B] text-center py-8">{t("loading")}</p>
         ) : sorted.length === 0 ? (
           <div className="text-center py-12 px-4">
             <Paperclip className="h-8 w-8 text-[#E7DED2] mx-auto mb-2" />
-            <p className="text-sm text-[#9B948B]">No deliverables yet</p>
+            <p className="text-sm text-[#9B948B]">{t("empty")}</p>
             <p className="text-xs text-[#9B948B] mt-1">
-              Files generated in your chat with the team will appear here.
+              {t("emptyHint")}
             </p>
           </div>
         ) : (
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-[1] bg-[#FFFDF9]">
               <tr>
-                <SortHeader label="Created" active={sortKey === "created"} dir={sortDir} onClick={() => toggleSort("created")} className="w-[110px]" />
-                <SortHeader label="File" active={sortKey === "filename"} dir={sortDir} onClick={() => toggleSort("filename")} />
-                <SortHeader label="Expires" active={sortKey === "expires"} dir={sortDir} onClick={() => toggleSort("expires")} className="w-[120px]" />
+                <SortHeader label={t("colCreated")} active={sortKey === "created"} dir={sortDir} onClick={() => toggleSort("created")} className="w-[110px]" />
+                <SortHeader label={t("colFile")} active={sortKey === "filename"} dir={sortDir} onClick={() => toggleSort("filename")} />
+                <SortHeader label={t("colExpires")} active={sortKey === "expires"} dir={sortDir} onClick={() => toggleSort("expires")} className="w-[120px]" />
               </tr>
             </thead>
             <tbody>
@@ -165,8 +159,8 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
                           <a
                             href={d.url}
                             download={d.title}
-                            title="Download"
-                            className="shrink-0 p-1 rounded text-[#7FAEE6] hover:bg-[#EAF3FD] transition-colors"
+                            title={t("downloadTitle")}
+                            className="shrink-0 p-1 rounded text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
                           >
                             <Download className="h-3.5 w-3.5" />
                           </a>
@@ -176,7 +170,7 @@ export function DeliverablesPanel({ goalId, onClose }: DeliverablesPanelProps) {
                     <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F1ECE4]">
                       {expired ? (
                         <span className="inline-block px-1.5 py-0.5 rounded text-[#D5847A] bg-[#D5847A]/10 font-medium">
-                          Expired
+                          {t("expired")}
                         </span>
                       ) : (
                         <span className="text-[#6F6A64]">{fmtCountdown(exp, now)}</span>

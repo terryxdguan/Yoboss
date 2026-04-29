@@ -123,7 +123,7 @@ export default function TodosLayoutPreviewPage() {
                 key={index}
                 className={`flex h-11 w-11 items-center justify-center rounded-lg border ${
                   active
-                    ? "border-[#B8D4F4] bg-[#FFFDF9] text-[#2B2B2B] shadow-[0_0_0_3px_rgba(127,174,230,0.18)]"
+                    ? "border-[#B8D4F4] bg-[#FFFDF9] text-[#2B2B2B] shadow-[0_0_0_3px_rgba(0,122,255,0.18)]"
                     : "border-transparent text-[#6F6A64]"
                 }`}
               >
@@ -136,7 +136,7 @@ export default function TodosLayoutPreviewPage() {
         <section className="min-w-0 flex-1">
           <header className="flex flex-col gap-3 border-b border-[#E7DED2] bg-[#FFFDF9]/70 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-8">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7FAEE6]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#007AFF]">
                 Personal To-Dos
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">
@@ -208,7 +208,7 @@ export default function TodosLayoutPreviewPage() {
                 </div>
 
                 <button className="flex items-center gap-2 rounded-lg border border-[#DDD3C7] bg-[#FFFDF9] px-3 py-2 text-left">
-                  <CalendarDays className="h-4 w-4 text-[#7FAEE6]" />
+                  <CalendarDays className="h-4 w-4 text-[#007AFF]" />
                   <span>
                     <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
                       Deadline
@@ -217,7 +217,7 @@ export default function TodosLayoutPreviewPage() {
                   </span>
                 </button>
 
-                <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7FAEE6] px-5 py-2.5 text-sm font-semibold text-white">
+                <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-5 py-2.5 text-sm font-semibold text-white">
                   <Plus className="h-4 w-4" />
                   Add task
                 </button>
@@ -228,7 +228,7 @@ export default function TodosLayoutPreviewPage() {
               <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-base font-semibold">ToDos Board</h2>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7FAEE6] px-3 py-2 text-sm font-semibold text-white">
+                  <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-3 py-2 text-sm font-semibold text-white">
                     <Plus className="h-4 w-4" />
                     Add category
                   </button>
@@ -284,7 +284,7 @@ export default function TodosLayoutPreviewPage() {
                             </div>
                           </div>
                           <div className="mt-3 flex items-center justify-between">
-                            <span className="rounded-full bg-[#EAF3FD] px-2 py-0.5 text-[11px] font-semibold text-[#5E8FCE]">
+                            <span className="rounded-full bg-[#E6F2FF] px-2 py-0.5 text-[11px] font-semibold text-[#5E8FCE]">
                               {task.badge}
                             </span>
                             <CheckCircle2 className="h-4 w-4 text-[#CFC3B5]" />

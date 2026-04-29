@@ -7,7 +7,7 @@ const C = {
   card: "#FFFDF9",
   fg: "#2B2B2B",
   muted: "#6F6A64",
-  primary: "#7FAEE6",
+  primary: "#007AFF",
   primaryFg: "#FFFDF9",
   border: "#DDD3C7",
 };

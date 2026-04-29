@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface ChatFabProps {
@@ -9,6 +10,7 @@ interface ChatFabProps {
 }
 
 export function ChatFab({ onClick, pulse = false }: ChatFabProps) {
+  const t = useTranslations("coachChat");
   return (
     <button
       onClick={onClick}
@@ -16,13 +18,13 @@ export function ChatFab({ onClick, pulse = false }: ChatFabProps) {
         "fixed bottom-6 right-6 z-50",
         "flex items-center justify-center",
         "h-12 w-12 rounded-full",
-        "bg-[#7FAEE6] text-white",
+        "bg-[#007AFF] text-white",
         "shadow-[0_2px_8px_rgba(0,0,0,0.10)]",
-        "hover:bg-[#6A9DDA] transition-colors",
+        "hover:bg-[#0066D6] transition-colors",
         "cursor-pointer",
         pulse && "animate-pulse-gentle"
       )}
-      aria-label="Open coach chat"
+      aria-label={t("openAria")}
     >
       <MessageCircle className="h-5 w-5" />
     </button>

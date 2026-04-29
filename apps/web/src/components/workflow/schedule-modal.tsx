@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { X, CalendarClock, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { updateWorkflow } from "@/lib/db/actions";
 import {
   buildCronExpression,
@@ -60,6 +61,7 @@ export function ScheduleModal({
   onClose,
   onSave,
 }: ScheduleModalProps) {
+  const t = useTranslations("workflows.scheduleModal");
   const initial = workflow.schedule_enabled
     ? parseCron(workflow.schedule_cron)
     : { frequency: "daily" as const, hour: 8, minute: 0, days: [] };
@@ -141,8 +143,8 @@ export function ScheduleModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-3">
           <div className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-[#7FAEE6]" />
-            <h2 className="text-lg font-semibold text-[#2B2B2B]">Schedule</h2>
+            <CalendarClock className="h-5 w-5 text-[#007AFF]" />
+            <h2 className="text-lg font-semibold text-[#2B2B2B]">{t("title")}</h2>
           </div>
           <button
             onClick={onClose}
@@ -162,7 +164,7 @@ export function ScheduleModal({
             <button
               onClick={() => setEnabled(!enabled)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                enabled ? "bg-[#7FAEE6]" : "bg-[#DDD3C7]"
+                enabled ? "bg-[#007AFF]" : "bg-[#DDD3C7]"
               }`}
             >
               <span
@@ -191,7 +193,7 @@ export function ScheduleModal({
                     onClick={() => setFrequency(f)}
                     className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
                       frequency === f
-                        ? "bg-[#7FAEE6] text-white border-[#7FAEE6]"
+                        ? "bg-[#007AFF] text-white border-[#007AFF]"
                         : "bg-[#FFFDF9] text-[#6F6A64] border-[#E7DED2] hover:bg-[#F1ECE4]"
                     }`}
                   >
@@ -211,7 +213,7 @@ export function ScheduleModal({
                 <select
                   value={hour}
                   onChange={(e) => setHour(parseInt(e.target.value))}
-                  className="flex-1 px-3 py-2 rounded-xl text-sm bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B] outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6] appearance-none cursor-pointer"
+                  className="flex-1 px-3 py-2 rounded-xl text-sm bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B] outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF] appearance-none cursor-pointer"
                 >
                   {HOURS.map((h) => (
                     <option key={h} value={h}>
@@ -225,7 +227,7 @@ export function ScheduleModal({
                 <select
                   value={minute}
                   onChange={(e) => setMinute(parseInt(e.target.value))}
-                  className="flex-1 px-3 py-2 rounded-xl text-sm bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B] outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6] appearance-none cursor-pointer"
+                  className="flex-1 px-3 py-2 rounded-xl text-sm bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B] outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF] appearance-none cursor-pointer"
                 >
                   {MINUTES.map((m) => (
                     <option key={m} value={m}>
@@ -249,7 +251,7 @@ export function ScheduleModal({
                       onClick={() => toggleDay(value)}
                       className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors border ${
                         days.includes(value)
-                          ? "bg-[#7FAEE6] text-white border-[#7FAEE6]"
+                          ? "bg-[#007AFF] text-white border-[#007AFF]"
                           : "bg-[#FFFDF9] text-[#6F6A64] border-[#E7DED2] hover:bg-[#F1ECE4]"
                       }`}
                     >
@@ -267,14 +269,14 @@ export function ScheduleModal({
 
             {/* Timezone */}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[#6F6A64]">Timezone</span>
+              <span className="text-[#6F6A64]">{t("timezone")}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[#2B2B2B] font-medium">
                   {userTimezone}
                 </span>
                 <a
                   href="/settings"
-                  className="text-[11px] text-[#7FAEE6] hover:underline"
+                  className="text-[11px] text-[#007AFF] hover:underline"
                 >
                   Change in Settings
                 </a>
@@ -284,7 +286,7 @@ export function ScheduleModal({
             {/* Next run preview */}
             {nextRun && (
               <div className="rounded-xl bg-[#F6F3EE] border border-[#E7DED2] px-4 py-3">
-                <p className="text-xs text-[#9B948B] mb-0.5">Next run</p>
+                <p className="text-xs text-[#9B948B] mb-0.5">{t("nextRun")}</p>
                 <p className="text-sm font-medium text-[#2B2B2B]">
                   {formatNextRun(nextRun)}
                 </p>
@@ -303,7 +305,7 @@ export function ScheduleModal({
             <button
               onClick={handleSave}
               disabled={!isValid || saving}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] transition-colors disabled:opacity-40"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-medium hover:bg-[#0066D6] transition-colors disabled:opacity-40"
             >
               {saving ? "Saving..." : "Save"}
             </button>

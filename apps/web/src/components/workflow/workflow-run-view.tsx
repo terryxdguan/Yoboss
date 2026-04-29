@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { X, Square, Send, Download, Globe, Code, Info } from "lucide-react";
 import { LiveTimer } from "@/components/ui/live-timer";
 import Image from "next/image";
@@ -121,6 +122,7 @@ export function WorkflowRunView({
   cachedMode,
   topic,
 }: WorkflowRunViewProps) {
+  const t = useTranslations("workflows.runView");
   const isPollingMode = !!existingRun && existingRun.status === "running";
   const isHistoryMode = !!existingRun && !isPollingMode;
 
@@ -1574,7 +1576,7 @@ export function WorkflowRunView({
         <div className="border-b border-[#D4B06A]/30 bg-[#D4B06A]/10 px-6 py-3 flex items-start gap-2.5">
           <Info className="h-4 w-4 text-[#C99442] mt-0.5 shrink-0" />
           <div className="text-sm text-[#2B2B2B] min-w-0">
-            <p className="font-medium">This is a cached demo run</p>
+            <p className="font-medium">{t("cachedDemo")}</p>
             <p className="text-xs text-[#6F6A64] mt-0.5">
               Your topic matches the default — we&apos;re showing you a previous successful output so you can see what this workflow produces. Edit the topic and run again to see it execute on your own input.
             </p>
@@ -1626,7 +1628,7 @@ export function WorkflowRunView({
             const status = result?.status || "pending";
             let dotColor = "#DDD3C7";
             if (status === "success") dotColor = "#7FB38A";
-            else if (status === "running") dotColor = "#7FAEE6";
+            else if (status === "running") dotColor = "#007AFF";
             else if (status === "failed") dotColor = "#D5847A";
 
             const agent = findAgent(step.agentId);
@@ -1675,7 +1677,7 @@ export function WorkflowRunView({
           if (msg.type === "user") {
             return (
               <div key={msg.id} className="flex justify-end">
-                <div className="max-w-[75%] rounded-xl px-4 py-3 text-sm bg-[#7FAEE6] text-white">
+                <div className="max-w-[75%] rounded-xl px-4 py-3 text-sm bg-[#007AFF] text-white">
                   <span className="whitespace-pre-wrap">{msg.content}</span>
                 </div>
               </div>
@@ -1725,14 +1727,14 @@ export function WorkflowRunView({
                             key={i}
                             className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
                               isLatest
-                                ? "bg-[#7FAEE6]/15 text-[#7FAEE6] shadow-[0_0_12px_rgba(127,174,230,0.2)]"
+                                ? "bg-[#007AFF]/15 text-[#007AFF] shadow-[0_0_12px_rgba(0,122,255,0.2)]"
                                 : "bg-[#F1ECE4] text-[#6F6A64]"
                             }`}
                           >
                             {isLatest && (
                               <span className="relative flex h-2 w-2 shrink-0">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7FAEE6] opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7FAEE6]" />
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
                               </span>
                             )}
                             {tool.type === "web_search" ? (
@@ -1767,11 +1769,11 @@ export function WorkflowRunView({
                   ) : msg.isStreaming ? (
                     <div className="flex items-center gap-3 py-1">
                       <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
-                      <span className="text-sm text-[#7FAEE6] font-medium animate-pulse">
+                      <span className="text-sm text-[#007AFF] font-medium animate-pulse">
                         {msg.toolActivity && msg.toolActivity.length > 0
                           ? msg.toolActivity[msg.toolActivity.length - 1].label
                           : "Working..."}
@@ -1792,7 +1794,7 @@ export function WorkflowRunView({
                             <span
                               key={i}
                               className="flex items-center gap-2 text-xs text-[#9B948B] italic"
-                              title="This file expired and is no longer available"
+                              title={t("fileExpired")}
                             >
                               <Download className="h-3.5 w-3.5 opacity-50" />
                               {f.filename} (expired)
@@ -1808,7 +1810,7 @@ export function WorkflowRunView({
                             download={f.filename}
                             target={isExternal ? "_blank" : undefined}
                             rel={isExternal ? "noopener noreferrer" : undefined}
-                            className="flex items-center gap-2 text-xs text-[#7FAEE6] hover:underline"
+                            className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
                           >
                             <Download className="h-3.5 w-3.5" />
                             {f.filename}
@@ -1825,10 +1827,10 @@ export function WorkflowRunView({
 
         {/* Streaming tool status when no text yet */}
         {isRunning && toolStatus && chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.content === "" && (
-          <div className="ml-11 text-xs text-[#7FAEE6] font-medium flex items-center gap-2">
+          <div className="ml-11 text-xs text-[#007AFF] font-medium flex items-center gap-2">
             <div className="relative w-2 h-2 shrink-0">
-              <span className="absolute inset-0 rounded-full bg-[#7FAEE6] animate-ping opacity-75" />
-              <span className="relative block w-2 h-2 rounded-full bg-[#7FAEE6]" />
+              <span className="absolute inset-0 rounded-full bg-[#007AFF] animate-ping opacity-75" />
+              <span className="relative block w-2 h-2 rounded-full bg-[#007AFF]" />
             </div>
             {toolStatus}
           </div>
@@ -1849,22 +1851,22 @@ export function WorkflowRunView({
                   handleSend();
                 }
               }}
-              placeholder="Ask about the results, request changes..."
+              placeholder={t("askPlaceholder")}
               disabled={isChatStreaming}
               rows={2}
-              className="flex-1 px-4 py-3 text-sm bg-[#F6F3EE] border border-[#DDD3C7] rounded-xl outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-[#7FAEE6]/50 transition-all"
+              className="flex-1 px-4 py-3 text-sm bg-[#F6F3EE] border border-[#DDD3C7] rounded-xl outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF]/50 transition-all"
             />
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || isChatStreaming}
-              className="px-4 py-3 rounded-xl bg-[#7FAEE6] text-white hover:bg-[#6A9DDA] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-3 rounded-xl bg-[#007AFF] text-white hover:bg-[#0066D6] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <div className="flex items-center justify-center gap-2 py-2 text-sm text-[#9B948B]">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#7FAEE6] animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-pulse" />
             Workflow is running... Chat will be available after completion.
           </div>
         )}

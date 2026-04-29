@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -16,8 +17,8 @@ function parseISOish(v: string | null): Date {
   return new Date();
 }
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAY_KEYS = ["su", "mo", "tu", "we", "th", "fr", "sa"] as const;
+const MONTH_KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
 
 /** Long-press repeat: fires callback on mousedown, then accelerates on hold */
 function useLongPress(callback: () => void) {
@@ -58,6 +59,9 @@ interface Props {
 }
 
 export function DateTimePicker({ value, onChange, onClose }: Props) {
+  const tDays = useTranslations("days.tiny");
+  const tMonths = useTranslations("months.short");
+  const tTodos = useTranslations("todos.datepicker");
   const ref = useRef<HTMLDivElement>(null);
   const init = parseISOish(value);
   const [year, setYear] = useState(init.getFullYear());
@@ -138,13 +142,13 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
       <div className="mb-2">
         <div className="flex items-center justify-between mb-2">
           <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1ECE4] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">◀</button>
-          <span className="text-sm font-semibold text-[#2B2B2B]">{MONTHS[month]} {year}</span>
+          <span className="text-sm font-semibold text-[#2B2B2B]">{tMonths(MONTH_KEYS[month])} {year}</span>
           <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1ECE4] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">▶</button>
         </div>
 
         <div className="grid grid-cols-7 gap-px mb-1">
-          {WEEKDAYS.map((d) => (
-            <div key={d} className="text-center text-[10px] text-[#9B948B] font-medium py-0.5">{d}</div>
+          {WEEKDAY_KEYS.map((k) => (
+            <div key={k} className="text-center text-[10px] text-[#9B948B] font-medium py-0.5">{tDays(k)}</div>
           ))}
         </div>
 
@@ -158,7 +162,7 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
                 d === null
                   ? ""
                   : d === day
-                    ? "bg-[#7FAEE6] text-white font-bold"
+                    ? "bg-[#007AFF] text-white font-bold"
                     : "text-[#2B2B2B] hover:bg-[#F1ECE4]"
               }`}
             >
@@ -178,6 +182,7 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
         setAmpm={setAmpm}
         pad={pad}
         onConfirm={confirm}
+        confirmLabel={tTodos("confirm")}
       />
     </div>
   );
@@ -185,12 +190,13 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
 
 /** Separated time controls so hooks can be called unconditionally */
 function TimeControls({
-  hour12, setHour12, minute, setMinute, ampm, setAmpm, pad: padFn, onConfirm,
+  hour12, setHour12, minute, setMinute, ampm, setAmpm, pad: padFn, onConfirm, confirmLabel,
 }: {
   hour12: number; setHour12: React.Dispatch<React.SetStateAction<number>>;
   minute: number; setMinute: React.Dispatch<React.SetStateAction<number>>;
   ampm: "AM" | "PM"; setAmpm: React.Dispatch<React.SetStateAction<"AM" | "PM">>;
   pad: (n: number) => string; onConfirm: () => void;
+  confirmLabel: string;
 }) {
   const hourUp = useLongPress(useCallback(() => setHour12((h) => (h === 12 ? 1 : h + 1)), [setHour12]));
   const hourDown = useLongPress(useCallback(() => setHour12((h) => (h === 1 ? 12 : h - 1)), [setHour12]));
@@ -211,7 +217,7 @@ function TimeControls({
               if (!isNaN(v) && v >= 1 && v <= 12) setHour12(v);
               else if (e.target.value === "" || e.target.value === "0") setHour12(12);
             }}
-            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7FAEE6]"
+            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#007AFF]"
           />
           <button {...hourDown} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▼</button>
         </div>
@@ -228,22 +234,22 @@ function TimeControls({
               if (!isNaN(v) && v >= 0 && v <= 59) setMinute(v);
               else if (e.target.value === "") setMinute(0);
             }}
-            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7FAEE6]"
+            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#007AFF]"
           />
           <button {...minDown} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▼</button>
         </div>
         <button
           onClick={() => setAmpm((p) => (p === "AM" ? "PM" : "AM"))}
-          className="w-10 h-7 rounded bg-[#7FAEE6]/10 hover:bg-[#7FAEE6]/20 text-[#7FAEE6] text-xs font-bold flex items-center justify-center transition-colors"
+          className="w-10 h-7 rounded bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] text-xs font-bold flex items-center justify-center transition-colors"
         >
           {ampm}
         </button>
         <div className="flex-1" />
         <button
           onClick={onConfirm}
-          className="px-3 py-1.5 rounded-lg bg-[#7FAEE6] hover:bg-[#6A9DDA] text-white text-xs font-semibold transition-colors"
+          className="px-3 py-1.5 rounded-lg bg-[#007AFF] hover:bg-[#0066D6] text-white text-xs font-semibold transition-colors"
         >
-          Confirm ✓
+          {confirmLabel}
         </button>
       </div>
   );

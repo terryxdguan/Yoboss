@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { DateTimePicker } from "./date-time-picker";
 import type { TodoItem } from "@/lib/types/database";
 
@@ -10,27 +11,19 @@ const PRIORITY_DOT: Record<string, string> = {
   low: "bg-[#7FB38A]",
 };
 
-/** Format deadline — time-only when todayOnly is true */
-function formatDeadline(d: string, todayOnly?: boolean): string {
+/** Format deadline — locale-aware via Intl. */
+function formatDeadline(d: string, locale: string, todayOnly?: boolean): string {
   const date = new Date(d);
-  const h = date.getHours();
-  const mins = date.getMinutes();
-
   if (todayOnly) {
-    // Time-only for today view
-    if (h === 0 && mins === 0) return "12:00 AM";
-    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    const ap = h >= 12 ? "PM" : "AM";
-    return `${h12}:${String(mins).padStart(2, "0")} ${ap}`;
+    return date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
   }
-
-  const month = date.toLocaleString("en", { month: "short" });
-  const day = date.getDate();
-  const year = date.getFullYear();
-  if (h === 0 && mins === 0) return `${month} ${day}, ${year}`;
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const ap = h >= 12 ? "PM" : "AM";
-  return `${month} ${day}, ${year} ${h12}:${String(mins).padStart(2, "0")}${ap}`;
+  return date.toLocaleString(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function isOverdue(item: { deadline: string | null; completed: boolean }): boolean {
@@ -43,14 +36,14 @@ export type CardVariant = "default" | "schedule" | "todo" | "high";
 
 const VARIANT_BORDER: Record<CardVariant, string> = {
   default: "border-[#E7DED2]",
-  schedule: "border-2 border-[#7FAEE6]/40",   // blue
+  schedule: "border-2 border-[#007AFF]/40",   // blue
   todo: "border-2 border-[#7FB38A]/40",       // green
   high: "border-2 border-[#D5847A]/50",       // red
 };
 
 const VARIANT_TIME_COLOR: Record<CardVariant, string> = {
   default: "text-[#9B948B]",
-  schedule: "text-[#7FAEE6]",   // blue
+  schedule: "text-[#007AFF]",   // blue
   todo: "text-[#7FB38A]",       // green
   high: "text-[#D5847A]",       // red
 };
@@ -83,6 +76,8 @@ export function TodoItemCard({
   item, timeSlot, sourceLabel, variant = "default", timeOnly,
   onToggle, onUpdate, onDelete, onSendToAI, className,
 }: TodoItemCardProps) {
+  const t = useTranslations("todos");
+  const locale = useLocale();
   const overdue = isOverdue({ deadline: item.deadline, completed: item.completed });
   const [editingDeadline, setEditingDeadline] = useState(false);
   const [editingText, setEditingText] = useState(false);
@@ -102,7 +97,7 @@ export function TodoItemCard({
         <button
           onClick={onToggle}
           className={`w-[18px] h-[18px] mt-0.5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
-            item.completed ? "border-[#7FB38A] bg-[#7FB38A]" : "border-[#DDD3C7] hover:border-[#7FAEE6]"
+            item.completed ? "border-[#7FB38A] bg-[#7FB38A]" : "border-[#DDD3C7] hover:border-[#007AFF]"
           }`}
         >
           {item.completed && <span className="text-white text-[10px]">✓</span>}
@@ -117,7 +112,7 @@ export function TodoItemCard({
               if (e.key === "Enter") commitTextEdit();
               if (e.key === "Escape") { setEditText(item.text); setEditingText(false); }
             }}
-            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#7FAEE6] rounded px-1.5 py-0.5 outline-none"
+            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#007AFF] rounded px-1.5 py-0.5 outline-none"
           />
         ) : (
           <span
@@ -130,10 +125,11 @@ export function TodoItemCard({
         {onSendToAI && (
           <button
             onClick={onSendToAI}
-            className="text-[#7FB38A] hover:text-[#3D7A5A] text-[13px] shrink-0 transition-colors"
-            title="Send to Team"
+            className="shrink-0 flex items-center gap-1 text-[#007AFF] hover:text-[#0066D6] text-[13px] font-medium transition-colors"
+            title={t("sendToTeam")}
           >
-            ▶
+            {t("start")}
+            <span aria-hidden>▶</span>
           </button>
         )}
         <button
@@ -153,8 +149,8 @@ export function TodoItemCard({
           </span>
         ) : editingDeadline ? (
           <span className="relative inline-block">
-            <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#7FAEE6] text-[#6F6A64] inline-block">
-              {item.deadline ? formatDeadline(item.deadline) : formatDeadline(new Date().toISOString())}
+            <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#007AFF] text-[#6F6A64] inline-block">
+              {item.deadline ? formatDeadline(item.deadline, locale) : formatDeadline(new Date().toISOString(), locale)}
             </span>
             <DateTimePicker
               value={item.deadline ?? null}
@@ -169,7 +165,7 @@ export function TodoItemCard({
               className={`flex items-center gap-1 hover:opacity-80 whitespace-nowrap ${overdue ? "text-[#D5847A] font-medium" : VARIANT_TIME_COLOR[variant]}`}
             >
               {overdue ? "⏰" : "🕐"}
-              <span>{formatDeadline(item.deadline, timeOnly)}</span>
+              <span>{formatDeadline(item.deadline, locale, timeOnly)}</span>
             </button>
             <button
               onClick={() => onUpdate({ deadline: null })}
@@ -183,7 +179,7 @@ export function TodoItemCard({
             onClick={() => setEditingDeadline(true)}
             className="text-[#DDD3C7] hover:text-[#9B948B] transition-colors"
           >
-            + deadline
+            {t("addDeadline")}
           </button>
         )}
 
@@ -195,9 +191,9 @@ export function TodoItemCard({
           onChange={(e) => onUpdate({ priority: e.target.value as TodoItem["priority"] })}
           className="text-[11px] px-1 py-0.5 rounded bg-transparent border border-transparent hover:border-[#E7DED2] text-[#9B948B] outline-none cursor-pointer"
         >
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
+          <option value="high">{t("priorityHigh")}</option>
+          <option value="medium">{t("priorityMedium")}</option>
+          <option value="low">{t("priorityLow")}</option>
         </select>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Search,
@@ -39,7 +40,7 @@ const CATEGORY_DISPLAY: Record<string, string> = {
 };
 
 // Unified color styles
-const CATEGORY_STYLE = { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", active: "bg-[#7FAEE6]" };
+const CATEGORY_STYLE = { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", active: "bg-[#007AFF]" };
 
 function loadHiredIds(): string[] {
   if (typeof window === "undefined") return [];
@@ -57,6 +58,7 @@ function saveHiredIds(ids: string[]) {
 
 export default function AgentMarketPage() {
   const router = useRouter();
+  const t = useTranslations("team.market");
   const [hiredIds, setHiredIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<"all" | AgentCategory>(
     "all"
@@ -122,12 +124,9 @@ export default function AgentMarketPage() {
           className="flex items-center gap-1.5 text-sm text-[#6F6A64] hover:text-[#2B2B2B] transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Team
+          {t("back")}
         </button>
-        <h1 className="text-2xl font-bold text-[#2B2B2B]">Hire Team Members</h1>
-        <p className="text-sm text-[#6F6A64] mt-1">
-          Hire specialists to join your team
-        </p>
+        <h1 className="text-2xl font-bold text-[#2B2B2B]">{t("title")}</h1>
       </div>
 
       {/* Search */}
@@ -138,8 +137,8 @@ export default function AgentMarketPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search agents..."
-            className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#FFFDF9] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#7FAEE6]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
+            placeholder={t("searchPlaceholder")}
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#FFFDF9] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
           />
         </div>
       </div>
@@ -176,7 +175,7 @@ export default function AgentMarketPage() {
       {/* Agent Grid */}
       {filtered.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-sm text-[#9B948B]">No agents found</p>
+          <p className="text-sm text-[#9B948B]">{t("noResults")}</p>
         </div>
       ) : (
         <>
@@ -208,22 +207,22 @@ export default function AgentMarketPage() {
                   {isHired ? (
                     <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#7FB38A]">
                       <Check className="h-3.5 w-3.5" />
-                      On your team
+                      {t("alreadyHired")}
                     </div>
                   ) : (
                     <button
                       onClick={() => handleHire(agent.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7FAEE6] text-white text-[11px] font-medium hover:bg-[#6A9DDA] active:scale-[0.97] transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#007AFF] text-white text-[11px] font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all"
                     >
                       <UserPlus className="h-3.5 w-3.5" />
-                      Hire
+                      {t("hire")}
                     </button>
                   )}
 
                   {/* Expertise tooltip on hover — above the card */}
                   <div className="absolute left-0 right-0 bottom-full mb-1 z-20 hidden group-hover:block">
                     <div className="bg-white border border-[#E7DED2] rounded-lg px-4 py-3 shadow-[0_8px_24px_rgba(30,34,39,0.12)]">
-                      <p className="text-[11px] font-semibold text-[#2B2B2B] mb-1.5">Expertise</p>
+                      <p className="text-[11px] font-semibold text-[#2B2B2B] mb-1.5">{t("expertise")}</p>
                       <ul className="space-y-1">
                         {agent.expertise.map((skill, i) => (
                           <li key={i} className="text-[11px] text-[#4A4540]">
@@ -256,7 +255,7 @@ export default function AgentMarketPage() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
                       currentPage === page
-                        ? "bg-[#7FAEE6] text-white"
+                        ? "bg-[#007AFF] text-white"
                         : "text-[#6F6A64] hover:bg-[#F1ECE4]"
                     }`}
                   >

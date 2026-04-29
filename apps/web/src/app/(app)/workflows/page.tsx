@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Layers } from "lucide-react";
 import {
   getWorkflows,
@@ -36,6 +37,7 @@ function saveFavorites(ids: string[]) { localStorage.setItem(FAVORITES_KEY, JSON
 
 export default function WorkflowsPage() {
   const router = useRouter();
+  const t = useTranslations("workflows.list");
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -183,12 +185,19 @@ export default function WorkflowsPage() {
 
   const allWorkflows = useMemo(() => {
     const arr = [...workflows];
+    const favSet = new Set(favoriteIds);
+    // Favorites always come first, regardless of sort mode. Within each
+    // group (favorited / not), the selected sort mode applies.
+    const byFavorite = (a: Workflow, b: Workflow) =>
+      Number(favSet.has(b.id)) - Number(favSet.has(a.id));
     if (sortMode === "name") {
-      arr.sort((a, b) => a.name.localeCompare(b.name));
+      arr.sort((a, b) => byFavorite(a, b) || a.name.localeCompare(b.name));
     } else {
       // "recent": last_run_at DESC, never-run workflows sink to bottom,
       // ties broken by name so order stays deterministic.
       arr.sort((a, b) => {
+        const fav = byFavorite(a, b);
+        if (fav !== 0) return fav;
         if (!a.last_run_at && !b.last_run_at) return a.name.localeCompare(b.name);
         if (!a.last_run_at) return 1;
         if (!b.last_run_at) return -1;
@@ -196,9 +205,9 @@ export default function WorkflowsPage() {
       });
     }
     return arr;
-  }, [workflows, sortMode]);
+  }, [workflows, sortMode, favoriteIds]);
 
-  if (!mounted) return <div className="flex items-center justify-center py-24"><div className="text-sm text-[#9B948B]">Loading...</div></div>;
+  if (!mounted) return <div className="flex items-center justify-center py-24"><div className="text-sm text-[#9B948B]">{t("loading")}</div></div>;
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -206,10 +215,10 @@ export default function WorkflowsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#2B2B2B]">Workflows</h1>
-            <p className="text-sm text-[#6F6A64] mt-1">Chain agents together to automate multi-step tasks</p>
+            <h1 className="text-2xl font-bold text-[#2B2B2B]">{t("title")}</h1>
+            <p className="text-sm text-[#6F6A64] mt-1">{t("subtitle")}</p>
           </div>
-          <button onClick={() => router.push("/workflows/edit/new")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7FAEE6] text-white text-sm font-medium hover:bg-[#6A9DDA] transition-colors">
+          <button onClick={() => router.push("/workflows/edit/new")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-medium hover:bg-[#0066D6] transition-colors">
             <Plus className="h-4 w-4" />
             New Workflow
           </button>
@@ -219,22 +228,22 @@ export default function WorkflowsPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-[#7FAEE6]" />
-              <h2 className="text-base font-semibold text-[#2B2B2B]">All Workflows</h2>
+              <Layers className="h-4 w-4 text-[#007AFF]" />
+              <h2 className="text-base font-semibold text-[#2B2B2B]">{t("all")}</h2>
             </div>
             <select
               value={sortMode}
               onChange={(e) => handleSortChange(e.target.value as SortMode)}
-              className="text-xs text-[#6F6A64] bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#7FAEE6] cursor-pointer"
-              aria-label="Sort workflows"
+              className="text-xs text-[#6F6A64] bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#007AFF] cursor-pointer"
+              aria-label={t("sortAria")}
             >
-              <option value="name">Sort: Name (A–Z)</option>
-              <option value="recent">Sort: Most recent run</option>
+              <option value="name">{t("sortName")}</option>
+              <option value="recent">{t("sortRecent")}</option>
             </select>
           </div>
           {!loading && allWorkflows.length === 0 && (
             <div className="text-center py-12 bg-[#FFFDF9] rounded-xl border border-[#E7DED2]">
-              <p className="text-sm text-[#9B948B]">No workflows yet — create one to get started</p>
+              <p className="text-sm text-[#9B948B]">{t("empty")}</p>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">

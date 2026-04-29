@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { GOAL_PLACEHOLDER as PLACEHOLDER } from "./example-goals";
+import { useTranslations } from "next-intl";
 
 interface GoalInputProps {
   value: string;
@@ -10,13 +10,15 @@ interface GoalInputProps {
 }
 
 export function GoalInput({ value, onChange, onSubmit }: GoalInputProps) {
+  const t = useTranslations("landing");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const placeholder = t("goalInputPlaceholder");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Tab key: auto-fill placeholder text
     if (e.key === "Tab" && !value.trim()) {
       e.preventDefault();
-      onChange(PLACEHOLDER);
+      onChange(placeholder);
       return;
     }
 
@@ -29,13 +31,18 @@ export function GoalInput({ value, onChange, onSubmit }: GoalInputProps) {
     }
   };
 
+  // Split the hint at the {key} placeholder so we can render the kbd in
+  // the middle without breaking the translatable string.
+  const hintTemplate = t("goalInputHint", { key: "__KEY__" });
+  const [hintBefore, hintAfter] = hintTemplate.split("__KEY__");
+
   return (
     <div className="relative max-w-4xl mx-auto group mb-16 rounded-2xl p-[1.5px] overflow-hidden">
       {/* Spinning gradient background */}
-      <div className="absolute inset-[-50%] animate-spin-slow bg-[conic-gradient(#7FAEE6,#a78bfa,#f59e0b,#ef4444,#7FAEE6)]" />
+      <div className="absolute inset-[-50%] animate-spin-slow bg-[conic-gradient(#007AFF,#a78bfa,#f59e0b,#ef4444,#007AFF)]" />
 
       {/* Glow layer */}
-      <div className="absolute inset-[-50%] animate-spin-slow bg-[conic-gradient(#7FAEE6,#a78bfa,#f59e0b,#ef4444,#7FAEE6)] blur-lg opacity-50" />
+      <div className="absolute inset-[-50%] animate-spin-slow bg-[conic-gradient(#007AFF,#a78bfa,#f59e0b,#ef4444,#007AFF)] blur-lg opacity-50" />
 
       {/* Card */}
       <div className="relative bg-[#FFFDF9] rounded-xl p-3">
@@ -45,16 +52,18 @@ export function GoalInput({ value, onChange, onSubmit }: GoalInputProps) {
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-lg md:text-xl py-4 px-7 min-h-[90px] resize-none text-[#2B2B2B] placeholder:text-[#9B948B]"
-          placeholder={PLACEHOLDER}
+          placeholder={placeholder}
         />
         <div className="flex justify-between items-center px-4 pb-2 gap-3">
           <span className="text-xs text-[#9B948B] leading-snug text-left">
-            Press <kbd className="px-1.5 py-0.5 rounded border border-[#E7DED2] bg-[#F1ECE4] text-[10px] font-medium text-[#6F6A64]">Tab</kbd> to autofill the example text
+            {hintBefore}
+            <kbd className="px-1.5 py-0.5 rounded border border-[#E7DED2] bg-[#F1ECE4] text-[10px] font-medium text-[#6F6A64]">Tab</kbd>
+            {hintAfter}
           </span>
           <button
             onClick={() => value.trim() && onSubmit(value.trim())}
-            className="bg-[#7FAEE6] text-white h-12 w-12 flex items-center justify-center rounded-lg hover:bg-[#6A9DDA] transition-all active:scale-95 shadow-sm shrink-0"
-            aria-label="Submit goal"
+            className="bg-[#007AFF] text-white h-12 w-12 flex items-center justify-center rounded-lg hover:bg-[#0066D6] transition-all active:scale-95 shadow-sm shrink-0"
+            aria-label={t("goalInputSubmitLabel")}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
