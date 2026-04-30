@@ -655,6 +655,76 @@ export async function getGoalDeliverables(
   return all;
 }
 
+// Files generated inside a single chat session (agent-scoped, not tied
+// to any goal). Mirrors the AI-generated portion of getGoalDeliverables
+// but reads only one session's messages — no manual goal_deliverables
+// rows apply here.
+export async function getSessionDeliverables(
+  sessionId: string,
+): Promise<GoalDeliverable[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? "";
+
+  const { data: msgs } = await supabase
+    .from("chat_messages")
+    .select("metadata, created_at")
+    .eq("session_id", sessionId)
+    .not("metadata", "is", null);
+
+  type FileEntry = { fileId: string; filename: string; createdAt: string };
+  const byFileId = new Map<string, FileEntry>();
+  for (const m of msgs || []) {
+    const meta = m.metadata as { generatedFiles?: { fileId?: string; filename?: string }[] } | null;
+    const files = meta?.generatedFiles;
+    if (!Array.isArray(files)) continue;
+    for (const f of files) {
+      if (!f?.fileId) continue;
+      const existing = byFileId.get(f.fileId);
+      const ts = m.created_at;
+      if (!existing || new Date(ts).getTime() < new Date(existing.createdAt).getTime()) {
+        byFileId.set(f.fileId, {
+          fileId: f.fileId,
+          filename: f.filename || "download",
+          createdAt: ts,
+        });
+      }
+    }
+  }
+
+  const arr = Array.from(byFileId.values());
+  const unresolved = arr.filter((f) => !f.filename || f.filename === "download");
+  if (unresolved.length > 0) {
+    const { getAnthropicClient } = await import("@/lib/ai/client");
+    const client = getAnthropicClient();
+    await Promise.all(
+      unresolved.map(async (f) => {
+        try {
+          const meta = await client.beta.files.retrieveMetadata(f.fileId);
+          if (meta.filename) f.filename = meta.filename;
+        } catch {
+          /* keep "download" fallback */
+        }
+      }),
+    );
+  }
+
+  return arr
+    .map((f) => ({
+      id: `chat:${f.fileId}`,
+      goal_id: "",
+      user_id: userId,
+      title: f.filename,
+      url: `/api/ai/files/${f.fileId}`,
+      file_type: inferFileType(f.filename),
+      source: "ai_generated" as const,
+      created_at: f.createdAt,
+    }))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
 // ============================================================
 // Chat Sessions & Messages
 // ============================================================

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { X, Send, Paperclip, FileText, Globe, Code, Download } from "lucide-react";
+import { X, Send, Paperclip, FileText, Globe, Code, Download, Maximize2, Minimize2 } from "lucide-react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -104,6 +104,8 @@ function useResize(initialWidth: number, minWidth: number, maxWidth: number) {
 
 export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panelTitle }: GoalChatPanelProps) {
   const t = useTranslations("goals.chatPanel");
+  const tCommon = useTranslations("common");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
@@ -611,14 +613,19 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
 
   return (
     <div
-      className="fixed right-0 top-16 bottom-0 z-[45] border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]"
-      style={{ width: panelWidth }}
+      className={`fixed top-16 bottom-0 z-[45] border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)] ${
+        isFullscreen ? "left-20 right-0" : "right-0"
+      }`}
+      style={isFullscreen ? undefined : { width: panelWidth }}
     >
-      {/* Resize handle */}
-      <div
-        onMouseDown={onResizeMouseDown}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
-      />
+      {/* Resize handle — hidden in fullscreen, since the panel spans the
+          full content area and there's nothing to drag against. */}
+      {!isFullscreen && (
+        <div
+          onMouseDown={onResizeMouseDown}
+          className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
@@ -633,12 +640,22 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
             )}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsFullscreen((v) => !v)}
+            aria-label={isFullscreen ? tCommon("exitFullscreen") : tCommon("enterFullscreen")}
+            title={isFullscreen ? tCommon("exitFullscreen") : tCommon("enterFullscreen")}
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
