@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
-import { chatWithCoach } from "@/lib/ai/decompose";
 import { chatWithGoalCoach } from "@/lib/ai/goal-chat-prompt";
 import { generateWeeklyPlan } from "@/lib/ai/weekly-plan";
 import { chatWithWeeklyPlanCoach, type WeeklyPlanChatContext } from "@/lib/ai/weekly-plan-chat";
 import { streamGoalDetailChat, type GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import { generateWeeklyReview } from "@/lib/ai/review";
 import { buildUserContext } from "@/lib/ai/user-context";
-import type { ConversationMessage } from "@/lib/ai/decompose";
 import type Anthropic from "@anthropic-ai/sdk";
 
 // Extend beyond the Hobby 60s default. Streaming actions like goal-chat,
@@ -54,15 +52,6 @@ export async function POST(request: NextRequest) {
   const { action } = body;
 
   try {
-    if (action === "chat") {
-      const { messages } = body as { messages: ConversationMessage[] };
-      const stream = await chatWithCoach(messages);
-      return new Response(
-        streamWithUsageLog(stream, user.id, "chat", "claude-opus-4-6"),
-        { headers: SSE_HEADERS }
-      );
-    }
-
     if (action === "weekly") {
       const { context } = body;
       const plan = await generateWeeklyPlan(context);

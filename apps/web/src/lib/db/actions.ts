@@ -6,7 +6,6 @@ import type {
   Phase,
   WeeklyPlan,
   DailyTask,
-  CoachingMessage,
   Streak,
   GoalNote,
   GoalDeliverable,
@@ -417,55 +416,6 @@ export async function getTodayTasks(userId: string, weekStart: string) {
     .order("sort_order");
 
   if (error) throw error;
-  return data;
-}
-
-// ============================================================
-// Coaching Messages
-// ============================================================
-
-export async function saveCoachingMessage(data: {
-  goal_id: string;
-  content: string;
-  trigger: string;
-  tokens_used?: number;
-}): Promise<CoachingMessage> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const { data: message, error } = await supabase
-    .from("coaching_messages")
-    .insert({ ...data, user_id: user.id })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return message;
-}
-
-export async function getTodayCoachingMessage(
-  userId: string,
-  goalId: string
-) {
-  const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
-
-  const { data, error } = await supabase
-    .from("coaching_messages")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("goal_id", goalId)
-    .eq("trigger", "daily_open")
-    .gte("created_at", `${today}T00:00:00`)
-    .lte("created_at", `${today}T23:59:59`)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error && error.code !== "PGRST116") throw error;
   return data;
 }
 

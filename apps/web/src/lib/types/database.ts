@@ -2,13 +2,6 @@ export type GoalStatus = "active" | "completed" | "archived";
 export type PhaseStatus = "upcoming" | "active" | "completed";
 export type ExecutionType = "user_action" | "ai_executable" | "ai_assisted";
 export type ExecutionStatus = "pending" | "running" | "completed" | "failed";
-export type CoachingTrigger =
-  | "daily_open"
-  | "week_start"
-  | "week_end"
-  | "task_complete"
-  | "manual";
-export type CoachingRole = "coach" | "researcher" | "creator" | "challenger";
 
 export interface User {
   id: string;
@@ -71,17 +64,6 @@ export interface PhaseTask {
   completed: boolean;
   completed_at: string | null;
   sort_order: number;
-  created_at: string;
-}
-
-export interface CoachingMessage {
-  id: string;
-  user_id: string;
-  goal_id: string;
-  role: string;
-  content: string;
-  trigger: CoachingTrigger;
-  tokens_used: number | null;
   created_at: string;
 }
 
