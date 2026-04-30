@@ -192,7 +192,6 @@
       "notFound": "Empleado no encontrado",
       "emptyConversation": "Inicia una conversación con {name}",
       "attachFile": "Adjuntar archivo",
-      "sessionMenu": "Opciones de la sesión",
       "menuRename": "Renombrar",
       "menuDeliverable": "Entregables",
       "menuDelete": "Eliminar",

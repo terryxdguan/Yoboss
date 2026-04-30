@@ -192,7 +192,6 @@
       "notFound": "Employee not found",
       "emptyConversation": "Start a conversation with {name}",
       "attachFile": "Attach file",
-      "sessionMenu": "Session options",
       "menuRename": "Rename",
       "menuDeliverable": "Deliverable",
       "menuDelete": "Delete",

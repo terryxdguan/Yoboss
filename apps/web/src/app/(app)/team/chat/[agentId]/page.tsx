@@ -6,15 +6,22 @@ import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Plus,
-  Send,
   Paperclip,
   FileText,
-  Trash2,
   MessageSquare,
   Globe,
   Code,
   Download,
+  Pencil,
+  Trash2,
+  FolderOpen,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -31,9 +38,11 @@ import {
   upsertAssistantMessage,
   updateSessionSummary,
   getSession,
+  getSessionDeliverables,
 } from "@/lib/db/actions";
+import { DeliverablesTable } from "@/components/common/deliverables-table";
 import { buildMessagesWithMemory, MAX_RECENT_MESSAGES } from "@/lib/ai/session-memory";
-import type { ChatSession, ChatMessage as DBChatMessage } from "@/lib/types/database";
+import type { ChatSession, ChatMessage as DBChatMessage, GoalDeliverable } from "@/lib/types/database";
 import { processFile, buildContentBlocks, ACCEPTED_FILE_TYPES, type FileAttachment } from "@/lib/utils/file-upload";
 import { parseSSEStream } from "@/lib/utils/sse-parser";
 import { LiveTimer } from "@/components/ui/live-timer";
@@ -92,6 +101,12 @@ export default function AgentChatPage() {
   const [sessionSummary, setSessionSummary] = useState<string | null>(null);
   const [inputHeight, setInputHeight] = useState(160);
   const inputDragging = useRef(false);
+  // Right-pane view. "chat" is the default; "deliverables" replaces the
+  // chat area with the file table for the active session. Switches back
+  // to chat whenever the active session changes.
+  const [rightView, setRightView] = useState<"chat" | "deliverables">("chat");
+  const [deliverables, setDeliverables] = useState<GoalDeliverable[]>([]);
+  const [deliverablesLoading, setDeliverablesLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -149,6 +164,22 @@ export default function AgentChatPage() {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isStreaming]);
+
+  // Whenever the active session changes, drop back to chat view so the
+  // user isn't stuck looking at a previous session's deliverables.
+  useEffect(() => {
+    setRightView("chat");
+  }, [activeSessionId]);
+
+  // Lazy-load the active session's deliverables when the user switches
+  // to that view; refresh on session change while the view stays open.
+  useEffect(() => {
+    if (rightView !== "deliverables" || !activeSessionId) return;
+    setDeliverablesLoading(true);
+    getSessionDeliverables(activeSessionId)
+      .then(setDeliverables)
+      .finally(() => setDeliverablesLoading(false));
+  }, [rightView, activeSessionId]);
 
   const sendToApi = useCallback(async (apiMessages: { role: string; content: string | object[] }[]) => {
     if (!agent || !activeSessionId) return;
@@ -585,9 +616,12 @@ export default function AgentChatPage() {
   const displayName = agent.label;
 
   return (
-    <div className="flex h-[calc(100vh-96px)] -mx-6 md:-mx-8 -mb-12">
+    // Fixed positioning bypasses the AppShell's max-w-1440 mx-auto wrapper
+    // so the session sidebar sits flush against the global icon nav and
+    // the chat area uses the full available width on wide screens.
+    <div className="fixed top-16 left-20 right-0 bottom-0 flex">
       {/* Session Sidebar */}
-      <div className="w-56 shrink-0 border-r border-[#E7DED2] bg-[#F6F3EE] flex flex-col">
+      <div className="w-72 shrink-0 border-r border-[#E7DED2] bg-[#F6F3EE] flex flex-col">
         {/* Back + Agent info */}
         <div className="px-3 py-4 border-b border-[#E7DED2]">
           <button
@@ -627,7 +661,7 @@ export default function AgentChatPage() {
             sessions.map((session) => (
               <div
                 key={session.id}
-                className={`group flex items-center gap-1 px-2 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${
+                className={`group relative flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${
                   activeSessionId === session.id
                     ? "bg-[#007AFF]/10 text-[#2B2B2B]"
                     : "text-[#6F6A64] hover:bg-[#E7DED2]/50"
@@ -642,12 +676,12 @@ export default function AgentChatPage() {
                     onChange={(e) => setEditTitleText(e.target.value)}
                     onBlur={() => handleTitleSave(session.id)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleTitleSave(session.id); if (e.key === "Escape") setEditingTitleId(null); }}
-                    className="flex-1 text-xs bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1 py-0.5 outline-none"
+                    className="flex-1 min-w-0 text-sm bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1.5 py-1 outline-none"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
                   <span
-                    className="flex-1 text-xs truncate"
+                    className="flex-1 min-w-0 text-sm truncate"
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       setEditingTitleId(session.id);
@@ -657,20 +691,76 @@ export default function AgentChatPage() {
                     {session.title}
                   </span>
                 )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#D5847A]/10 transition-all"
-                >
-                  <Trash2 className="h-3 w-3 text-[#D5847A]" />
-                </button>
+                {/* Three inline action icons (always visible) replace the
+                    old "⋯" dropdown. Each is wrapped in a Tooltip so the
+                    function is still discoverable by hover-label. Clicks
+                    stopPropagation so the row's onClick doesn't fire. */}
+                <TooltipProvider delay={150}>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSessionId(session.id);
+                          setEditingTitleId(session.id);
+                          setEditTitleText(session.title);
+                        }}
+                        className="p-1 rounded text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#2B2B2B] transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>{t("menuRename")}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSessionId(session.id);
+                          setRightView("deliverables");
+                        }}
+                        className="p-1 rounded text-[#9B948B] hover:bg-[#E7DED2] hover:text-[#2B2B2B] transition-colors"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>{t("menuDeliverable")}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(session.id);
+                        }}
+                        className="p-1 rounded text-[#9B948B] hover:bg-[#D5847A]/10 hover:text-[#D5847A] transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>{t("menuDelete")}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* Right pane — chat OR deliverables, depending on which view the
+          three-dot menu put us in. Both share the wrapper so the page
+          frame stays put as the user toggles between them. */}
       <div className="flex-1 flex flex-col bg-[#FFFDF9] min-w-0">
+        {rightView === "deliverables" ? (
+          <DeliverablesView
+            title={sessions.find((s) => s.id === activeSessionId)?.title || displayName}
+            deliverables={deliverables}
+            loading={deliverablesLoading}
+            onBackToChat={() => setRightView("chat")}
+            backLabel={t("viewChat")}
+          />
+        ) : (
+          <>
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           {messages.length === 0 && !isStreaming && (
@@ -886,6 +976,43 @@ export default function AgentChatPage() {
             </div>
           </div>
         </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DeliverablesView({
+  title,
+  deliverables,
+  loading,
+  onBackToChat,
+  backLabel,
+}: {
+  title: string;
+  deliverables: GoalDeliverable[];
+  loading: boolean;
+  onBackToChat: () => void;
+  backLabel: string;
+}) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between h-14 px-6 border-b border-[#E7DED2] shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="h-4 w-4 text-[#007AFF] shrink-0" />
+          <span className="text-sm font-semibold text-[#2B2B2B] truncate">{title}</span>
+        </div>
+        <button
+          type="button"
+          onClick={onBackToChat}
+          className="text-xs text-[#007AFF] hover:underline font-medium"
+        >
+          ← {backLabel}
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <DeliverablesTable deliverables={deliverables} loading={loading} />
       </div>
     </div>
   );
