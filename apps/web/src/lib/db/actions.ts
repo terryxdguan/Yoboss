@@ -20,6 +20,8 @@ import type {
   DashboardTodayItem,
   DashboardWorkflowRun,
   GoalWithPhases,
+  UserMemory,
+  UserMemoryImportance,
 } from "../types/database";
 import { getWeekStart, getTodayDayOfWeek, classifyTimeSlot } from "../utils/date";
 import type {
@@ -2080,4 +2082,186 @@ export async function getCreditUsageSummary(): Promise<{
     usedCreditsCents: Math.max(0, totalCreditsCents - balanceCents),
     balanceCents,
   };
+}
+
+// ============================================================
+// USER MEMORY — long-term, cross-session preferences
+// ============================================================
+
+/** Soft cap on total memory entries per user. When upsert pushes over the
+ *  limit we evict oldest 'low' first, then 'medium'. 'high' importance
+ *  entries are not auto-evicted; user can prune via Settings. Tweak here
+ *  if real usage shows we need more. */
+const USER_MEMORY_MAX_ENTRIES = 50;
+
+const IMPORTANCE_RANK: Record<UserMemoryImportance, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+/** Fetch all of the current user's memory entries, ordered for prompt
+ *  injection (high importance + recently-used first). PostgreSQL sorts
+ *  text alphabetically so we can't rely on `ORDER BY importance DESC`
+ *  for the desired high→medium→low order; do it in JS via IMPORTANCE_RANK. */
+export async function getUserMemory(): Promise<UserMemory[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("user_memory")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("last_used_at", { ascending: false });
+
+  if (error) {
+    console.error("[user_memory] getUserMemory failed", error);
+    return [];
+  }
+  const rows = (data || []) as UserMemory[];
+  return rows.sort((a, b) => {
+    const ra = IMPORTANCE_RANK[a.importance] ?? 0;
+    const rb = IMPORTANCE_RANK[b.importance] ?? 0;
+    if (ra !== rb) return rb - ra; // high first
+    return b.last_used_at.localeCompare(a.last_used_at); // newest used first
+  });
+}
+
+/** Insert a batch of new memory entries. Cap-aware: if the resulting count
+ *  would exceed USER_MEMORY_MAX_ENTRIES, the oldest non-high entries are
+ *  evicted first. Called from the /api/ai/summarize rollover, so it runs
+ *  on the server with the user's authed Supabase client. */
+export async function upsertUserMemoryEntries(
+  entries: Array<{
+    category: string | null;
+    content: string;
+    importance: UserMemoryImportance;
+    source_session_id?: string | null;
+  }>,
+): Promise<UserMemory[]> {
+  if (entries.length === 0) return [];
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const rows = entries.map((e) => ({
+    user_id: user.id,
+    category: e.category,
+    content: e.content,
+    importance: e.importance,
+    source_session_id: e.source_session_id ?? null,
+  }));
+
+  const { data: inserted, error } = await supabase
+    .from("user_memory")
+    .insert(rows)
+    .select("*");
+  if (error) {
+    console.error("[user_memory] insert failed", error);
+    throw new Error(error.message);
+  }
+
+  // After insert, enforce cap. Pull current count; if over, delete the
+  // oldest entries by (importance ASC, last_used_at ASC) until at limit.
+  const { data: existing } = await supabase
+    .from("user_memory")
+    .select("id, importance, last_used_at")
+    .eq("user_id", user.id);
+  if (existing && existing.length > USER_MEMORY_MAX_ENTRIES) {
+    const evictable = [...existing]
+      // Don't auto-evict 'high'. They stay until the user prunes manually.
+      .filter((r) => r.importance !== "high")
+      .sort((a, b) => {
+        const ra = IMPORTANCE_RANK[a.importance as UserMemoryImportance] ?? 0;
+        const rb = IMPORTANCE_RANK[b.importance as UserMemoryImportance] ?? 0;
+        if (ra !== rb) return ra - rb; // low before medium
+        return a.last_used_at.localeCompare(b.last_used_at); // oldest first
+      });
+    const overflow = existing.length - USER_MEMORY_MAX_ENTRIES;
+    const idsToDelete = evictable.slice(0, overflow).map((r) => r.id);
+    if (idsToDelete.length > 0) {
+      await supabase.from("user_memory").delete().in("id", idsToDelete);
+    }
+  }
+
+  return (inserted || []) as UserMemory[];
+}
+
+/** Bump last_used_at on the entries we just injected into a prompt. Keeps
+ *  the LRU eviction order honest. Fire-and-forget on a best-effort basis;
+ *  the model already saw them, we're just bookkeeping. */
+export async function touchUserMemoryUsedAt(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("user_memory")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .in("id", ids);
+}
+
+/** Settings UI: edit one entry's content, category, or importance. */
+export async function updateUserMemoryEntry(
+  id: string,
+  updates: Partial<
+    Pick<UserMemory, "content" | "category" | "importance">
+  >,
+): Promise<UserMemory | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("user_memory")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data || null) as UserMemory | null;
+}
+
+/** Settings UI: delete a single memory entry. */
+export async function deleteUserMemoryEntry(id: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("user_memory")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+}
+
+/** Settings UI: nuke all of the current user's memory entries. */
+export async function clearAllUserMemory(): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("user_memory")
+    .delete()
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
 }

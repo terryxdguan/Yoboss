@@ -422,7 +422,7 @@ export function GoalChatPanel({ goalId, goalContext, taskContext, onClose, panel
           fetch("/api/ai/summarize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ oldSummary: sessionSummary, messages: messagesToCompress }),
+            body: JSON.stringify({ oldSummary: sessionSummary, messages: messagesToCompress, sessionId }),
           })
             .then((r) => r.json())
             .then(async (data) => {

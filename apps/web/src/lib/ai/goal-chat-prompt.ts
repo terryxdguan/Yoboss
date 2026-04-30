@@ -236,14 +236,20 @@ It's already ${dayNames[todayDow]} (day_of_week=${todayDow}). When generating \`
 
 export async function chatWithGoalCoach(
   messages: Anthropic.MessageParam[],
-  todayDow?: number
+  todayDow?: number,
+  // Long-term user memory + active goals snapshot. Appended after the
+  // base system prompt; injected by the API route via buildUserContext.
+  userContext?: string,
 ) {
   const client = getAnthropicClient();
 
-  const system =
+  let system =
     typeof todayDow === "number" && todayDow > 0 && todayDow <= 6
       ? SYSTEM_PROMPT + buildTodayNote(todayDow)
       : SYSTEM_PROMPT;
+  if (userContext && userContext.trim().length > 0) {
+    system = `${system}\n\n${userContext}`;
+  }
 
   const stream = await client.messages.stream({
     // Opus 4.7 — goal creation is high-stakes planning, worth the extra cost.

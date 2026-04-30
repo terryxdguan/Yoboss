@@ -260,6 +260,23 @@ export interface AiUsageRecord {
   created_at: string;
 }
 
+/** User-level long-term memory — stable preferences extracted from chats
+ *  by the same Haiku rollover that maintains chat_sessions.summary. Lives
+ *  per user, shared across sessions/agents/goals. Capacity-capped at 50
+ *  per user (eviction handled in upsertUserMemoryEntries). */
+export type UserMemoryImportance = "low" | "medium" | "high";
+
+export interface UserMemory {
+  id: string;
+  user_id: string;
+  category: string | null;
+  content: string;
+  importance: UserMemoryImportance;
+  source_session_id: string | null;
+  created_at: string;
+  last_used_at: string;
+}
+
 // Composite types
 export interface GoalWithPhases extends Goal {
   phases: Phase[];

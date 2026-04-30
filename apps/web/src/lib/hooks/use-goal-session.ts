@@ -604,6 +604,7 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
             body: JSON.stringify({
               oldSummary: sessionSummaryRef.current,
               messages: messagesToCompress,
+              sessionId,
             }),
           })
             .then((r) => r.json())

@@ -1,7 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/db/server";
 import { DailyEmailToggle } from "./email-toggle";
+import { UserMemorySection } from "./user-memory-section";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
+import { getUserMemory } from "@/lib/db/actions";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -21,6 +23,11 @@ export default async function SettingsPage() {
     }
     if (data?.timezone) timezone = data.timezone;
   }
+
+  // User memory entries — long-term, cross-session prefs the agents have
+  // picked up. Pulled server-side and handed to the client section as
+  // initialEntries so the page paints fully on first load.
+  const userMemory = user ? await getUserMemory() : [];
 
   return (
     <div className="space-y-8">
@@ -51,6 +58,8 @@ export default async function SettingsPage() {
         initialEnabled={dailyEmailEnabled}
         initialTimezone={timezone}
       />
+
+      <UserMemorySection initialEntries={userMemory} />
     </div>
   );
 }

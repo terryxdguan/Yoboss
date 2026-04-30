@@ -99,12 +99,22 @@ ${context.weekSummary ? `Summary: ${context.weekSummary}` : ""}
 ${tasksText}`;
 }
 
-function buildSystemBlocks(context: GoalDetailChatContext): Anthropic.TextBlockParam[] {
-  return [
+function buildSystemBlocks(
+  context: GoalDetailChatContext,
+  userContext?: string,
+): Anthropic.TextBlockParam[] {
+  const blocks: Anthropic.TextBlockParam[] = [
     { type: "text", text: COMMON_SYSTEM, cache_control: { type: "ephemeral" } },
     { type: "text", text: buildGoalContextBlock(context), cache_control: { type: "ephemeral" } },
     { type: "text", text: buildWeeklyContextBlock(context) },
   ];
+  // Long-term user memory + cross-goal active context. Uncached by design:
+  // it changes after every 10-turn rollover and after each todo toggle, so
+  // caching would invalidate too often to be useful.
+  if (userContext && userContext.trim().length > 0) {
+    blocks.push({ type: "text", text: userContext });
+  }
+  return blocks;
 }
 
 // Server-side tools that Anthropic executes
@@ -123,10 +133,11 @@ const SERVER_TOOLS: Anthropic.Messages.ToolUnion[] = [
 export function streamGoalDetailChat(
   messages: Anthropic.MessageParam[],
   context: GoalDetailChatContext,
-  onUsage?: (inputTokens: number, outputTokens: number) => void
+  onUsage?: (inputTokens: number, outputTokens: number) => void,
+  userContext?: string,
 ): ReadableStream<Uint8Array> {
   const client = getAnthropicClient();
-  const systemBlocks = buildSystemBlocks(context);
+  const systemBlocks = buildSystemBlocks(context, userContext);
   const encoder = new TextEncoder();
 
   // Single-turn stream: run exactly ONE messages.stream() call and

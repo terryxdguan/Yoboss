@@ -219,12 +219,18 @@ Week ${context.weekNumber} of estimated ${context.estimatedWeeks} weeks${midWeek
 
 export async function chatWithWeeklyPlanCoach(
   messages: Anthropic.MessageParam[],
-  weeklyContext?: WeeklyPlanChatContext
+  weeklyContext?: WeeklyPlanChatContext,
+  // Long-term user memory + active goals; appended after the per-goal
+  // weekly context. Injected by the API route via buildUserContext.
+  userContext?: string,
 ) {
   const client = getAnthropicClient();
-  const systemPrompt = weeklyContext
+  let systemPrompt = weeklyContext
     ? `${SYSTEM_PROMPT}\n\nCURRENT CONTEXT:\n${buildContextBlock(weeklyContext)}`
     : SYSTEM_PROMPT;
+  if (userContext && userContext.trim().length > 0) {
+    systemPrompt = `${systemPrompt}\n\n${userContext}`;
+  }
 
   const stream = await client.messages.stream({
     // Opus 4.7 — weekly plan conversations benefit from stronger

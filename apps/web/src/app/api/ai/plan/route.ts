@@ -7,6 +7,7 @@ import { generateWeeklyPlan } from "@/lib/ai/weekly-plan";
 import { chatWithWeeklyPlanCoach, type WeeklyPlanChatContext } from "@/lib/ai/weekly-plan-chat";
 import { streamGoalDetailChat, type GoalDetailChatContext } from "@/lib/ai/goal-detail-chat";
 import { generateWeeklyReview } from "@/lib/ai/review";
+import { buildUserContext } from "@/lib/ai/user-context";
 import type { ConversationMessage } from "@/lib/ai/decompose";
 import type Anthropic from "@anthropic-ai/sdk";
 
@@ -85,7 +86,8 @@ export async function POST(request: NextRequest) {
 
     if (action === "goal-chat") {
       const { messages } = body as { messages: Anthropic.MessageParam[] };
-      const stream = await chatWithGoalCoach(messages);
+      const userContext = await buildUserContext();
+      const stream = await chatWithGoalCoach(messages, undefined, userContext);
       return new Response(
         streamWithUsageLog(stream, user.id, "goal-chat", "claude-opus-4-6"),
         { headers: SSE_HEADERS }
@@ -111,6 +113,12 @@ export async function POST(request: NextRequest) {
       // callers already pass `summary + last 5 messages` via
       // buildMessagesWithMemory. No server-side trimming needed.
 
+      // Long-term user memory + active goals snapshot. Built once per
+      // request and threaded into whichever intent we dispatch. Same
+      // value across intents — keeps the user's cross-session preferences
+      // visible regardless of where they're chatting.
+      const userContext = await buildUserContext();
+
       if (intent === "coach") {
         if (!context?.coach) {
           return NextResponse.json(
@@ -125,7 +133,8 @@ export async function POST(request: NextRequest) {
           context.coach,
           (inputTokens, outputTokens) => {
             logUsage(user.id, "goal-session-coach", "claude-opus-4-7", inputTokens, outputTokens).catch(() => {});
-          }
+          },
+          userContext,
         );
         return new Response(readableStream, { headers: SSE_HEADERS });
       }
@@ -139,10 +148,10 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        stream = await chatWithWeeklyPlanCoach(messages, context.weekly);
+        stream = await chatWithWeeklyPlanCoach(messages, context.weekly, userContext);
         logRoute = "goal-session-weekly";
       } else {
-        stream = await chatWithGoalCoach(messages, todayDow);
+        stream = await chatWithGoalCoach(messages, todayDow, userContext);
         logRoute = "goal-session-creation";
       }
 
