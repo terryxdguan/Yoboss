@@ -243,19 +243,33 @@ export async function chatWithGoalCoach(
 ) {
   const client = getAnthropicClient();
 
-  let system =
-    typeof todayDow === "number" && todayDow > 0 && todayDow <= 6
-      ? SYSTEM_PROMPT + buildTodayNote(todayDow)
-      : SYSTEM_PROMPT;
+  // Three-block system layout for prompt caching:
+  //   1. SYSTEM_PROMPT  — fully static       → cached (ephemeral, 5m)
+  //   2. userContext    — per-user, stable   → cached
+  //   3. todayNote      — per-day, per-call  → uncached
+  // SYSTEM_PROMPT (~3500 t) + tools (~635 t) sits right around Opus 4.7's
+  // 4096-token cache minimum; piggybacking userContext (~500-1500 t) on
+  // top puts the prefix solidly above threshold so the cache actually
+  // engages on multi-turn goal-creation conversations.
+  const systemBlocks: Anthropic.TextBlockParam[] = [
+    { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+  ];
   if (userContext && userContext.trim().length > 0) {
-    system = `${system}\n\n${userContext}`;
+    systemBlocks.push({
+      type: "text",
+      text: userContext,
+      cache_control: { type: "ephemeral" },
+    });
+  }
+  if (typeof todayDow === "number" && todayDow > 0 && todayDow <= 6) {
+    systemBlocks.push({ type: "text", text: buildTodayNote(todayDow) });
   }
 
   const stream = await client.messages.stream({
     // Opus 4.7 — goal creation is high-stakes planning, worth the extra cost.
     model: MODELS.opus,
     max_tokens: 4096,
-    system,
+    system: systemBlocks,
     tools: GOAL_CHAT_TOOLS,
     messages,
   });

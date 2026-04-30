@@ -225,11 +225,28 @@ export async function chatWithWeeklyPlanCoach(
   userContext?: string,
 ) {
   const client = getAnthropicClient();
-  let systemPrompt = weeklyContext
-    ? `${SYSTEM_PROMPT}\n\nCURRENT CONTEXT:\n${buildContextBlock(weeklyContext)}`
-    : SYSTEM_PROMPT;
+
+  // Three-block system layout for prompt caching:
+  //   1. SYSTEM_PROMPT  — fully static       → cached (ephemeral, 5m)
+  //   2. userContext    — per-user, stable   → cached
+  //   3. weeklyContext  — per-call snapshot  → uncached
+  // SYSTEM_PROMPT (~3300 t) + tools (~1000 t) easily clears the Opus 4.7
+  // 4096-token minimum; userContext rides on top for free.
+  const systemBlocks: Anthropic.TextBlockParam[] = [
+    { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+  ];
   if (userContext && userContext.trim().length > 0) {
-    systemPrompt = `${systemPrompt}\n\n${userContext}`;
+    systemBlocks.push({
+      type: "text",
+      text: userContext,
+      cache_control: { type: "ephemeral" },
+    });
+  }
+  if (weeklyContext) {
+    systemBlocks.push({
+      type: "text",
+      text: `CURRENT CONTEXT:\n${buildContextBlock(weeklyContext)}`,
+    });
   }
 
   const stream = await client.messages.stream({
@@ -237,7 +254,7 @@ export async function chatWithWeeklyPlanCoach(
     // reasoning when deciding which clarifying questions to ask.
     model: MODELS.opus,
     max_tokens: 4096,
-    system: systemPrompt,
+    system: systemBlocks,
     tools: [ASK_QUESTION_TOOL, CREATE_WEEKLY_PLAN_TOOL],
     messages,
   });

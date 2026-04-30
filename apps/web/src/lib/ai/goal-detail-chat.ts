@@ -103,17 +103,26 @@ function buildSystemBlocks(
   context: GoalDetailChatContext,
   userContext?: string,
 ): Anthropic.TextBlockParam[] {
+  // Block ordering matters for cache invalidation. We put the per-call
+  // weekly context AFTER the user-stable userContext so weekly toggles
+  // don't blow the userContext cache. Block sequence:
+  //   1. COMMON_SYSTEM         — global static prompt   → cached
+  //   2. buildGoalContextBlock — stable per-goal        → cached
+  //   3. userContext           — stable per-user (10+ turns) → cached
+  //   4. buildWeeklyContextBlock — per-call snapshot    → uncached
+  // Uses 3/4 of Anthropic's max cache breakpoints.
   const blocks: Anthropic.TextBlockParam[] = [
     { type: "text", text: COMMON_SYSTEM, cache_control: { type: "ephemeral" } },
     { type: "text", text: buildGoalContextBlock(context), cache_control: { type: "ephemeral" } },
-    { type: "text", text: buildWeeklyContextBlock(context) },
   ];
-  // Long-term user memory + cross-goal active context. Uncached by design:
-  // it changes after every 10-turn rollover and after each todo toggle, so
-  // caching would invalidate too often to be useful.
   if (userContext && userContext.trim().length > 0) {
-    blocks.push({ type: "text", text: userContext });
+    blocks.push({
+      type: "text",
+      text: userContext,
+      cache_control: { type: "ephemeral" },
+    });
   }
+  blocks.push({ type: "text", text: buildWeeklyContextBlock(context) });
   return blocks;
 }
 

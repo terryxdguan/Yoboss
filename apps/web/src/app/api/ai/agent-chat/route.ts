@@ -70,24 +70,30 @@ IMPORTANT: Always address the user as "Hi Boss" at the start of each conversatio
 FILE GENERATION: When generating ANY file (HTML, PDF, PPT, Excel, etc.) using code execution, you MUST copy the output file to $OUTPUT_DIR so the user can download it. Example: after creating a file, run: cp /tmp/myfile.html $OUTPUT_DIR/myfile.html. The $OUTPUT_DIR environment variable is pre-set. Only files in $OUTPUT_DIR are downloadable.
 `;
 
-    // Long-term user memory + active goals snapshot. Per-user, changes
-    // every 10-turn rollover or when a goal/todo is mutated, so it lives
-    // outside the cached prefix.
+    // Long-term user memory + active goals snapshot. Per-user; stable
+    // across most of a chat session (memory only updates every 10-turn
+    // rollover; active goals change on todo toggles / goal edits). Worth
+    // caching even at 1.25x write cost — payback is one cache hit.
     const userContext = await buildUserContext();
 
     // Four-block system layout for prompt caching:
     //   1. yobossPrefix  — identical across all agents/users → shared cache
-    //   2. basePrompt    — identical per-agent → each agent's repeat calls hit
-    //   3. userContext   — per-user (long-term memory + active goals) → uncached
+    //   2. basePrompt    — identical per-agent → each agent's repeats hit
+    //   3. userContext   — per-user (memory + active goals) → cached
     //   4. extraContext  — per-call (turn-specific) → uncached
-    // Two cache_control breakpoints; blocks 3-4 live outside the cached
-    // prefix so per-user/per-call context never invalidates blocks 1-2.
+    // Three cache_control breakpoints (uses 3/4 of Anthropic's per-request
+    // limit). Block 4 stays uncached so per-call ephemera never invalidates
+    // the user-stable prefix.
     const systemBlocks: Anthropic.Messages.TextBlockParam[] = [
       { type: "text", text: yobossPrefix, cache_control: { type: "ephemeral" } },
       { type: "text", text: basePrompt, cache_control: { type: "ephemeral" } },
     ];
     if (userContext && userContext.trim().length > 0) {
-      systemBlocks.push({ type: "text", text: userContext });
+      systemBlocks.push({
+        type: "text",
+        text: userContext,
+        cache_control: { type: "ephemeral" },
+      });
     }
     if (extraContext) {
       systemBlocks.push({
