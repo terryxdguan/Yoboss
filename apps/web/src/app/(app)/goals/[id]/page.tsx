@@ -15,6 +15,9 @@ import {
   ChevronDown,
   X,
   Plus,
+  Users,
+  FolderOpen,
+  StickyNote,
 } from "lucide-react";
 import { createClient } from "@/lib/db/client";
 import { useTranslations, useLocale } from "next-intl";
@@ -90,8 +93,6 @@ export default function GoalDetailPage() {
   // visible above the fold. Toggle reveals the full 2-pane layout.
   const [showAllPhases, setShowAllPhases] = useState(false);
   const [pendingAITask, setPendingAITask] = useState<DailyTask | null>(null);
-  const [actionMenuOpen, setActionMenuOpen] = useState(true);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
   // Phase milestones (sub-phase markers) — read-only outline shown next
   // to the active phase. Persisted in phase_tasks (legacy table name).
   // Held flat here; UI filters by selectedPhaseId.
@@ -133,25 +134,6 @@ export default function GoalDetailPage() {
     setRightPanel((prev) => (prev === panel ? "none" : panel));
     if (panel !== "ai") setPendingAITask(null);
   };
-
-  // Close the Action menu when clicking outside or pressing Escape.
-  useEffect(() => {
-    if (!actionMenuOpen) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
-        setActionMenuOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActionMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [actionMenuOpen]);
 
   const loadData = useCallback(async () => {
     const supabase = createClient();
@@ -452,89 +434,73 @@ export default function GoalDetailPage() {
       </button>
 
       <div className="mb-6">
+        {/* Title row: title + status badge on the left, action buttons on
+            the right. Description below intentionally lives OUTSIDE this
+            flex so it spans the full width and can flow underneath the
+            buttons (instead of being squeezed into a narrow left column). */}
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold text-[#2B2B2B]">
-                <EditableText
-                  value={goal.title}
-                  onSave={(next) => handleSaveGoalField("title", next)}
-                  placeholder={t("titlePlaceholder")}
-                  className="text-2xl font-semibold text-[#2B2B2B]"
-                />
-              </h1>
-              {(() => {
-                const status = getGoalStatusBadge(goal.status, tList);
-                return (
-                  <span
-                    className="text-xs font-medium px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: `${status.color}1F`,
-                      color: status.color,
-                    }}
-                  >
-                    {status.label}
-                  </span>
-                );
-              })()}
-            </div>
-            <p className="text-sm text-[#6F6A64] mt-1">
+          <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold text-[#2B2B2B]">
               <EditableText
-                value={goal.description || ""}
-                onSave={(next) => handleSaveGoalField("description", next)}
-                multiline
-                placeholder={t("descPlaceholder")}
-                emptyHint={t("descEmptyHint")}
-                className="text-sm text-[#6F6A64]"
+                value={goal.title}
+                onSave={(next) => handleSaveGoalField("title", next)}
+                placeholder={t("titlePlaceholder")}
+                className="text-2xl font-semibold text-[#2B2B2B]"
               />
-            </p>
+            </h1>
+            {(() => {
+              const status = getGoalStatusBadge(goal.status, tList);
+              return (
+                <span
+                  className="text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{
+                    backgroundColor: `${status.color}1F`,
+                    color: status.color,
+                  }}
+                >
+                  {status.label}
+                </span>
+              );
+            })()}
           </div>
-          {/* Action section. Lives in its own flex column with a fixed
-              width so the goal title/description on the left wraps before
-              colliding. The dropdown links are flow content (not absolute)
-              so the section's height grows with the menu and the progress
-              bar below stays clear. */}
-          <div ref={actionMenuRef} className="shrink-0 w-48 flex flex-col items-end gap-3">
-            <button
-              type="button"
-              onClick={() => setActionMenuOpen((v) => !v)}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6] active:scale-95 transition-all shadow-[0_2px_8px_rgba(0,122,255,0.25)]"
-            >
-              {t("action")}
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${actionMenuOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            {actionMenuOpen && (
-              <div className="flex flex-col items-end gap-2.5">
-                {([
-                  { key: "ai", label: t("menuWorkTeam") },
-                  { key: "deliverables", label: t("menuFiles") },
-                  { key: "notes", label: t("menuNotes") },
-                ] as const).map(({ key, label }) => {
-                  const active = rightPanel === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        togglePanel(key);
-                        setActionMenuOpen(false);
-                      }}
-                      className={`text-sm font-semibold underline underline-offset-4 transition-colors whitespace-nowrap ${
-                        active
-                          ? "text-[#007AFF]"
-                          : "text-[#000000]/85 hover:text-[#000000]"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          {/* Action buttons — three side-by-side blue pills, each opening
+              its associated right-side panel. Wraps on narrow widths so it
+              never overlaps the title on the left. */}
+          <div className="shrink-0 flex flex-row flex-wrap items-center justify-end gap-2">
+            {([
+              { key: "ai", label: t("menuWorkTeam"), Icon: Users },
+              { key: "deliverables", label: t("menuFiles"), Icon: FolderOpen },
+              { key: "notes", label: t("menuNotes"), Icon: StickyNote },
+            ] as const).map(({ key, label, Icon }) => {
+              const active = rightPanel === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => togglePanel(key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-semibold active:scale-95 transition-all whitespace-nowrap shadow-[0_2px_8px_rgba(0,122,255,0.25)] ${
+                    active
+                      ? "bg-[#0052B0] ring-2 ring-[#007AFF]/40 ring-offset-2 ring-offset-[#FFFDF9]"
+                      : "bg-[#007AFF] hover:bg-[#0066D6]"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
+        <p className="text-sm text-[#6F6A64] mt-3">
+          <EditableText
+            value={goal.description || ""}
+            onSave={(next) => handleSaveGoalField("description", next)}
+            multiline
+            placeholder={t("descPlaceholder")}
+            emptyHint={t("descEmptyHint")}
+            className="text-sm text-[#6F6A64]"
+          />
+        </p>
       </div>
 
       {/* Hoisted "Generate Weekly Plan" CTA — when no plan exists this is
@@ -566,9 +532,7 @@ export default function GoalDetailPage() {
         </div>
       )}
 
-      {/* Overall Progress — only meaningful once a weekly plan exists.
-          Percentage sits below the bar (right-aligned) so the open
-          Action menu in the page header doesn't overlap it. */}
+      {/* Overall Progress — only meaningful once a weekly plan exists. */}
       {hasTasks && (
         <div className="mb-6">
           <h2 className="text-base font-semibold text-[#2B2B2B] mb-4">{t("thisWeek")}</h2>
