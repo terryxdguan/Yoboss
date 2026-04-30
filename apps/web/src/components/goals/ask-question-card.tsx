@@ -21,6 +21,12 @@ export function AskQuestionCard({
   const [otherText, setOtherText] = useState("");
   const [showOther, setShowOther] = useState(false);
 
+  // Free-text-only mode is the wizard's "anything else?" final-check step.
+  // The model emits ask_question with empty options + allow_other=true; we
+  // render a textarea + Submit + Skip instead of the option-toggle dance.
+  const isFreeTextOnly =
+    data.options.length === 0 && data.allow_other === true;
+
   const toggleOption = (value: string) => {
     if (disabled) return;
     if (data.allow_multiple) {
@@ -52,8 +58,54 @@ export function AskQuestionCard({
     onAnswer(answer);
   };
 
+  // Free-text-only path: submit whatever's in the textarea (or skip empty).
+  // The selected[] stays empty; the model reads `other_text` as the answer.
+  const handleFreeTextSubmit = () => {
+    const trimmed = otherText.trim();
+    onAnswer({
+      question: data.question,
+      selected: [],
+      other_text: trimmed || undefined,
+    });
+  };
+
   const canSubmit =
     (selected.length > 0 || (showOther && otherText.trim())) && !disabled;
+
+  if (isFreeTextOnly) {
+    return (
+      <div className="border border-[#E7DED2] rounded-lg bg-[#FFFDF9] p-4 mt-2">
+        <p className="text-sm font-medium text-[#2B2B2B] mb-3">
+          {data.question}
+        </p>
+        <textarea
+          value={otherText}
+          onChange={(e) => setOtherText(e.target.value)}
+          disabled={disabled}
+          rows={3}
+          placeholder={t("freeTextPlaceholder")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !disabled) {
+              e.preventDefault();
+              handleFreeTextSubmit();
+            }
+          }}
+          className="w-full resize-none border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9] mb-3 disabled:opacity-60"
+        />
+        {!disabled && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleFreeTextSubmit}
+              className="bg-[#007AFF] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all"
+            >
+              {otherText.trim() ? t("submit") : t("skipAndContinue")}
+            </button>
+            <span className="text-[11px] text-[#9B948B]">{t("freeTextHint")}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="border border-[#E7DED2] rounded-lg bg-[#FFFDF9] p-4 mt-2">

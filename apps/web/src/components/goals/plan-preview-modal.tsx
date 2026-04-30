@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Calendar, Check, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { EditableText } from "@/components/ui/editable-text";
 import type { WeeklyPlanData } from "@/lib/types/goal-chat";
 
 const DAY_NAME_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -13,14 +15,23 @@ export function PlanPreviewModal({
   isSaving,
 }: {
   plan: WeeklyPlanData;
-  onConfirm: () => void;
+  /** Confirm hands the (possibly edited) plan back to the caller so the
+   *  saver writes the edited version, not the AI's untouched output. */
+  onConfirm: (plan: WeeklyPlanData) => void;
   onEdit: () => void;
   isSaving: boolean;
 }) {
   const t = useTranslations("goals.planPreview");
   const tDays = useTranslations("days.short");
 
-  const tasks = Array.isArray(plan.tasks) ? plan.tasks : [];
+  // Local editable copy. Re-syncs to incoming prop whenever the model
+  // re-emits a fresh plan (e.g. after an "adjust" round).
+  const [edited, setEdited] = useState<WeeklyPlanData>(plan);
+  useEffect(() => {
+    setEdited(plan);
+  }, [plan]);
+
+  const tasks = Array.isArray(edited.tasks) ? edited.tasks : [];
   const tasksByDay: Record<number, WeeklyPlanData["tasks"]> = {};
   for (const task of tasks) {
     if (!tasksByDay[task.day_of_week]) tasksByDay[task.day_of_week] = [];
@@ -30,6 +41,30 @@ export function PlanPreviewModal({
   const totalTasks = tasks.length;
   const totalMinutes = tasks.reduce((sum, t) => sum + (t.time_estimate_minutes || 0), 0);
   const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
+
+  const setSummary = (next: string) =>
+    setEdited((p) => ({ ...p, ai_summary: next }));
+  const setTaskField = (
+    taskIdx: number,
+    field: "title" | "description" | "time_slot",
+    next: string,
+  ) =>
+    setEdited((p) => ({
+      ...p,
+      tasks: p.tasks.map((tk, i) =>
+        i === taskIdx ? { ...tk, [field]: next } : tk,
+      ),
+    }));
+  const setTaskMinutes = (taskIdx: number, next: string) => {
+    const parsed = parseInt(next, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) return;
+    setEdited((p) => ({
+      ...p,
+      tasks: p.tasks.map((tk, i) =>
+        i === taskIdx ? { ...tk, time_estimate_minutes: parsed } : tk,
+      ),
+    }));
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -47,9 +82,23 @@ export function PlanPreviewModal({
               </p>
             </div>
           </div>
-          {plan.ai_summary && (
-            <p className="text-sm text-[#6F6A64] leading-relaxed">{plan.ai_summary}</p>
-          )}
+          <p className="text-sm text-[#6F6A64] leading-relaxed">
+            <EditableText
+              value={edited.ai_summary || ""}
+              onSave={setSummary}
+              multiline
+              rows={2}
+              placeholder={t("summaryPlaceholder")}
+              emptyHint={t("summaryEmpty")}
+              className="text-sm text-[#6F6A64]"
+            />
+          </p>
+        </div>
+        {/* Inline-edit hint banner — without this users routinely don't
+            realize the modal is editable. Single-line, no dismissal. */}
+        <div className="flex items-center gap-1.5 px-6 py-2 text-[11px] text-[#7FAEE6] bg-[#EAF3FD] border-b border-[#E7DED2]">
+          <Pencil className="h-3 w-3" />
+          <span>{t("editHint")}</span>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -60,21 +109,39 @@ export function PlanPreviewModal({
                 <div key={dayIdx} className="bg-[#F6F3EE] rounded-xl p-4 border border-[#E7DED2]/50">
                   <p className="text-sm font-semibold text-[#2B2B2B] mb-2">{tDays(DAY_NAME_KEYS[dayIdx])}</p>
                   <ul className="space-y-2">
-                    {dayTasks.map((task, i) => (
-                      <li key={i} className="text-sm text-[#6F6A64]">
-                        <p className="text-[#2B2B2B]">{task.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {task.time_slot && (
-                            <span className="text-[11px] text-[#9B948B]">{task.time_slot}</span>
-                          )}
-                          {task.time_estimate_minutes && (
-                            <span className="text-[11px] text-[#9B948B]">
-                              {task.time_estimate_minutes} min
+                    {dayTasks.map((task) => {
+                      const taskIdx = edited.tasks.indexOf(task);
+                      return (
+                        <li key={taskIdx} className="text-sm text-[#6F6A64]">
+                          <p className="text-[#2B2B2B]">
+                            <EditableText
+                              value={task.title}
+                              onSave={(next) => setTaskField(taskIdx, "title", next)}
+                              placeholder={t("taskTitlePlaceholder")}
+                              className="text-[#2B2B2B]"
+                            />
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#9B948B]">
+                            <EditableText
+                              value={task.time_slot || ""}
+                              onSave={(next) => setTaskField(taskIdx, "time_slot", next)}
+                              placeholder={t("taskTimeSlotPlaceholder")}
+                              emptyHint={t("taskTimeSlotEmpty")}
+                              className="text-[11px] text-[#9B948B]"
+                            />
+                            <span>
+                              <EditableText
+                                value={String(task.time_estimate_minutes ?? 0)}
+                                onSave={(next) => setTaskMinutes(taskIdx, next)}
+                                placeholder="0"
+                                className="text-[11px] text-[#9B948B]"
+                              />{" "}
+                              {t("minutesSuffix")}
                             </span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               );
@@ -83,7 +150,7 @@ export function PlanPreviewModal({
         </div>
         <div className="px-6 py-4 border-t border-[#E7DED2] flex items-center gap-3">
           <button
-            onClick={onConfirm}
+            onClick={() => onConfirm(edited)}
             disabled={isSaving}
             className="flex-1 flex items-center justify-center gap-2 bg-[#7FB38A] text-white text-sm font-medium py-3 rounded-xl hover:bg-[#3D7A5A] active:scale-[0.98] transition-all disabled:opacity-50"
           >

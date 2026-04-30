@@ -191,7 +191,13 @@
       "newChat": "New Chat",
       "notFound": "Employee not found",
       "emptyConversation": "Start a conversation with {name}",
-      "attachFile": "Attach file"
+      "attachFile": "Attach file",
+      "sessionMenu": "Session options",
+      "menuRename": "Rename",
+      "menuDeliverable": "Deliverable",
+      "menuDelete": "Delete",
+      "viewChat": "Chat",
+      "viewDeliverables": "Deliverables"
     }
   },
   "todos": {
@@ -235,7 +241,9 @@
     "saveFailed": "Couldn't save. Try again.",
     "loading": "Loading…",
     "dismiss": "Dismiss",
-    "or": "or"
+    "or": "or",
+    "enterFullscreen": "Maximize",
+    "exitFullscreen": "Restore"
   },
   "nav": {
     "notifications": "Notifications",
@@ -619,7 +627,6 @@
       "titlePlaceholder": "Goal title",
       "descPlaceholder": "Describe this goal…",
       "descEmptyHint": "Double-click to add a description…",
-      "action": "Action",
       "menuWorkTeam": "Work with Team",
       "menuFiles": "Files & Deliverables",
       "menuNotes": "My Notes",
@@ -668,7 +675,11 @@
     "askQuestion": {
       "other": "Other",
       "otherPlaceholder": "Type your answer...",
-      "continue": "Continue"
+      "continue": "Continue",
+      "freeTextPlaceholder": "Anything else worth mentioning? Skills, constraints, preferences, specific things to include — or leave empty.",
+      "submit": "Submit",
+      "skipAndContinue": "Skip and continue",
+      "freeTextHint": "⌘/Ctrl+Enter to submit"
     },
     "chatMessage": {
       "agentLabel": "Assistant",
@@ -698,7 +709,16 @@
       "summary": "{tasks} tasks · ~{hours}h total",
       "saving": "Saving...",
       "save": "Looks good, save it!",
-      "adjust": "Adjust"
+      "adjust": "Adjust",
+      "editHint": "Double-click any field to edit it before saving",
+      "summaryPlaceholder": "Summary of this week's plan…",
+      "summaryEmpty": "Double-click to add a summary…",
+      "taskTitlePlaceholder": "Task",
+      "taskDescriptionPlaceholder": "Optional notes…",
+      "taskDescriptionEmpty": "+ notes",
+      "taskTimeSlotPlaceholder": "morning",
+      "taskTimeSlotEmpty": "+ time",
+      "minutesSuffix": "min"
     },
     "roadmapPreview": {
       "weeklyScheduleTitle": "Weekly Schedule",
@@ -706,9 +726,23 @@
       "milestonesCount": "{count, plural, one {# milestone} other {# milestones}}",
       "scheduledCount": "{count} scheduled",
       "weeksCount": "{count, plural, one {# week} other {# weeks}}",
+      "weeksSuffix": "weeks",
       "continueEditing": "Continue Editing",
       "creating": "Creating...",
-      "confirm": "Confirm & Create Plan"
+      "confirm": "Confirm & Create Plan",
+      "editHint": "Double-click any field to edit it before confirming",
+      "goalTitlePlaceholder": "Goal title",
+      "goalDescriptionPlaceholder": "Describe this goal…",
+      "goalDescriptionEmpty": "Double-click to add a description…",
+      "phaseTitlePlaceholder": "Phase title",
+      "phaseDescriptionPlaceholder": "Describe this phase…",
+      "phaseDescriptionEmpty": "Double-click to add a description…",
+      "milestonePlaceholder": "Milestone",
+      "scheduleSummaryPlaceholder": "Summary of this week's plan…",
+      "scheduleSummaryEmpty": "Double-click to add a summary…",
+      "taskTitlePlaceholder": "Task",
+      "taskTimeSlotPlaceholder": "morning",
+      "taskTimeSlotEmpty": "+ time"
     },
     "notes": {
       "title": "Notes",

@@ -191,7 +191,13 @@
       "newChat": "Novo chat",
       "notFound": "Funcionário não encontrado",
       "emptyConversation": "Inicie uma conversa com {name}",
-      "attachFile": "Anexar arquivo"
+      "attachFile": "Anexar arquivo",
+      "sessionMenu": "Opções da sessão",
+      "menuRename": "Renomear",
+      "menuDeliverable": "Entregáveis",
+      "menuDelete": "Excluir",
+      "viewChat": "Chat",
+      "viewDeliverables": "Entregáveis"
     }
   },
   "todos": {
@@ -235,7 +241,9 @@
     "saveFailed": "Não foi possível salvar. Tente novamente.",
     "loading": "Carregando…",
     "dismiss": "Fechar",
-    "or": "ou"
+    "or": "ou",
+    "enterFullscreen": "Maximizar",
+    "exitFullscreen": "Restaurar"
   },
   "nav": {
     "notifications": "Notificações",
@@ -619,7 +627,6 @@
       "titlePlaceholder": "Título da meta",
       "descPlaceholder": "Descreva esta meta…",
       "descEmptyHint": "Clique duas vezes para adicionar uma descrição…",
-      "action": "Ação",
       "menuWorkTeam": "Trabalhar com a equipe",
       "menuFiles": "Arquivos e entregáveis",
       "menuNotes": "Minhas notas",
@@ -668,7 +675,11 @@
     "askQuestion": {
       "other": "Outro",
       "otherPlaceholder": "Digite sua resposta...",
-      "continue": "Continuar"
+      "continue": "Continuar",
+      "freeTextPlaceholder": "Algo mais a mencionar? Habilidades, restrições, preferências, coisas específicas a incluir — ou deixe vazio.",
+      "submit": "Enviar",
+      "skipAndContinue": "Pular e continuar",
+      "freeTextHint": "⌘/Ctrl+Enter para enviar"
     },
     "chatMessage": {
       "agentLabel": "Assistente",
@@ -698,7 +709,16 @@
       "summary": "{tasks} tarefas · ~{hours}h no total",
       "saving": "Salvando...",
       "save": "Está ótimo, salve!",
-      "adjust": "Ajustar"
+      "adjust": "Ajustar",
+      "editHint": "Clique duplo em qualquer campo para editar antes de salvar",
+      "summaryPlaceholder": "Resumo do plano desta semana…",
+      "summaryEmpty": "Clique duplo para adicionar um resumo…",
+      "taskTitlePlaceholder": "Tarefa",
+      "taskDescriptionPlaceholder": "Notas opcionais…",
+      "taskDescriptionEmpty": "+ notas",
+      "taskTimeSlotPlaceholder": "manhã",
+      "taskTimeSlotEmpty": "+ horário",
+      "minutesSuffix": "min"
     },
     "roadmapPreview": {
       "weeklyScheduleTitle": "Agenda semanal",
@@ -706,9 +726,23 @@
       "milestonesCount": "{count, plural, one {# marco} other {# marcos}}",
       "scheduledCount": "{count} agendadas",
       "weeksCount": "{count, plural, one {# semana} other {# semanas}}",
+      "weeksSuffix": "semanas",
       "continueEditing": "Continuar editando",
       "creating": "Criando...",
-      "confirm": "Confirmar e criar plano"
+      "confirm": "Confirmar e criar plano",
+      "editHint": "Clique duplo em qualquer campo para editar antes de confirmar",
+      "goalTitlePlaceholder": "Título da meta",
+      "goalDescriptionPlaceholder": "Descreva esta meta…",
+      "goalDescriptionEmpty": "Clique duplo para adicionar uma descrição…",
+      "phaseTitlePlaceholder": "Título da fase",
+      "phaseDescriptionPlaceholder": "Descreva esta fase…",
+      "phaseDescriptionEmpty": "Clique duplo para adicionar uma descrição…",
+      "milestonePlaceholder": "Marco",
+      "scheduleSummaryPlaceholder": "Resumo do plano desta semana…",
+      "scheduleSummaryEmpty": "Clique duplo para adicionar um resumo…",
+      "taskTitlePlaceholder": "Tarefa",
+      "taskTimeSlotPlaceholder": "manhã",
+      "taskTimeSlotEmpty": "+ horário"
     },
     "notes": {
       "title": "Notas",

@@ -191,7 +191,13 @@
       "newChat": "Nouveau chat",
       "notFound": "Employé introuvable",
       "emptyConversation": "Démarrez une conversation avec {name}",
-      "attachFile": "Joindre un fichier"
+      "attachFile": "Joindre un fichier",
+      "sessionMenu": "Options de la session",
+      "menuRename": "Renommer",
+      "menuDeliverable": "Livrables",
+      "menuDelete": "Supprimer",
+      "viewChat": "Chat",
+      "viewDeliverables": "Livrables"
     }
   },
   "todos": {
@@ -235,7 +241,9 @@
     "saveFailed": "Échec de l'enregistrement. Réessayez.",
     "loading": "Chargement…",
     "dismiss": "Fermer",
-    "or": "ou"
+    "or": "ou",
+    "enterFullscreen": "Agrandir",
+    "exitFullscreen": "Restaurer"
   },
   "nav": {
     "notifications": "Notifications",
@@ -619,7 +627,6 @@
       "titlePlaceholder": "Titre de l'objectif",
       "descPlaceholder": "Décrivez cet objectif…",
       "descEmptyHint": "Double-cliquez pour ajouter une description…",
-      "action": "Action",
       "menuWorkTeam": "Travailler avec l'équipe",
       "menuFiles": "Fichiers et livrables",
       "menuNotes": "Mes notes",
@@ -668,7 +675,11 @@
     "askQuestion": {
       "other": "Autre",
       "otherPlaceholder": "Tapez votre réponse...",
-      "continue": "Continuer"
+      "continue": "Continuer",
+      "freeTextPlaceholder": "Autre chose à mentionner ? Compétences, contraintes, préférences, choses spécifiques à inclure — ou laissez vide.",
+      "submit": "Envoyer",
+      "skipAndContinue": "Passer et continuer",
+      "freeTextHint": "⌘/Ctrl+Entrée pour envoyer"
     },
     "chatMessage": {
       "agentLabel": "Assistant",
@@ -698,7 +709,16 @@
       "summary": "{tasks} tâches · ~{hours}h au total",
       "saving": "Enregistrement...",
       "save": "Ça me va, enregistrer !",
-      "adjust": "Ajuster"
+      "adjust": "Ajuster",
+      "editHint": "Double-cliquez sur un champ pour le modifier avant d'enregistrer",
+      "summaryPlaceholder": "Résumé du plan de cette semaine…",
+      "summaryEmpty": "Double-cliquez pour ajouter un résumé…",
+      "taskTitlePlaceholder": "Tâche",
+      "taskDescriptionPlaceholder": "Notes optionnelles…",
+      "taskDescriptionEmpty": "+ notes",
+      "taskTimeSlotPlaceholder": "matin",
+      "taskTimeSlotEmpty": "+ horaire",
+      "minutesSuffix": "min"
     },
     "roadmapPreview": {
       "weeklyScheduleTitle": "Planning hebdomadaire",
@@ -706,9 +726,23 @@
       "milestonesCount": "{count, plural, one {# jalon} other {# jalons}}",
       "scheduledCount": "{count} planifiées",
       "weeksCount": "{count, plural, one {# semaine} other {# semaines}}",
+      "weeksSuffix": "semaines",
       "continueEditing": "Continuer la modification",
       "creating": "Création...",
-      "confirm": "Confirmer et créer le plan"
+      "confirm": "Confirmer et créer le plan",
+      "editHint": "Double-cliquez sur un champ pour le modifier avant de confirmer",
+      "goalTitlePlaceholder": "Titre de l'objectif",
+      "goalDescriptionPlaceholder": "Décrivez cet objectif…",
+      "goalDescriptionEmpty": "Double-cliquez pour ajouter une description…",
+      "phaseTitlePlaceholder": "Titre de la phase",
+      "phaseDescriptionPlaceholder": "Décrivez cette phase…",
+      "phaseDescriptionEmpty": "Double-cliquez pour ajouter une description…",
+      "milestonePlaceholder": "Jalon",
+      "scheduleSummaryPlaceholder": "Résumé du plan de cette semaine…",
+      "scheduleSummaryEmpty": "Double-cliquez pour ajouter un résumé…",
+      "taskTitlePlaceholder": "Tâche",
+      "taskTimeSlotPlaceholder": "matin",
+      "taskTimeSlotEmpty": "+ horaire"
     },
     "notes": {
       "title": "Notes",

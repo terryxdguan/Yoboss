@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, X } from "lucide-react";
+import { ArrowLeft, Send, X, Maximize2, Minimize2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   useGoalSession,
@@ -118,6 +118,8 @@ type GoalWizardPanelProps = GoalCreationProps | WeeklyPlanningProps;
 
 export function GoalWizardPanel(props: GoalWizardPanelProps) {
   const t = useTranslations("goals.wizard");
+  const tCommon = useTranslations("common");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // Default to the max width so the panel feels generous on first open;
   // the user can still drag the handle leftward to anything ≥ 360.
   const { width, onMouseDown } = useResize(720, 360, 720);
@@ -132,25 +134,39 @@ export function GoalWizardPanel(props: GoalWizardPanelProps) {
 
   return (
     <div
-      className="fixed right-0 top-16 bottom-0 z-[45] border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]"
-      style={{ width }}
+      className={`fixed top-16 bottom-0 z-[45] border-l border-[#E7DED2] bg-[#F6F3EE] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)] ${
+        isFullscreen ? "left-20 right-0" : "right-0"
+      }`}
+      style={isFullscreen ? undefined : { width }}
     >
-      <div
-        onMouseDown={onMouseDown}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
-      />
+      {!isFullscreen && (
+        <div
+          onMouseDown={onMouseDown}
+          className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
+        />
+      )}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <h2 className="text-sm font-semibold text-[#2B2B2B]">
           {props.intent === "goal-creation"
             ? t("headerCreate")
             : t("headerWeekly")}
         </h2>
-        <button
-          onClick={props.onClose}
-          className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsFullscreen((v) => !v)}
+            aria-label={isFullscreen ? tCommon("exitFullscreen") : tCommon("enterFullscreen")}
+            title={isFullscreen ? tCommon("exitFullscreen") : tCommon("enterFullscreen")}
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={props.onClose}
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {props.intent === "goal-creation" ? (
         <GoalCreationBody {...props} />
@@ -303,8 +319,10 @@ function GoalCreationChat({
     inputRef.current?.focus();
   };
 
-  const handleConfirm = async () => {
-    const goalId = await confirmPlan();
+  // RoadmapPreview now hands us the (possibly edited) plan — pass it
+  // through so the saver writes the user's edits, not the AI's draft.
+  const handleConfirm = async (edited?: import("@/lib/types/goal-chat").GoalPlanData) => {
+    const goalId = await confirmPlan(edited);
     if (goalId) lastGoalIdRef.current = goalId;
   };
 
@@ -541,20 +559,23 @@ function WeeklyPlanningChat({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [sessionHook.messages, sessionHook.isStreaming]);
 
-  const handleConfirm = async () => {
-    if (!sessionHook.weeklyPreview) return;
+  // PlanPreviewModal now hands us the (possibly edited) plan. Use it
+  // when present; otherwise fall back to the AI's untouched draft.
+  const handleConfirm = async (edited?: import("@/lib/types/goal-chat").WeeklyPlanData) => {
+    const target = edited ?? sessionHook.weeklyPreview;
+    if (!target) return;
     setIsSaving(true);
     setSaveError(null);
     try {
       const created = await createWeeklyPlan({
         phase_id: phase.id,
         week_start: weekStart,
-        ai_summary: sessionHook.weeklyPreview.ai_summary,
+        ai_summary: target.ai_summary,
       });
       // Defense-in-depth: the chat prompt already tells the model to plan
       // only from today onward, but a non-zero portion of generations still
       // emit past-day tasks. Drop them so the user never sees stale rows.
-      const futureTasks = sessionHook.weeklyPreview.tasks.filter(
+      const futureTasks = target.tasks.filter(
         (t) => t.day_of_week >= todayDow,
       );
       if (futureTasks.length === 0) {

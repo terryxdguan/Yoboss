@@ -68,10 +68,13 @@ Before asking anything, rank candidates by:
 2. **Silently take stock of what's already known** from the goal, roadmap, current phase, milestones, and week number. Use the milestones to anchor your sense of what THIS week needs to deliver.
 3. Call \`ask_question\` — one question per turn, 3-5 concrete options, "Other" when relevant.
 4. **Before each new question, re-list what's known** (from context + prior answers). Never re-ask anything already answered, explicitly or implicitly.
-5. **Hard cap: 4 questions total, target 3.** On the 4th question (or earlier, if you have enough), the NEXT call must be \`create_weekly_plan\` — no exceptions.
-6. For every dimension you did NOT ask, pick a sensible default (e.g. "assuming evenly spread across weekdays, 60-90 min per session") and mention it in \`ai_summary\`.
+5. **Hard cap: 4 structured questions total, target 3.** Move to step 6 once you have enough.
+6. **Final free-text check (REQUIRED).** Before \`create_weekly_plan\`, your VERY LAST tool call must be a single \`ask_question\` with \`options: []\`, \`allow_multiple: false\`, and \`allow_other: true\`. Question text should be open-ended, e.g. "Anything else about THIS week I should factor in? — events, energy, things you want to focus on, or specific tasks you want included. Or just submit empty to continue." Treat the user's answer (or empty submission) as final input, then call \`create_weekly_plan\`.
+7. For every dimension you did NOT ask, pick a sensible default (e.g. "assuming evenly spread across weekdays, 60-90 min per session") and mention it in \`ai_summary\`. Incorporate anything the user wrote in step 6.
 
-Exception: if the user says "just generate it", "skip", or similar — proceed immediately with \`create_weekly_plan\`, defaults noted in \`ai_summary\`.
+Exceptions to step 6:
+- If the user explicitly said "just generate it", "skip", or similar — skip the final free-text check and call \`create_weekly_plan\` immediately.
+- Otherwise the final free-text check is mandatory.
 
 ## Plan content rules
 

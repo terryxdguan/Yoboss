@@ -1,12 +1,16 @@
 "use client";
 
-import { X, Loader2, Calendar, Clock, Flag } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Loader2, Calendar, Clock, Flag, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { EditableText } from "@/components/ui/editable-text";
 import type { GoalPlanData } from "@/lib/types/goal-chat";
 
 interface RoadmapPreviewProps {
   plan: GoalPlanData;
-  onConfirm: () => void;
+  /** Confirm now sends the (possibly edited) plan back to the caller so
+   *  the saver writes the edited version, not the original AI output. */
+  onConfirm: (plan: GoalPlanData) => void;
   onEdit: () => void;
   isSaving?: boolean;
   error?: string | null;
@@ -24,16 +28,24 @@ export function RoadmapPreview({
   const t = useTranslations("goals.roadmapPreview");
   const tDays = useTranslations("days.short");
 
+  // Local editable copy of the plan. Re-syncs when the prop changes (e.g.
+  // after an "edit" round trip with the model). All inline edits mutate
+  // this copy; the unedited prop stays untouched until the user confirms.
+  const [edited, setEdited] = useState<GoalPlanData>(plan);
+  useEffect(() => {
+    setEdited(plan);
+  }, [plan]);
+
   // Defensive: Claude can occasionally emit malformed tool_use where phases
   // is not an array (e.g. after an interrupted resume). The hook validates
   // too, but belt-and-suspenders here prevents a hard crash.
-  const phases = Array.isArray(plan.phases) ? plan.phases : [];
+  const phases = Array.isArray(edited.phases) ? edited.phases : [];
   const totalMilestones = phases.reduce(
     (sum, p) => sum + (p.milestones?.length ?? 0),
     0,
   );
-  const hasSchedule = !!plan.weekly_schedule;
-  const scheduleTasks = plan.weekly_schedule?.tasks || [];
+  const hasSchedule = !!edited.weekly_schedule;
+  const scheduleTasks = edited.weekly_schedule?.tasks || [];
 
   // Group schedule tasks by day
   const tasksByDay = new Map<number, typeof scheduleTasks>();
@@ -48,6 +60,78 @@ export function RoadmapPreview({
     summaryParts.push(t("milestonesCount", { count: totalMilestones }));
   if (hasSchedule) summaryParts.push(t("scheduledCount", { count: scheduleTasks.length }));
 
+  // ----- Field-level setters. Each one returns a new plan with one slot
+  // replaced; `setEdited` swaps it in. The setters intentionally accept
+  // the new value as a string and parse only where needed so EditableText's
+  // string interface drops in cleanly.
+  const setGoalTitle = (next: string) =>
+    setEdited((p) => ({ ...p, goal_title: next }));
+  const setGoalDescription = (next: string) =>
+    setEdited((p) => ({ ...p, goal_description: next }));
+  const setPhaseField = (
+    phaseIdx: number,
+    field: "title" | "description",
+    next: string,
+  ) =>
+    setEdited((p) => ({
+      ...p,
+      phases: p.phases.map((ph, i) =>
+        i === phaseIdx ? { ...ph, [field]: next } : ph,
+      ),
+    }));
+  const setPhaseWeeks = (phaseIdx: number, next: string) => {
+    const parsed = parseInt(next, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return;
+    setEdited((p) => ({
+      ...p,
+      phases: p.phases.map((ph, i) =>
+        i === phaseIdx ? { ...ph, estimated_weeks: parsed } : ph,
+      ),
+    }));
+  };
+  const setMilestoneTitle = (
+    phaseIdx: number,
+    mIdx: number,
+    next: string,
+  ) =>
+    setEdited((p) => ({
+      ...p,
+      phases: p.phases.map((ph, i) =>
+        i === phaseIdx
+          ? {
+              ...ph,
+              milestones: (ph.milestones ?? []).map((m, j) =>
+                j === mIdx ? { ...m, title: next } : m,
+              ),
+            }
+          : ph,
+      ),
+    }));
+  const setScheduleSummary = (next: string) =>
+    setEdited((p) =>
+      p.weekly_schedule
+        ? { ...p, weekly_schedule: { ...p.weekly_schedule, ai_summary: next } }
+        : p,
+    );
+  const setScheduleTask = (
+    taskIdx: number,
+    field: "title" | "time_slot",
+    next: string,
+  ) =>
+    setEdited((p) =>
+      p.weekly_schedule
+        ? {
+            ...p,
+            weekly_schedule: {
+              ...p.weekly_schedule,
+              tasks: p.weekly_schedule.tasks.map((tk, i) =>
+                i === taskIdx ? { ...tk, [field]: next } : tk,
+              ),
+            },
+          }
+        : p,
+    );
+
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-sm" />
@@ -56,12 +140,25 @@ export function RoadmapPreview({
         <div className="bg-[#FFFDF9] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.12)] w-full max-w-2xl max-h-[85vh] flex flex-col">
           {/* Header */}
           <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
-            <div>
+            <div className="min-w-0 flex-1 pr-3">
               <h2 className="text-xl font-semibold text-[#2B2B2B]">
-                {plan.goal_title}
+                <EditableText
+                  value={edited.goal_title}
+                  onSave={setGoalTitle}
+                  placeholder={t("goalTitlePlaceholder")}
+                  className="text-xl font-semibold text-[#2B2B2B]"
+                />
               </h2>
               <p className="text-sm text-[#6F6A64] mt-1">
-                {plan.goal_description}
+                <EditableText
+                  value={edited.goal_description}
+                  onSave={setGoalDescription}
+                  multiline
+                  rows={2}
+                  placeholder={t("goalDescriptionPlaceholder")}
+                  emptyHint={t("goalDescriptionEmpty")}
+                  className="text-sm text-[#6F6A64]"
+                />
               </p>
               <p className="text-xs text-[#9B948B] mt-2">
                 {summaryParts.join(" · ")}
@@ -69,25 +166,41 @@ export function RoadmapPreview({
             </div>
             <button
               onClick={onEdit}
-              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors"
+              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors shrink-0"
             >
               <X className="h-5 w-5" />
             </button>
+          </div>
+
+          {/* Inline-edit hint banner — first-time users won't know fields
+              are editable until the modal hints at it. Single small line,
+              no dismissal needed. */}
+          <div className="flex items-center gap-1.5 px-6 py-2 text-[11px] text-[#7FAEE6] bg-[#EAF3FD] border-b border-[#E7DED2]">
+            <Pencil className="h-3 w-3" />
+            <span>{t("editHint")}</span>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
             {/* Weekly Schedule (for short goals) */}
-            {hasSchedule && (
+            {hasSchedule && edited.weekly_schedule && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar className="h-4 w-4 text-[#007AFF]" />
                   <h3 className="text-sm font-semibold text-[#2B2B2B]">{t("weeklyScheduleTitle")}</h3>
                 </div>
-                {plan.weekly_schedule!.ai_summary && (
-                  <p className="text-xs text-[#6F6A64] mb-3">{plan.weekly_schedule!.ai_summary}</p>
-                )}
+                <p className="text-xs text-[#6F6A64] mb-3">
+                  <EditableText
+                    value={edited.weekly_schedule.ai_summary || ""}
+                    onSave={setScheduleSummary}
+                    multiline
+                    rows={2}
+                    placeholder={t("scheduleSummaryPlaceholder")}
+                    emptyHint={t("scheduleSummaryEmpty")}
+                    className="text-xs text-[#6F6A64]"
+                  />
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   {Array.from(tasksByDay.entries())
                     .sort(([a], [b]) => a - b)
@@ -95,15 +208,40 @@ export function RoadmapPreview({
                       <div key={dow} className="rounded-lg border border-[#E7DED2] bg-white p-3">
                         <p className="text-xs font-semibold text-[#2B2B2B] mb-2">{tDays(DAY_NAME_KEYS[dow])}</p>
                         <div className="space-y-1.5">
-                          {tasks.sort((a, b) => a.sort_order - b.sort_order).map((task, i) => (
-                            <div key={i} className="flex items-start gap-1.5">
-                              <Clock className="h-3 w-3 text-[#9B948B] mt-0.5 shrink-0" />
-                              <div>
-                                <p className="text-xs text-[#2B2B2B] leading-snug">{task.title}</p>
-                                <p className="text-[10px] text-[#9B948B]">{task.time_slot}</p>
+                          {tasks.sort((a, b) => a.sort_order - b.sort_order).map((task) => {
+                            // Find this task's index in the canonical
+                            // edited.weekly_schedule!.tasks array so the
+                            // setter mutates the right slot.
+                            const taskIdx = edited.weekly_schedule!.tasks.indexOf(task);
+                            return (
+                              <div key={taskIdx} className="flex items-start gap-1.5">
+                                <Clock className="h-3 w-3 text-[#9B948B] mt-0.5 shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs text-[#2B2B2B] leading-snug">
+                                    <EditableText
+                                      value={task.title}
+                                      onSave={(next) =>
+                                        setScheduleTask(taskIdx, "title", next)
+                                      }
+                                      placeholder={t("taskTitlePlaceholder")}
+                                      className="text-xs text-[#2B2B2B]"
+                                    />
+                                  </p>
+                                  <p className="text-[10px] text-[#9B948B]">
+                                    <EditableText
+                                      value={task.time_slot || ""}
+                                      onSave={(next) =>
+                                        setScheduleTask(taskIdx, "time_slot", next)
+                                      }
+                                      placeholder={t("taskTimeSlotPlaceholder")}
+                                      emptyHint={t("taskTimeSlotEmpty")}
+                                      className="text-[10px] text-[#9B948B]"
+                                    />
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -125,17 +263,38 @@ export function RoadmapPreview({
                         <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-[#007AFF] text-white text-sm font-semibold">
                           {phaseIdx + 1}
                         </div>
-                        <div className="pt-1">
+                        <div className="pt-1 min-w-0 flex-1">
                           <p className="text-sm font-semibold text-[#2B2B2B]">
-                            {phase.title}
+                            <EditableText
+                              value={phase.title}
+                              onSave={(next) =>
+                                setPhaseField(phaseIdx, "title", next)
+                              }
+                              placeholder={t("phaseTitlePlaceholder")}
+                              className="text-sm font-semibold text-[#2B2B2B]"
+                            />
                           </p>
-                          {phase.description && (
-                            <p className="text-xs text-[#6F6A64] mt-0.5">
-                              {phase.description}
-                            </p>
-                          )}
+                          <p className="text-xs text-[#6F6A64] mt-0.5">
+                            <EditableText
+                              value={phase.description || ""}
+                              onSave={(next) =>
+                                setPhaseField(phaseIdx, "description", next)
+                              }
+                              multiline
+                              rows={2}
+                              placeholder={t("phaseDescriptionPlaceholder")}
+                              emptyHint={t("phaseDescriptionEmpty")}
+                              className="text-xs text-[#6F6A64]"
+                            />
+                          </p>
                           <span className="inline-block text-[11px] text-[#9B948B] mt-1">
-                            {t("weeksCount", { count: phase.estimated_weeks })}
+                            <EditableText
+                              value={String(phase.estimated_weeks)}
+                              onSave={(next) => setPhaseWeeks(phaseIdx, next)}
+                              placeholder="1"
+                              className="text-[11px] text-[#9B948B]"
+                            />{" "}
+                            {t("weeksSuffix")}
                           </span>
                         </div>
                       </div>
@@ -147,8 +306,15 @@ export function RoadmapPreview({
                             className="flex items-start gap-2.5 py-1.5"
                           >
                             <Flag className="h-3.5 w-3.5 shrink-0 text-[#007AFF] mt-0.5" />
-                            <span className="text-sm text-[#2B2B2B]">
-                              {m.title}
+                            <span className="text-sm text-[#2B2B2B] min-w-0 flex-1">
+                              <EditableText
+                                value={m.title}
+                                onSave={(next) =>
+                                  setMilestoneTitle(phaseIdx, mIdx, next)
+                                }
+                                placeholder={t("milestonePlaceholder")}
+                                className="text-sm text-[#2B2B2B]"
+                              />
                             </span>
                           </div>
                         ))}
@@ -175,7 +341,7 @@ export function RoadmapPreview({
               {t("continueEditing")}
             </button>
             <button
-              onClick={onConfirm}
+              onClick={() => onConfirm(edited)}
               disabled={isSaving}
               className="flex items-center gap-2 bg-[#007AFF] text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-50"
             >

@@ -893,16 +893,20 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
   // the draft session as confirmed so it drops off the Continue list.
   // ------------------------------------------------------------
 
-  const confirmPlan = useCallback(async () => {
-    if (!plan) return;
+  const confirmPlan = useCallback(async (override?: GoalPlanData) => {
+    // Prefer the override (the caller's edited copy from RoadmapPreview)
+    // over our internal `plan` state. The modal holds its own working copy
+    // until the user confirms, so React state on this hook is stale.
+    const target = override ?? plan;
+    if (!target) return;
     setStage("saving");
     setError(null);
 
     try {
       // Step 1: createGoal must come first — everything below needs goal.id.
       const goal = await createGoal({
-        title: plan.goal_title,
-        description: plan.goal_description,
+        title: target.goal_title,
+        description: target.goal_description,
       });
 
       // Step 2: kick off everything that only needs goal.id IN PARALLEL.
@@ -923,26 +927,26 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
         // milestone — read-only sub-phase markers, not actionable todos).
         const phases = await createPhases(
           goal.id,
-          plan.phases.map((p) => ({
+          target.phases.map((p) => ({
             title: p.title,
             description: p.description,
             estimated_weeks: p.estimated_weeks,
             milestones: p.milestones ?? [],
           }))
         );
-        if (plan.weekly_schedule && phases.length > 0) {
+        if (target.weekly_schedule && phases.length > 0) {
           const firstPhase = phases[0];
           const weeklyPlan = await createWeeklyPlan({
             phase_id: firstPhase.id,
             week_start: getWeekStart(),
-            ai_summary: plan.weekly_schedule.ai_summary,
+            ai_summary: target.weekly_schedule.ai_summary,
           });
           // Defense-in-depth: even though the goal-creation prompt now tells
           // the model to skip past days, a non-zero portion of generations
           // still emit Mon/Tue tasks when the user creates a goal mid-week.
           // Drop them here so the user never sees stale "past" rows.
           const todayDow = getTodayDayOfWeek();
-          const futureTasks = plan.weekly_schedule.tasks.filter(
+          const futureTasks = target.weekly_schedule.tasks.filter(
             (t) => t.day_of_week >= todayDow,
           );
           if (futureTasks.length > 0) {
