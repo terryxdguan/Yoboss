@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-export const metadata = {
-  title: "Terms of Service — YoBoss",
-  description: "The terms that govern your use of YoBoss.",
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "The terms that govern your use of YoBoss — your rights, our obligations, and how the service may be used.",
+  alternates: { canonical: "/terms" },
+  openGraph: {
+    url: "/terms",
+    title: "Terms of Service — YoBoss",
+    description: "The terms that govern your use of YoBoss.",
+  },
+  twitter: {
+    title: "Terms of Service — YoBoss",
+    description: "The terms that govern your use of YoBoss.",
+  },
 };
 
 export default async function TermsPage() {

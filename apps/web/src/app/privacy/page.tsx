@@ -1,9 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-export const metadata = {
-  title: "Privacy Policy — YoBoss",
-  description: "How YoBoss collects, uses, and protects your data.",
+export const metadata: Metadata = {
+  // Title template ("%s — YoBoss") in the root layout adds the suffix.
+  title: "Privacy Policy",
+  description:
+    "How YoBoss collects, uses, and protects your data — what we store, who we share it with, and your rights.",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    url: "/privacy",
+    title: "Privacy Policy — YoBoss",
+    description: "How YoBoss collects, uses, and protects your data.",
+  },
+  twitter: {
+    title: "Privacy Policy — YoBoss",
+    description: "How YoBoss collects, uses, and protects your data.",
+  },
 };
 
 export default async function PrivacyPage() {
