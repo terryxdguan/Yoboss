@@ -29,6 +29,10 @@ const ROUTE_LIMITS: Record<string, number> = {
   coach: 10,
   "agent-chat": 15,
   summarize: 30,
+  // Scheduled workflows can fan out via cron (every 5 min). Keep this low
+  // so a runaway schedule can't blast Anthropic faster than the user's
+  // monthly allowance check can debit.
+  "workflow-execute": 5,
 };
 
 // --- Main guard ---

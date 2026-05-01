@@ -90,7 +90,12 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/dev/") ||
     // Sentry tunnel route — proxies browser SDK events through our origin
     // to dodge ad-blockers. Must be reachable without a session.
-    request.nextUrl.pathname.startsWith("/monitoring");
+    request.nextUrl.pathname.startsWith("/monitoring") ||
+    // Workflow execute is invoked by /api/cron/run-scheduled via a server-
+    // to-server fetch (no cookies). The route handler does its own dual
+    // auth — CRON_SECRET bearer for scheduled runs, Supabase session for
+    // manual runs — so middleware doesn't need to gate it.
+    request.nextUrl.pathname === "/api/workflows/execute";
 
   // Protect private routes. On dev, if the bypass is configured, send the
   // request through /api/dev/auto-login first so it gets a real session for

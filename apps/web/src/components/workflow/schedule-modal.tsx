@@ -53,7 +53,7 @@ const DAY_LABELS = [
 ];
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = [0, 15, 30, 45];
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 export function ScheduleModal({
   workflow,

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/db/server";
 import { createAdminClient } from "@/lib/db/admin";
 import { getAnthropicClient, MANAGED_AGENT, listSessionFiles } from "@/lib/ai/client";
 import { executeCustomTool } from "@/lib/ai/custom-tools";
-import { logUsage } from "@/lib/ai/rate-limit";
+import { logUsage, withRateLimit } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { ALL_AGENTS, DEFAULT_AGENTS } from "@/lib/ai/agent-registry";
@@ -181,6 +181,57 @@ export async function POST(request: NextRequest) {
     .single();
   if (wfErr || !workflow) {
     return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
+  }
+
+  // Quota gate. Without this, scheduled workflows kept billing the project
+  // (we pay Anthropic) for users whose monthly cap was already exhausted —
+  // see PR adding consecutive_quota_failures + cron-level pre-skip for
+  // the full mitigation. Manual triggers see the same 402 but don't strike
+  // out the schedule (counter only ticks on triggered_by === "scheduled").
+  const rateCheck = await withRateLimit(userId, "workflow-execute");
+  if (!rateCheck.allowed) {
+    const isQuotaError = rateCheck.response.status === 402;
+
+    // Persist a failed run record so it shows up in the user's history
+    // with a real reason — otherwise the schedule "silently doesn't run"
+    // and the user has no signal in-app. We don't have `steps` shaped yet
+    // (topic injection happens after the quota gate), so fall back to the
+    // raw stored steps for the total count.
+    const rawStepsForCount = (workflow.steps as { id: string }[] | null) ?? [];
+    await supabase.from("workflow_runs").insert({
+      workflow_id: workflowId,
+      user_id: userId,
+      status: "failed",
+      current_step: 0,
+      total_steps: rawStepsForCount.length,
+      step_results: [],
+      triggered_by: triggeredBy,
+      error: isQuotaError ? "Monthly allowance exhausted" : "Rate limit",
+      completed_at: new Date().toISOString(),
+    });
+
+    if (isQuotaError && triggeredBy === "scheduled") {
+      // Strike the schedule. Three consecutive quota failures auto-disables
+      // it so we stop spamming this user every 5 min until they top up.
+      const failures = (workflow.consecutive_quota_failures ?? 0) + 1;
+      const update: { consecutive_quota_failures: number; schedule_enabled?: boolean } = {
+        consecutive_quota_failures: failures,
+      };
+      if (failures >= 3) update.schedule_enabled = false;
+      await supabase.from("workflows").update(update).eq("id", workflowId);
+
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: failures >= 3 ? "scheduled_run_disabled" : "scheduled_run_quota_exceeded",
+        title:
+          failures >= 3
+            ? `${workflow.name} schedule paused — out of credits`
+            : `${workflow.name} skipped — out of credits`,
+        metadata: { workflowId, consecutiveFailures: failures },
+      });
+    }
+
+    return rateCheck.response;
   }
 
   // Use topic from request, falling back to workflow's saved topic
@@ -367,9 +418,16 @@ export async function POST(request: NextRequest) {
       .update({ status: "success", step_results: stepResults, completed_at: new Date().toISOString() })
       .eq("id", runId);
 
+    // Successful run resets the strike counter — only consecutive failures
+    // are interesting for auto-pausing a schedule.
     await supabase
       .from("workflows")
-      .update({ last_run_at: new Date().toISOString(), last_run_status: "success", status: "ready" })
+      .update({
+        last_run_at: new Date().toISOString(),
+        last_run_status: "success",
+        status: "ready",
+        consecutive_quota_failures: 0,
+      })
       .eq("id", workflowId);
 
     await supabase.from("notifications").insert({
