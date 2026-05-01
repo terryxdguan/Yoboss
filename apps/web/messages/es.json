@@ -96,7 +96,30 @@
     "colModel": "Modelo",
     "colTokens": "Tokens (entrada/salida)",
     "colCost": "Coste",
-    "loadMore": "Cargar más"
+    "loadMore": "Cargar más",
+    "privacyTitle": "Privacidad y cuenta",
+    "exportTitle": "Exporta tus datos",
+    "exportDescription": "Descarga un archivo JSON con tus objetivos, planes, tareas, notas e historial de chat.",
+    "exportButton": "Exportar",
+    "exporting": "Exportando…",
+    "exportFailed": "La exportación falló. Inténtalo de nuevo.",
+    "deleteTitle": "Eliminar cuenta",
+    "deleteDescription": "Elimina permanentemente tu cuenta y todos los datos almacenados. Esta acción no se puede deshacer.",
+    "deleteButton": "Eliminar cuenta",
+    "deleteConfirmTitle": "¿Eliminar tu cuenta?",
+    "deleteConfirmBody": "Se eliminarán inmediatamente tus objetivos, tareas y chats, y cualquier suscripción activa será cancelada. Esta acción no se puede deshacer.",
+    "deleteConfirmPrompt": "Escribe DELETE para confirmar",
+    "deleteCancel": "Cancelar",
+    "deleteConfirmButton": "Eliminar para siempre",
+    "deleting": "Eliminando…",
+    "deleteFailed": "No se pudo eliminar la cuenta. Inténtalo de nuevo."
+  },
+  "cookies": {
+    "ariaLabel": "Consentimiento de cookies",
+    "body": "Usamos cookies esenciales para mantenerte con sesión iniciada. Con tu permiso también activamos analítica de uso y repeticiones de errores para mejorar el producto.",
+    "learnMore": "Política de privacidad",
+    "accept": "Aceptar",
+    "decline": "Rechazar"
   },
   "workflows": {
     "list": {
@@ -196,7 +219,9 @@
       "menuDeliverable": "Entregables",
       "menuDelete": "Eliminar",
       "viewChat": "Chat",
-      "viewDeliverables": "Entregables"
+      "viewDeliverables": "Entregables",
+      "quotaExceeded": "⚠️ Tu cuota mensual y tu saldo se han agotado.",
+      "quotaCta": "Comprar créditos en Cuenta →"
     }
   },
   "todos": {
@@ -382,7 +407,7 @@
   },
   "privacy": {
     "title": "Política de privacidad",
-    "lastUpdated": "Última actualización: 27 de abril de 2026",
+    "lastUpdated": "Última actualización: 1 de mayo de 2026",
     "s1Title": "1. Qué recopilamos",
     "s1Body": "Cuando te registras almacenamos tu correo electrónico y (cuando se proporciona) el nombre y la foto de tu proveedor de autenticación. Mientras usas YoBoss almacenamos los objetivos, fases, tareas, notas y mensajes de chat que creas. Se registra telemetría de uso anonimizada (recuento de solicitudes, tokens del modelo) para facturación y monitoreo de calidad.",
     "s2Title": "2. Cómo lo usamos",
@@ -401,13 +426,13 @@
     "s3L4Name": "Vercel",
     "s3L4Body": " — alojamiento de la aplicación y registros del runtime perimetral.",
     "s4Title": "4. Conservación de datos",
-    "s4Body": "Tus datos se conservan mientras tu cuenta esté activa. Puedes eliminar objetivos, tareas y sesiones de chat individuales desde dentro de la app. Para borrar tu cuenta y todos los datos asociados, escríbenos al contacto de abajo — atenderemos la solicitud en un plazo de 30 días.",
+    "s4Body": "Tus datos se conservan mientras tu cuenta esté activa. Puedes eliminar objetivos, tareas y sesiones de chat individuales desde dentro de la app. Para eliminar tu cuenta completa y todos los datos asociados, usa el botón Eliminar cuenta en la página Cuenta — la eliminación es inmediata, se propaga por todas nuestras bases de datos y cancela cualquier suscripción activa.",
     "s5Title": "5. Archivos generados por IA",
     "s5Body": "Los archivos producidos por la ejecución de código de IA los conserva Anthropic durante un periodo limitado (normalmente 30 días desde su creación) y luego caducan. Descarga lo que quieras conservar a largo plazo.",
     "s6Title": "6. Tus derechos",
-    "s6Body": "Puedes solicitar acceso, corrección o eliminación de tus datos personales en cualquier momento. Puedes exportar tus objetivos y tareas desde la app, o contactarnos para obtener una exportación completa.",
+    "s6Body": "Puedes solicitar acceso, corrección o eliminación de tus datos personales en cualquier momento. La página Cuenta tiene botones de autoservicio para exportar todos tus datos como archivo JSON y para eliminar tu cuenta; ambos se ejecutan al instante sin contactar al soporte.",
     "s7Title": "7. Cookies",
-    "s7Body": "Usamos solo cookies de origen — estrictamente necesarias para autenticación (tokens de sesión) y de preferencias (estado de la interfaz). Sin cookies publicitarias ni de seguimiento.",
+    "s7Body": "Usamos solo cookies de origen — estrictamente necesarias para autenticación (tokens de sesión) y de preferencias (estado de la interfaz). En la primera visita un banner pide tu consentimiento antes de activar la analítica opcional (Vercel Analytics) y las repeticiones de errores (Sentry). Puedes rechazar cualquiera de las dos; las cookies esenciales de autenticación siempre se ejecutan. Sin cookies publicitarias ni de seguimiento.",
     "s8Title": "8. Contacto",
     "s8Body": "¿Preguntas o solicitudes sobre tus datos? Escribe a "
   },

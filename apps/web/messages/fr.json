@@ -96,7 +96,30 @@
     "colModel": "Modèle",
     "colTokens": "Jetons (entrée/sortie)",
     "colCost": "Coût",
-    "loadMore": "Charger plus"
+    "loadMore": "Charger plus",
+    "privacyTitle": "Confidentialité et compte",
+    "exportTitle": "Exporter vos données",
+    "exportDescription": "Téléchargez un fichier JSON avec vos objectifs, plans, tâches, notes et historique de chat.",
+    "exportButton": "Exporter",
+    "exporting": "Export en cours…",
+    "exportFailed": "L'export a échoué. Veuillez réessayer.",
+    "deleteTitle": "Supprimer le compte",
+    "deleteDescription": "Supprimer définitivement votre compte et toutes les données stockées. Cette action est irréversible.",
+    "deleteButton": "Supprimer le compte",
+    "deleteConfirmTitle": "Supprimer votre compte ?",
+    "deleteConfirmBody": "Vos objectifs, tâches et chats seront immédiatement supprimés, et tout abonnement actif sera annulé. Cette action est irréversible.",
+    "deleteConfirmPrompt": "Tapez DELETE pour confirmer",
+    "deleteCancel": "Annuler",
+    "deleteConfirmButton": "Supprimer définitivement",
+    "deleting": "Suppression…",
+    "deleteFailed": "Impossible de supprimer le compte. Veuillez réessayer."
+  },
+  "cookies": {
+    "ariaLabel": "Consentement aux cookies",
+    "body": "Nous utilisons des cookies essentiels pour vous garder connecté. Avec votre permission, nous activons aussi des analyses d'usage et des replays d'erreurs pour améliorer le produit.",
+    "learnMore": "Politique de confidentialité",
+    "accept": "Accepter",
+    "decline": "Refuser"
   },
   "workflows": {
     "list": {
@@ -196,7 +219,9 @@
       "menuDeliverable": "Livrables",
       "menuDelete": "Supprimer",
       "viewChat": "Chat",
-      "viewDeliverables": "Livrables"
+      "viewDeliverables": "Livrables",
+      "quotaExceeded": "⚠️ Votre quota mensuel et votre solde sont tous deux épuisés.",
+      "quotaCta": "Acheter des crédits dans Compte →"
     }
   },
   "todos": {
@@ -382,7 +407,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "lastUpdated": "Dernière mise à jour : 27 avril 2026",
+    "lastUpdated": "Dernière mise à jour : 1 mai 2026",
     "s1Title": "1. Ce que nous collectons",
     "s1Body": "Lors de votre inscription, nous stockons l'adresse e-mail et (si fournis) le nom et l'avatar de votre fournisseur d'authentification. Pendant que vous utilisez YoBoss, nous stockons les objectifs, phases, tâches, notes et messages de chat que vous créez. De la télémétrie d'usage anonymisée (nombre de requêtes, jetons du modèle) est enregistrée pour la facturation et le suivi qualité.",
     "s2Title": "2. Comment nous l'utilisons",
@@ -401,13 +426,13 @@
     "s3L4Name": "Vercel",
     "s3L4Body": " — hébergement de l'application et journaux du runtime edge.",
     "s4Title": "4. Conservation des données",
-    "s4Body": "Vos données sont conservées tant que votre compte est actif. Vous pouvez supprimer des objectifs, des tâches et des sessions de chat individuels depuis l'application. Pour supprimer votre compte et toutes les données associées, écrivez-nous au contact ci-dessous — nous traiterons la demande sous 30 jours.",
+    "s4Body": "Vos données sont conservées tant que votre compte est actif. Vous pouvez supprimer des objectifs, des tâches et des sessions de chat individuels depuis l'application. Pour supprimer votre compte entier et toutes les données associées, utilisez le bouton Supprimer le compte sur la page Compte — la suppression est immédiate, se propage à toutes nos bases de données et annule tout abonnement actif.",
     "s5Title": "5. Fichiers générés par l'IA",
     "s5Body": "Les fichiers produits par l'exécution de code IA sont conservés par Anthropic pendant une fenêtre limitée (généralement 30 jours après création) puis expirent. Téléchargez ce que vous voulez garder à long terme.",
     "s6Title": "6. Vos droits",
-    "s6Body": "Vous pouvez demander l'accès, la rectification ou la suppression de vos données personnelles à tout moment. Vous pouvez exporter vos objectifs et tâches via l'application, ou nous contacter pour un export complet.",
+    "s6Body": "Vous pouvez demander l'accès, la rectification ou la suppression de vos données personnelles à tout moment. La page Compte propose des boutons en libre-service pour exporter toutes vos données dans un fichier JSON et pour supprimer votre compte ; les deux s'exécutent instantanément sans contacter le support.",
     "s7Title": "7. Cookies",
-    "s7Body": "Nous utilisons uniquement des cookies de première partie — des cookies strictement nécessaires à l'authentification (jetons de session) et de préférences (état de l'interface). Aucun cookie publicitaire ni de suivi.",
+    "s7Body": "Nous utilisons uniquement des cookies de première partie — des cookies strictement nécessaires à l'authentification (jetons de session) et de préférences (état de l'interface). Lors de la première visite, une bannière demande votre consentement avant d'activer les analyses optionnelles (Vercel Analytics) et les replays d'erreurs (Sentry). Vous pouvez refuser l'un ou l'autre ; les cookies essentiels d'authentification sont toujours actifs. Aucun cookie publicitaire ni de suivi.",
     "s8Title": "8. Contact",
     "s8Body": "Questions ou demandes concernant vos données ? Écrivez à "
   },

@@ -96,7 +96,30 @@
     "colModel": "Modelo",
     "colTokens": "Tokens (entrada/saída)",
     "colCost": "Custo",
-    "loadMore": "Carregar mais"
+    "loadMore": "Carregar mais",
+    "privacyTitle": "Privacidade e conta",
+    "exportTitle": "Exportar seus dados",
+    "exportDescription": "Baixe um arquivo JSON com suas metas, planos, tarefas, notas e histórico de chat.",
+    "exportButton": "Exportar",
+    "exporting": "Exportando…",
+    "exportFailed": "A exportação falhou. Tente novamente.",
+    "deleteTitle": "Excluir conta",
+    "deleteDescription": "Remove permanentemente sua conta e todos os dados armazenados. Esta ação não pode ser desfeita.",
+    "deleteButton": "Excluir conta",
+    "deleteConfirmTitle": "Excluir sua conta?",
+    "deleteConfirmBody": "Suas metas, tarefas e chats serão excluídos imediatamente, e qualquer assinatura ativa será cancelada. Esta ação não pode ser desfeita.",
+    "deleteConfirmPrompt": "Digite DELETE para confirmar",
+    "deleteCancel": "Cancelar",
+    "deleteConfirmButton": "Excluir para sempre",
+    "deleting": "Excluindo…",
+    "deleteFailed": "Não foi possível excluir a conta. Tente novamente."
+  },
+  "cookies": {
+    "ariaLabel": "Consentimento de cookies",
+    "body": "Usamos cookies essenciais para manter você conectado. Com sua permissão também ativamos análises de uso e replays de erros para melhorar o produto.",
+    "learnMore": "Política de Privacidade",
+    "accept": "Aceitar",
+    "decline": "Recusar"
   },
   "workflows": {
     "list": {
@@ -196,7 +219,9 @@
       "menuDeliverable": "Entregáveis",
       "menuDelete": "Excluir",
       "viewChat": "Chat",
-      "viewDeliverables": "Entregáveis"
+      "viewDeliverables": "Entregáveis",
+      "quotaExceeded": "⚠️ Sua cota mensal e seu saldo se esgotaram.",
+      "quotaCta": "Comprar créditos em Conta →"
     }
   },
   "todos": {
@@ -382,7 +407,7 @@
   },
   "privacy": {
     "title": "Política de Privacidade",
-    "lastUpdated": "Última atualização: 27 de abril de 2026",
+    "lastUpdated": "Última atualização: 1 de maio de 2026",
     "s1Title": "1. O que coletamos",
     "s1Body": "Quando você se cadastra armazenamos o e-mail e (quando fornecidos) o nome e o avatar do seu provedor de autenticação. Enquanto você usa o YoBoss, armazenamos as metas, fases, tarefas, notas e mensagens de chat que você cria. Telemetria de uso anonimizada (contagem de requisições, tokens do modelo) é registrada para faturamento e monitoramento de qualidade.",
     "s2Title": "2. Como usamos",
@@ -401,13 +426,13 @@
     "s3L4Name": "Vercel",
     "s3L4Body": " — hospedagem da aplicação e logs do runtime de borda.",
     "s4Title": "4. Retenção de dados",
-    "s4Body": "Seus dados permanecem enquanto sua conta estiver ativa. Você pode excluir metas, tarefas e sessões de chat individualmente dentro do app. Para excluir sua conta e todos os dados associados, escreva ao contato abaixo — atenderemos a solicitação em até 30 dias.",
+    "s4Body": "Seus dados permanecem enquanto sua conta estiver ativa. Você pode excluir metas, tarefas e sessões de chat individualmente dentro do app. Para excluir sua conta inteira e todos os dados associados, use o botão Excluir conta na página Conta — a exclusão é imediata, propaga-se por todas as nossas bases de dados e cancela qualquer assinatura ativa.",
     "s5Title": "5. Arquivos gerados por IA",
     "s5Body": "Os arquivos produzidos pela execução de código de IA ficam retidos pela Anthropic por um período limitado (normalmente 30 dias a partir da criação) e depois expiram. Baixe o que você quer guardar a longo prazo.",
     "s6Title": "6. Seus direitos",
-    "s6Body": "Você pode solicitar acesso, correção ou exclusão dos seus dados pessoais a qualquer momento. Pode exportar suas metas e tarefas pelo app ou contatar-nos para uma exportação completa.",
+    "s6Body": "Você pode solicitar acesso, correção ou exclusão dos seus dados pessoais a qualquer momento. A página Conta tem botões de autoatendimento para exportar todos os seus dados como arquivo JSON e para excluir sua conta; ambos rodam instantaneamente sem precisar contatar o suporte.",
     "s7Title": "7. Cookies",
-    "s7Body": "Usamos apenas cookies próprios — estritamente necessários para autenticação (tokens de sessão) e cookies de preferência (estado da interface). Sem cookies de publicidade ou rastreamento.",
+    "s7Body": "Usamos apenas cookies próprios — estritamente necessários para autenticação (tokens de sessão) e cookies de preferência (estado da interface). Na primeira visita um banner pede consentimento antes de ativarmos análises opcionais (Vercel Analytics) e replays de erros (Sentry). Você pode recusar qualquer um dos dois; cookies essenciais de autenticação sempre rodam. Sem cookies de publicidade ou rastreamento.",
     "s8Title": "8. Contato",
     "s8Body": "Dúvidas ou solicitações sobre seus dados? Escreva para "
   },

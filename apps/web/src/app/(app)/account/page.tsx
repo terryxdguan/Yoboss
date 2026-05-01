@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Calendar, Globe, Check, BarChart3, CreditCard, Sparkles } from "lucide-react";
+import { Calendar, Globe, Check, BarChart3, CreditCard, Sparkles, Download, AlertTriangle } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   getAccountPageData,
@@ -80,6 +80,10 @@ export default function AccountPage() {
   const [tzSaved, setTzSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -156,6 +160,58 @@ export default function AccountPage() {
       alert("Failed to open portal");
     } finally {
       setPortalLoading(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/account/export", { method: "POST" });
+      if (!res.ok) {
+        alert(t("exportFailed"));
+        return;
+      }
+      // Streamed JSON → blob → anchor click. Filename comes from
+      // Content-Disposition; if the browser doesn't surface it, fall back
+      // to a timestamped default.
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `yoboss-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert(t("exportFailed"));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        alert(data?.error || t("deleteFailed"));
+        setDeleting(false);
+        return;
+      }
+      // Server already signed us out; redirect to landing. Hard reload so
+      // any in-memory Supabase client also drops state.
+      window.location.href = "/";
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert(t("deleteFailed"));
+      setDeleting(false);
     }
   }
 
@@ -476,6 +532,111 @@ export default function AccountPage() {
           </>
         )}
       </div>
+
+      {/* Section: Privacy / Danger Zone — GDPR data export + account
+          deletion. Lives at the bottom of the account page so it isn't
+          stumbled into accidentally. */}
+      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D5847A]/10">
+            <AlertTriangle className="h-4 w-4 text-[#D5847A]" />
+          </div>
+          <h2 className="text-sm font-semibold text-[#2B2B2B]">{t("privacyTitle")}</h2>
+        </div>
+
+        <div className="space-y-4">
+          {/* Export */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#2B2B2B]">{t("exportTitle")}</p>
+              <p className="text-xs text-[#6F6A64] mt-0.5">{t("exportDescription")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50 shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {exporting ? t("exporting") : t("exportButton")}
+            </button>
+          </div>
+
+          <div className="border-t border-[#F1ECE4]" />
+
+          {/* Delete */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#D5847A]">{t("deleteTitle")}</p>
+              <p className="text-xs text-[#6F6A64] mt-0.5">{t("deleteDescription")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#D5847A]/40 text-[#D5847A] hover:bg-[#D5847A]/10 transition-colors shrink-0"
+            >
+              {t("deleteButton")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete confirm modal */}
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4"
+          onClick={() => !deleting && setDeleteOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-label={t("deleteConfirmTitle")}
+            className="w-full max-w-md rounded-xl bg-[#FFFDF9] border border-[#E7DED2] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D5847A]/10">
+                <AlertTriangle className="h-5 w-5 text-[#D5847A]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-[#2B2B2B]">{t("deleteConfirmTitle")}</h3>
+                <p className="mt-1 text-sm text-[#6F6A64]">{t("deleteConfirmBody")}</p>
+              </div>
+            </div>
+
+            <label className="block mt-5">
+              <span className="text-xs font-medium text-[#6F6A64]">{t("deleteConfirmPrompt")}</span>
+              <input
+                autoFocus
+                type="text"
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                disabled={deleting}
+                placeholder="DELETE"
+                className="mt-1.5 w-full rounded-lg border border-[#E7DED2] px-3 py-2 text-sm text-[#2B2B2B] outline-none focus:border-[#D5847A]/50 focus:ring-2 focus:ring-[#D5847A]/20"
+              />
+            </label>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50"
+              >
+                {t("deleteCancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteText !== "DELETE" || deleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#D5847A] text-white hover:bg-[#C4736A] transition-colors disabled:opacity-40"
+              >
+                {deleting ? t("deleting") : t("deleteConfirmButton")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

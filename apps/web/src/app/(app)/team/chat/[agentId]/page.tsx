@@ -831,12 +831,12 @@ export default function AgentChatPage() {
                     )}
                     {msg.quotaExceeded && (
                       <div className="mt-2 pt-2 border-t border-[#E7DED2] text-[12px] text-[#C9843D] space-y-1.5">
-                        <div>⚠️ 你本月的额度已用完，余额也已耗尽。</div>
+                        <div>{t("quotaExceeded")}</div>
                         <Link
                           href="/account"
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#C9843D] text-white text-[11px] font-medium hover:bg-[#B5742F] transition-colors"
                         >
-                          前往账户页购买 Credits →
+                          {t("quotaCta")}
                         </Link>
                       </div>
                     )}

@@ -21,12 +21,10 @@ Sentry.init({
 
   enableLogs: true,
 
-  integrations: [
-    Sentry.replayIntegration({
-      maskAllText: true,
-      blockAllMedia: true,
-    }),
-  ],
+  // The Replay integration is added dynamically by CookieConsent only after
+  // the user accepts cookies. Errors and perf are tracked unconditionally
+  // (legitimate-interest basis); replay captures DOM and gets explicit
+  // consent before activating.
 });
 
 // App Router navigation tracing — emits transactions for client-side route
