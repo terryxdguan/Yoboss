@@ -87,7 +87,10 @@ export async function middleware(request: NextRequest) {
     // (otherwise the redirect below would loop). The route itself triple-
     // guards against running in production, so whitelisting it here is
     // safe regardless of env.
-    request.nextUrl.pathname.startsWith("/api/dev/");
+    request.nextUrl.pathname.startsWith("/api/dev/") ||
+    // Sentry tunnel route — proxies browser SDK events through our origin
+    // to dodge ad-blockers. Must be reachable without a session.
+    request.nextUrl.pathname.startsWith("/monitoring");
 
   // Protect private routes. On dev, if the bypass is configured, send the
   // request through /api/dev/auto-login first so it gets a real session for
