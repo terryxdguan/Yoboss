@@ -105,7 +105,12 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/account?checkout=success`,
+      // Pass the purchase kind back in the success URL so the account page
+      // can decide whether to trust the banner. Subscription checkouts depend
+      // on the Stripe webhook landing before the user's tier flips — if the
+      // webhook fails (wrong endpoint URL, bad signing secret, etc.), the
+      // user would otherwise see "plan is active" while still on Free tier.
+      success_url: `${appUrl}/account?checkout=success&kind=${kind}`,
       cancel_url: `${appUrl}/account?checkout=cancelled`,
       metadata,
       ...(mode === "subscription"

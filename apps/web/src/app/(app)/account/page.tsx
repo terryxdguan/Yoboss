@@ -283,18 +283,38 @@ export default function AccountPage() {
           <h2 className="text-sm font-semibold text-[#2B2B2B]">{t("billingTitle")}</h2>
         </div>
 
-        {/* Checkout result banner */}
-        {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && (
-          <div className="mb-4 rounded-lg border border-[#7FB38A]/30 bg-[#7FB38A]/10 px-4 py-2.5 flex items-center gap-2">
-            <Check className="h-4 w-4 text-[#7FB38A]" />
-            <span className="text-sm text-[#2B2B2B]">{t("checkoutSuccess")}</span>
-          </div>
-        )}
-        {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "cancelled" && (
-          <div className="mb-4 rounded-lg border border-[#D4B06A]/30 bg-[#D4B06A]/10 px-4 py-2.5 flex items-center gap-2">
-            <span className="text-sm text-[#2B2B2B]">{t("checkoutCancelled")}</span>
-          </div>
-        )}
+        {/* Checkout result banner.
+            Subscription path: only confirm "plan is active" once the Stripe
+            webhook has actually flipped the tier in our DB. Showing the
+            success banner purely based on the URL would lie whenever event
+            delivery fails (wrong endpoint, signature mismatch, etc.) — the
+            user pays, sees "active", but stays on Free tier.
+            Credits path: keep showing immediately — credits delivery is
+            simpler and the balance below reflects the truth either way. */}
+        {(() => {
+          if (typeof window === "undefined") return null;
+          const params = new URLSearchParams(window.location.search);
+          const result = params.get("checkout");
+          if (result === "success") {
+            const kind = params.get("kind");
+            const isSubscription = kind === "subscription";
+            if (isSubscription && tier === "free") return null;
+            return (
+              <div className="mb-4 rounded-lg border border-[#7FB38A]/30 bg-[#7FB38A]/10 px-4 py-2.5 flex items-center gap-2">
+                <Check className="h-4 w-4 text-[#7FB38A]" />
+                <span className="text-sm text-[#2B2B2B]">{t("checkoutSuccess")}</span>
+              </div>
+            );
+          }
+          if (result === "cancelled") {
+            return (
+              <div className="mb-4 rounded-lg border border-[#D4B06A]/30 bg-[#D4B06A]/10 px-4 py-2.5 flex items-center gap-2">
+                <span className="text-sm text-[#2B2B2B]">{t("checkoutCancelled")}</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         {/* Current plan + actions */}
         <div className="flex items-start justify-between gap-4 mb-6">
