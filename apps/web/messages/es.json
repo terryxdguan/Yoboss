@@ -121,6 +121,23 @@
     "accept": "Aceptar",
     "decline": "Rechazar"
   },
+  "feedback": {
+    "openAria": "Enviar comentarios",
+    "title": "Envíanos tus comentarios",
+    "subtitle": "¿Encontraste un fallo o tienes una idea? Leemos cada mensaje.",
+    "close": "Cerrar",
+    "typeBug": "Fallo",
+    "typeSuggestion": "Idea",
+    "typeOther": "Otro",
+    "placeholder": "Cuéntanos qué pasó o qué mejoraría YoBoss…",
+    "cancel": "Cancelar",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "thankYouTitle": "¡Gracias por tus comentarios!",
+    "thankYouBody": "Lo revisaremos. Si es un fallo, podríamos contactarte por correo.",
+    "done": "Listo",
+    "errorGeneric": "No se pudo enviar. Inténtalo de nuevo."
+  },
   "workflows": {
     "list": {
       "title": "Flujos de trabajo",

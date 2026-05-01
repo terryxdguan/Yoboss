@@ -121,6 +121,23 @@
     "accept": "Aceitar",
     "decline": "Recusar"
   },
+  "feedback": {
+    "openAria": "Enviar feedback",
+    "title": "Enviar feedback",
+    "subtitle": "Encontrou um bug ou tem uma ideia? Lemos cada mensagem.",
+    "close": "Fechar",
+    "typeBug": "Bug",
+    "typeSuggestion": "Ideia",
+    "typeOther": "Outro",
+    "placeholder": "Conte-nos o que aconteceu ou o que tornaria o YoBoss melhor…",
+    "cancel": "Cancelar",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "thankYouTitle": "Obrigado pelo feedback!",
+    "thankYouBody": "Vamos analisar. Se for um bug, podemos retornar por e-mail.",
+    "done": "Pronto",
+    "errorGeneric": "Não foi possível enviar. Tente novamente."
+  },
   "workflows": {
     "list": {
       "title": "Fluxos de trabalho",

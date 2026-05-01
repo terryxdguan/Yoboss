@@ -121,6 +121,23 @@
     "accept": "Accept",
     "decline": "Decline"
   },
+  "feedback": {
+    "openAria": "Send feedback",
+    "title": "Send feedback",
+    "subtitle": "Spotted a bug or have an idea? We read every message.",
+    "close": "Close",
+    "typeBug": "Bug",
+    "typeSuggestion": "Idea",
+    "typeOther": "Other",
+    "placeholder": "Tell us what happened, or what would make YoBoss better…",
+    "cancel": "Cancel",
+    "send": "Send",
+    "sending": "Sending…",
+    "thankYouTitle": "Thanks for the feedback!",
+    "thankYouBody": "We'll take a look. If it's a bug we may follow up by email.",
+    "done": "Done",
+    "errorGeneric": "Couldn't send. Please try again."
+  },
   "workflows": {
     "list": {
       "title": "Workflows",

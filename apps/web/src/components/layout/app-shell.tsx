@@ -5,6 +5,7 @@ import { Sidebar } from "./sidebar";
 import { TopNav } from "./top-nav";
 import { ChatFab } from "./chat-fab";
 import { ChatPanel } from "./chat-panel";
+import { FeedbackWidget } from "@/components/feedback/feedback-widget";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -47,6 +48,7 @@ export function AppShell({ children, userAvatar, userName }: AppShellProps) {
       </main>
 
       <ChatPanel open={chatOpen} onClose={closeChat} />
+      <FeedbackWidget />
     </div>
   );
 }

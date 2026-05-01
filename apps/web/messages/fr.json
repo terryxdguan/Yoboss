@@ -121,6 +121,23 @@
     "accept": "Accepter",
     "decline": "Refuser"
   },
+  "feedback": {
+    "openAria": "Envoyer un commentaire",
+    "title": "Envoyer un commentaire",
+    "subtitle": "Un bug repéré ou une idée ? Nous lisons chaque message.",
+    "close": "Fermer",
+    "typeBug": "Bug",
+    "typeSuggestion": "Idée",
+    "typeOther": "Autre",
+    "placeholder": "Dites-nous ce qui s'est passé, ou ce qui rendrait YoBoss meilleur…",
+    "cancel": "Annuler",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "thankYouTitle": "Merci pour votre retour !",
+    "thankYouBody": "Nous allons regarder. Si c'est un bug, nous pourrons vous recontacter par e-mail.",
+    "done": "Terminé",
+    "errorGeneric": "Échec de l'envoi. Veuillez réessayer."
+  },
   "workflows": {
     "list": {
       "title": "Workflows",
