@@ -325,6 +325,7 @@
     "footerCopyright": "© 2026 YoBoss",
     "footerPrivacy": "Privacidade",
     "footerTerms": "Termos",
+    "footerContact": "Fale conosco",
     "authErrorTitle": "O login não foi concluído",
     "authErrorExpired": "Seu link de confirmação expirou. Cadastre-se novamente para receber um link novo.",
     "authErrorInvalid": "Esse link de confirmação não é mais válido. Cadastre-se novamente para receber um link novo.",

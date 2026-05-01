@@ -242,6 +242,7 @@ export function LandingPage() {
               <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/pricing">{t("navPricing")}</a>
               <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/privacy">{t("footerPrivacy")}</a>
               <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="/terms">{t("footerTerms")}</a>
+              <a className="text-xs text-[#9B948B] hover:text-[#6F6A64] hover:underline" href="mailto:contact@mail.yoboss.ai">{t("footerContact")}</a>
             </div>
             <span className="text-xs text-[#9B948B]">{t("footerCopyright")}</span>
           </div>
