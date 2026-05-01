@@ -35,17 +35,19 @@ export function FeedbackWidget() {
     setSubmitting(true);
     setError(null);
 
-    // Mirror to Sentry's Feedback inbox so bug reports surface alongside
-    // any recent errors / replays for that user. Fail quietly — Sentry's
-    // own breadcrumbs will tell us if this throws.
-    try {
-      const Sentry = await import("@sentry/nextjs");
-      Sentry.captureFeedback({
-        message: `[${type}] ${body.trim()}`,
-        url: typeof window !== "undefined" ? window.location.href : undefined,
-      });
-    } catch {
-      // ignore
+    // Mirror BUG reports to Sentry so they surface alongside the user's
+    // recent errors / replay. Ideas and "other" feedback are product-level
+    // and would just be noise in the engineering inbox.
+    if (type === "bug") {
+      try {
+        const Sentry = await import("@sentry/nextjs");
+        Sentry.captureFeedback({
+          message: body.trim(),
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        });
+      } catch {
+        // ignore
+      }
     }
 
     try {
