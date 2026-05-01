@@ -2059,6 +2059,74 @@ export async function getRecentCreditTransactions(limit = 20) {
   return data || [];
 }
 
+// One-shot loader for /account. Replaces 4 separate server actions
+// (getBillingState + getCreditUsageSummary + getRecentAiUsage + getUserTimezone)
+// each of which independently parsed cookies + called auth.getUser(), so a
+// single page load fired 5 auth round-trips. This consolidates to one auth
+// call followed by 4 parallel queries — same data, ~5× fewer round-trips.
+export async function getAccountPageData(usageLimit = 30): Promise<{
+  quota: UserQuota | null;
+  creditUsage: {
+    totalCreditsCents: number;
+    usedCreditsCents: number;
+    balanceCents: number;
+  };
+  usage: AiUsageRecord[];
+  timezone: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const [
+    { data: quota },
+    { data: transactions },
+    { data: usageRows },
+    { data: tzRow },
+  ] = await Promise.all([
+    supabase.from("user_quotas").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("credit_transactions").select("amount_cents").eq("user_id", user.id),
+    supabase
+      .from("ai_usage")
+      .select("id, route, model, input_tokens, output_tokens, estimated_cost_cents, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(0, usageLimit - 1),
+    supabase.from("users").select("timezone").eq("id", user.id).maybeSingle(),
+  ]);
+
+  // Mirror getBillingState's auto-create-on-first-visit behavior.
+  let finalQuota = quota as UserQuota | null;
+  if (!finalQuota) {
+    const { data: created } = await supabase
+      .from("user_quotas")
+      .insert({ user_id: user.id })
+      .select()
+      .single();
+    finalQuota = created as UserQuota | null;
+  }
+
+  const balanceCents = finalQuota?.credits_balance_cents ?? 0;
+  const positiveCredits =
+    transactions?.reduce((s, t) => s + Math.max(0, t.amount_cents ?? 0), 0) ?? 0;
+  const spentCredits =
+    transactions?.reduce((s, t) => s + Math.max(0, -(t.amount_cents ?? 0)), 0) ?? 0;
+  const totalCreditsCents = Math.max(positiveCredits, balanceCents + spentCredits);
+
+  return {
+    quota: finalQuota,
+    creditUsage: {
+      totalCreditsCents,
+      usedCreditsCents: Math.max(0, totalCreditsCents - balanceCents),
+      balanceCents,
+    },
+    usage: (usageRows as AiUsageRecord[]) || [],
+    timezone: tzRow?.timezone || "UTC",
+  };
+}
+
 export async function getCreditUsageSummary(): Promise<{
   totalCreditsCents: number;
   usedCreditsCents: number;

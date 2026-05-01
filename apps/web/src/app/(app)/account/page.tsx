@@ -5,10 +5,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Calendar, Globe, Check, BarChart3, CreditCard, Sparkles } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
-  getBillingState,
-  getCreditUsageSummary,
+  getAccountPageData,
   getRecentAiUsage,
-  getUserTimezone,
   upsertUserTimezone,
 } from "@/lib/db/actions";
 import { TIMEZONES } from "@/lib/timezones";
@@ -101,25 +99,24 @@ export default function AccountPage() {
           });
         }
 
-        const [q, credit, u, tz] = await Promise.all([
-          getBillingState(),
-          getCreditUsageSummary(),
-          getRecentAiUsage(30, 0),
-          getUserTimezone(),
-        ]);
+        const { quota: q, creditUsage: credit, usage: u, timezone: tz } =
+          await getAccountPageData(30);
 
         setQuota(q);
         setCreditUsage(credit);
         setUsage(u);
         setHasMore(u.length === 30);
 
-        // Auto-detect timezone if UTC
+        // Auto-detect timezone if UTC. Fire-and-forget the upsert so the
+        // first-visit user doesn't wait on a write before seeing the page.
         let finalTz = tz;
         if (tz === "UTC") {
           const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
           if (detected && detected !== "UTC") {
             finalTz = detected;
-            await upsertUserTimezone(finalTz);
+            upsertUserTimezone(finalTz).catch((err) => {
+              console.error("Failed to persist auto-detected timezone:", err);
+            });
           }
         }
         setTimezone(finalTz);
