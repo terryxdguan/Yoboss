@@ -173,10 +173,11 @@ export function RoadmapPreview({
           </div>
 
           {/* Inline-edit hint banner — first-time users won't know fields
-              are editable until the modal hints at it. Single small line,
-              no dismissal needed. */}
-          <div className="flex items-center gap-1.5 px-6 py-2 text-[11px] text-[#7FAEE6] bg-[#EAF3FD] border-b border-[#E7DED2]">
-            <Pencil className="h-3 w-3" />
+              are editable until the modal hints at it. Uses the brand
+              action blue + medium weight (not the soft #7FAEE6) so it
+              reads as instruction, not decorative caption. */}
+          <div className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#007AFF] bg-[#E6F2FF] border-b border-[#BDD8F2]">
+            <Pencil className="h-4 w-4 shrink-0" />
             <span>{t("editHint")}</span>
           </div>
 

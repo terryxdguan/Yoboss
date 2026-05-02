@@ -95,9 +95,11 @@ export function PlanPreviewModal({
           </p>
         </div>
         {/* Inline-edit hint banner — without this users routinely don't
-            realize the modal is editable. Single-line, no dismissal. */}
-        <div className="flex items-center gap-1.5 px-6 py-2 text-[11px] text-[#7FAEE6] bg-[#EAF3FD] border-b border-[#E7DED2]">
-          <Pencil className="h-3 w-3" />
+            realize the modal is editable. Single-line, no dismissal.
+            Uses the brand action blue + medium weight (not the soft
+            #7FAEE6) so it reads as instruction, not decorative caption. */}
+        <div className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#007AFF] bg-[#E6F2FF] border-b border-[#BDD8F2]">
+          <Pencil className="h-4 w-4 shrink-0" />
           <span>{t("editHint")}</span>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-4">
