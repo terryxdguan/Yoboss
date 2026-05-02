@@ -313,6 +313,10 @@ export default function PricingPage() {
             ))}
           </div>
         </div>
+
+        <p className="mt-12 text-center text-xs text-[#9B948B]">
+          {t("currencyNote")}
+        </p>
       </div>
     </div>
   );
