@@ -156,10 +156,15 @@ export function DashboardTodayItems({
     });
   };
 
-  // Filter high priority: only show if no deadline OR deadline is today
+  // Filter high priority: only show if its deadline is today. The
+  // dashboard's "Today's To-Do List" must reflect items the user has
+  // explicitly committed to do today — high-priority items without a
+  // deadline are aspirational, not scheduled, and clutter the list. They
+  // remain visible on /todos and still feed into the AI chat context
+  // (see dashboard-shell.tsx's buildChatContext).
   const todayStr = new Date().toISOString().split("T")[0];
   const filteredHighPriority = highPriority.filter(i => {
-    if (!i.deadline) return true;               // no deadline → show
+    if (!i.deadline) return false;               // no deadline → not today's
     return i.deadline.startsWith(todayStr);      // deadline is today → show
   });
 
