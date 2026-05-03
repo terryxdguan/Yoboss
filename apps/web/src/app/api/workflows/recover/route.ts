@@ -9,15 +9,25 @@ const allAgents = [...DEFAULT_AGENTS, ...ALL_AGENTS];
 
 /**
  * POST /api/workflows/recover
- * Auto-recover a stale workflow run by pulling results from the Anthropic session.
- * Called when a run has been "running" for >20 min without DB updates.
+ * Auto-recover a workflow run by pulling results from the Anthropic session.
+ *
+ * Two modes:
+ * 1. Default — recover a "running" run that hasn't updated in a while
+ *    (e.g. Vercel function timed out mid-step). Status will be set
+ *    based on what the session events show.
+ * 2. force=true — re-pull files for a run that's already in a terminal
+ *    state (success/failed/cancelled). Use case: agent's last polling
+ *    pass was killed by Vercel maxDuration just before the file was
+ *    written to Anthropic Files API, so the run got marked "success"
+ *    but with zero deliverables. Force mode merges newly-discovered
+ *    files into step_results without altering existing status/output.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { runId } = await request.json();
+  const { runId, force } = await request.json();
   if (!runId) return NextResponse.json({ error: "runId required" }, { status: 400 });
 
   const admin = createAdminClient();
@@ -33,8 +43,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  if (run.status !== "running") {
-    return NextResponse.json({ error: "Run is not stale", status: run.status });
+  if (run.status !== "running" && !force) {
+    return NextResponse.json({
+      error: "Run is not stale. Pass {force:true} to re-pull files for a run already marked terminal (e.g. \"success\" but missing deliverables).",
+      status: run.status,
+    });
   }
 
   if (!run.session_id) {
@@ -116,21 +129,42 @@ export async function POST(request: NextRequest) {
       filesPerStep[lastCompletedStep] = newFiles;
     }
 
-    // Update step results
+    // Update step results.
+    //
+    // Files are merged ADDITIVELY for every step — even already-successful
+    // ones — because the only reason force-recovery exists is "step
+    // finished, file appeared on Anthropic side, but our DB never
+    // recorded it". Keeping the old guard here would drop those files
+    // on the floor.
+    //
+    // Status / output / toolActivity are NOT overwritten on already-
+    // successful steps; the existing values are typically richer than
+    // a re-fetch (e.g. partial text already streamed at original run
+    // time). Only fill them in for steps that still look unfinished.
     for (let i = 0; i < stepResults.length; i++) {
       if (i > currentStep) break; // Step never started
 
       const text = stepTexts[i]?.join("") || "";
       const tools = stepTools[i] || [];
+      const newFilesForStep = filesPerStep[i] || [];
 
-      // Only update steps that are still "running" or "pending" with no output
-      if (stepResults[i].status === "running" || (stepResults[i].status === "pending") || !stepResults[i].output) {
+      // Always merge in any newly-discovered files for this step.
+      if (newFilesForStep.length > 0) {
+        stepResults[i] = {
+          ...stepResults[i],
+          files: [...(stepResults[i].files || []), ...newFilesForStep],
+        };
+      }
+
+      // Only re-derive status/output for steps that didn't complete
+      // before. Already-terminal steps keep their existing values.
+      const isUnfinished = stepResults[i].status === "running" || stepResults[i].status === "pending";
+      if (isUnfinished || !stepResults[i].output) {
         stepResults[i] = {
           ...stepResults[i],
           status: i < idleCount ? "success" : (text.length > 0 ? "success" : "failed"),
           output: text || stepResults[i].output || "(Recovered — check Deliverables for files)",
           toolActivity: tools.length > 0 ? tools : stepResults[i].toolActivity,
-          files: filesPerStep[i]?.length > 0 ? [...(stepResults[i].files || []), ...filesPerStep[i]] : stepResults[i].files,
         };
       }
     }
@@ -165,12 +199,18 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[Recovery] Failed:", err);
 
-    // Mark as failed so it doesn't stay stuck
-    await admin.from("workflow_runs").update({
-      status: "failed",
-      completed_at: new Date().toISOString(),
-    }).eq("id", runId);
-    await admin.from("workflows").update({ status: "ready" }).eq("id", run.workflow_id);
+    // Only downgrade to "failed" if the run was actively stuck "running"
+    // when we started. For force-recovery on a run that was already
+    // terminal (success/failed/cancelled), leave its status alone — a
+    // transient Anthropic API blip during file-merge shouldn't nuke a
+    // "complete" run back to "failed".
+    if (run.status === "running") {
+      await admin.from("workflow_runs").update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+      }).eq("id", runId);
+      await admin.from("workflows").update({ status: "ready" }).eq("id", run.workflow_id);
+    }
 
     return NextResponse.json({
       recovered: false,

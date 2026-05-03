@@ -137,7 +137,19 @@ async function isRunCancelled(supabase: ReturnType<typeof createAdminClient>, ru
   return data?.status === "cancelled";
 }
 
-export const maxDuration = 300; // 5 min per step (Vercel Hobby cap; Pro allows up to 900)
+// Vercel Pro caps function duration at 900s (15 min). We use the full
+// budget here because workflow steps that combine web_search + multi-turn
+// reasoning + code_execution to produce a deliverable file routinely run
+// 6–12 minutes on real research tasks. With 300s we silently truncated
+// the polling loop right when the agent was about to `cp` the output
+// file to $OUTPUT_DIR — agent finished saying "saved as a standalone
+// HTML file" but the file never actually appeared in deliverables.
+//
+// 15 min still isn't enough for the longest tasks. The
+// `/api/workflows/recover` route + a future recover-stale-runs cron
+// pull files from Anthropic's session after the function dies, which is
+// the proper backstop for anything > 15 min.
+export const maxDuration = 900;
 
 export async function POST(request: NextRequest) {
   // Dual auth: CRON_SECRET for scheduled runs, user session for manual runs
