@@ -6,11 +6,11 @@ import { withRateLimit, logUsage } from "@/lib/ai/rate-limit";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
-// Pro plan ceiling. See workflows/execute/route.ts for the rationale —
-// long research/code_execution steps need the full 15-min budget,
-// otherwise the polling loop is killed before the agent's final file
-// write reaches Anthropic Files API.
-export const maxDuration = 900;
+// Pro plan ceiling (800s, ~13 min). See workflows/execute/route.ts for
+// the rationale — long research/code_execution steps need the full
+// budget, otherwise the polling loop is killed before the agent's
+// final file write reaches Anthropic Files API.
+export const maxDuration = 800;
 
 async function loadPromptFile(promptFile: string): Promise<string> {
   const filePath = join(
