@@ -35,7 +35,10 @@ export interface RecoverOptions {
 export type RecoverResult =
   | {
       recovered: true;
-      status: "success" | "failed";
+      // "running" = recoverRun pulled the latest session data but the run
+      // still has pending/running steps. Caller (cron sweeper) is expected
+      // to kick the next step via resumeStuckRun.
+      status: "success" | "failed" | "running";
       stepsRecovered: number;
       filesRecovered: number;
     }
@@ -201,28 +204,46 @@ export async function recoverRun(
       }
     }
 
+    // Decide overall status from what step_results show.
+    //
+    // - allDone  → "success" (and finalize: completed_at, workflow ready)
+    // - anyFailed → "failed" (terminal)
+    // - anyIncomplete (pending/running) without any failure → keep as
+    //   "running" without setting completed_at. recoverRun's job is to
+    //   merge the latest session events into step_results, NOT to mark
+    //   half-finished work complete. The cron sweeper's resumeStuckRun
+    //   pass kicks off the next pending step separately.
     const allDone = stepResults.every((s) => s.status === "success");
     const anyFailed = stepResults.some((s) => s.status === "failed");
-    const finalStatus: "success" | "failed" = allDone ? "success" : anyFailed ? "failed" : "success";
 
-    await admin
-      .from("workflow_runs")
-      .update({
-        status: finalStatus,
-        current_step: Math.min(currentStep + 1, steps.length),
-        step_results: stepResults,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", runId);
+    let finalStatus: "success" | "failed" | "running";
+    if (allDone) finalStatus = "success";
+    else if (anyFailed) finalStatus = "failed";
+    else finalStatus = "running"; // pending/running steps remain — leave for resumer
 
-    await admin
-      .from("workflows")
-      .update({
-        status: "ready",
-        last_run_at: new Date().toISOString(),
-        last_run_status: finalStatus,
-      })
-      .eq("id", run.workflow_id);
+    const isTerminal = finalStatus === "success" || finalStatus === "failed";
+
+    const update: Record<string, unknown> = {
+      current_step: Math.min(currentStep + 1, steps.length),
+      step_results: stepResults,
+      status: finalStatus,
+    };
+    if (isTerminal) {
+      update.completed_at = new Date().toISOString();
+    }
+
+    await admin.from("workflow_runs").update(update).eq("id", runId);
+
+    if (isTerminal) {
+      await admin
+        .from("workflows")
+        .update({
+          status: "ready",
+          last_run_at: new Date().toISOString(),
+          last_run_status: finalStatus,
+        })
+        .eq("id", run.workflow_id);
+    }
 
     console.log(`[Recovery] ✅ Run ${runId} recovered as "${finalStatus}"`);
 
