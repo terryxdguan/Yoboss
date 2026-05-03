@@ -171,7 +171,9 @@
     },
     "deliverables": {
       "noFiles": "Sin archivos generados",
-      "download": "Descargar"
+      "download": "Descargar",
+      "expiryNotice": "Los archivos caducan 30 días después de su creación; descárgalos ahora para conservarlos. Los archivos caducados no se pueden recuperar.",
+      "expiryNoticeShort": "Los archivos caducan en 30 días — descárgalos para conservarlos"
     },
     "history": {
       "noRuns": "Aún no hay ejecuciones",

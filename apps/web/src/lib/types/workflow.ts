@@ -25,8 +25,14 @@ export interface Workflow {
 }
 
 export interface GeneratedFile {
+  /** Anthropic file id for live runs. Cached template runs don't have
+   *  this — they store files in Supabase Storage and use `href` instead. */
   fileId: string;
   filename: string;
+  /** Direct Storage URL — only set on cached template runs (attached
+   *  server-side by /api/workflows/check-cache). When present, callers
+   *  must download via this href instead of /api/ai/files/<fileId>. */
+  href?: string;
 }
 
 export interface WorkflowStepResult {

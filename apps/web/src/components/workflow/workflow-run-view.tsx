@@ -123,6 +123,7 @@ export function WorkflowRunView({
   topic,
 }: WorkflowRunViewProps) {
   const t = useTranslations("workflows.runView");
+  const tDeliv = useTranslations("workflows.deliverables");
   const isPollingMode = !!existingRun && existingRun.status === "running";
   const isHistoryMode = !!existingRun && !isPollingMode;
 
@@ -679,11 +680,15 @@ export function WorkflowRunView({
       setCurrentStep(i);
       setToolStatus(null);
 
-      // Update step results
-      const updatedResults = [...initialResults];
-      for (let j = 0; j < i; j++) {
-        updatedResults[j] = { ...updatedResults[j], status: "success" };
-      }
+      // Carry forward every prior step from the ref — which by now holds
+      // {success, output, files, durationMs, ...} for j < i, set in the
+      // success block of the previous iteration. Reading from
+      // initialResults instead would reset prior steps to {pending} and
+      // an inner j<i loop could only re-stamp them as {status:'success'}
+      // with no output — every per-step DB write would clobber the
+      // accumulated history of earlier steps. (Same pattern resumeAndContinue
+      // already uses below.)
+      const updatedResults = [...stepResultsRef.current];
       updatedResults[i] = { ...updatedResults[i], status: "running" };
       setStepResults(updatedResults);
       stepResultsRef.current = updatedResults;
@@ -806,14 +811,14 @@ export function WorkflowRunView({
       generateWorkflowSummary(outputs);
 
       try {
-        // Get the latest step_results from state
-        let finalResults: typeof initialResults = [];
-        setStepResults((prev) => { finalResults = prev; return prev; });
-
+        // Read from ref, not setState updater. The updater pattern (`let x;
+        // setState(prev => { x = prev; return prev; })`) is not guaranteed
+        // to run synchronously in React 18 — when it doesn't, `x` stays
+        // `[]` and we wipe out every step_results we just persisted.
         await updateWorkflowRun(run.id, {
           status: "success",
           current_step: workflow.steps.length,
-          step_results: finalResults,
+          step_results: stepResultsRef.current,
           completed_at: new Date().toISOString(),
         });
         await updateWorkflow(workflow.id, {
@@ -1555,6 +1560,7 @@ export function WorkflowRunView({
           items.push({
             fileId: f.fileId,
             filename: f.filename,
+            href: f.href,
             source,
             createdAt: existingRun ? new Date(existingRun.started_at) : now,
           });
@@ -1782,43 +1788,58 @@ export function WorkflowRunView({
                   ) : null}
 
                   {/* Generated files */}
-                  {msg.generatedFiles && msg.generatedFiles.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1.5">
-                      {msg.generatedFiles.map((f, i) => {
-                        // Cached runs attach `href` server-side (Storage URL) and may flag
-                        // files as `missing` if Anthropic expired them during bootstrap.
-                        // Live runs use the existing /api/ai/files/{fileId} pattern.
-                        const cachedFile = f as GeneratedFile & { href?: string; missing?: boolean };
-                        if (cachedFile.missing) {
+                  {msg.generatedFiles && msg.generatedFiles.length > 0 && (() => {
+                    // Show the 30-day reminder only when at least one file is
+                    // a live (Anthropic-backed) file — cached demo files live
+                    // in Supabase Storage and don't expire. The presence of
+                    // an `href` flags a cached file.
+                    const hasLiveFile = msg.generatedFiles.some(
+                      (f) => !(f as GeneratedFile & { href?: string }).href
+                    );
+                    return (
+                      <div className="mt-3 pt-2 border-t border-[#E7DED2] space-y-1.5">
+                        {msg.generatedFiles.map((f, i) => {
+                          // Cached runs attach `href` server-side (Storage URL) and may flag
+                          // files as `missing` if Anthropic expired them during bootstrap.
+                          // Live runs use the existing /api/ai/files/{fileId} pattern.
+                          const cachedFile = f as GeneratedFile & { href?: string; missing?: boolean };
+                          if (cachedFile.missing) {
+                            return (
+                              <span
+                                key={i}
+                                className="flex items-center gap-2 text-xs text-[#9B948B] italic"
+                                title={t("fileExpired")}
+                              >
+                                <Download className="h-3.5 w-3.5 opacity-50" />
+                                {f.filename} (expired)
+                              </span>
+                            );
+                          }
+                          const href = cachedFile.href ?? `/api/ai/files/${f.fileId}`;
+                          const isExternal = !!cachedFile.href;
                           return (
-                            <span
+                            <a
                               key={i}
-                              className="flex items-center gap-2 text-xs text-[#9B948B] italic"
-                              title={t("fileExpired")}
+                              href={href}
+                              download={f.filename}
+                              target={isExternal ? "_blank" : undefined}
+                              rel={isExternal ? "noopener noreferrer" : undefined}
+                              className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
                             >
-                              <Download className="h-3.5 w-3.5 opacity-50" />
-                              {f.filename} (expired)
-                            </span>
+                              <Download className="h-3.5 w-3.5" />
+                              {f.filename}
+                            </a>
                           );
-                        }
-                        const href = cachedFile.href ?? `/api/ai/files/${f.fileId}`;
-                        const isExternal = !!cachedFile.href;
-                        return (
-                          <a
-                            key={i}
-                            href={href}
-                            download={f.filename}
-                            target={isExternal ? "_blank" : undefined}
-                            rel={isExternal ? "noopener noreferrer" : undefined}
-                            className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            {f.filename}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
+                        })}
+                        {hasLiveFile && (
+                          <p className="flex items-center gap-1.5 text-[11px] text-[#A6571E] mt-1.5">
+                            <Info className="h-3 w-3 shrink-0" />
+                            {tDeliv("expiryNoticeShort")}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

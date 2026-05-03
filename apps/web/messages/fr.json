@@ -171,7 +171,9 @@
     },
     "deliverables": {
       "noFiles": "Aucun fichier généré",
-      "download": "Télécharger"
+      "download": "Télécharger",
+      "expiryNotice": "Les fichiers expirent 30 jours après leur création — téléchargez-les maintenant pour les conserver. Les fichiers expirés ne peuvent pas être récupérés.",
+      "expiryNoticeShort": "Les fichiers expirent dans 30 jours — téléchargez pour conserver"
     },
     "history": {
       "noRuns": "Aucune exécution pour l'instant",

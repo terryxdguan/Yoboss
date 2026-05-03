@@ -18,6 +18,10 @@ export interface DeliverableItem {
   filename: string;
   source: string; // e.g. "Step 1" or "Follow-up chat"
   createdAt: Date;
+  /** Direct download URL when the file lives in Supabase Storage (cached
+   *  template runs). When set, render the link with this href instead of
+   *  /api/ai/files/<fileId> — cached files don't have an Anthropic id. */
+  href?: string;
 }
 
 export function extractDeliverablesFromRun(run: WorkflowRun): DeliverableItem[] {
@@ -33,6 +37,7 @@ export function extractDeliverablesFromRun(run: WorkflowRun): DeliverableItem[] 
           items.push({
             fileId: f.fileId,
             filename: f.filename,
+            href: f.href,
             source: `Step ${i + 1}`,
             createdAt: runDate,
           });
@@ -49,6 +54,7 @@ export function extractDeliverablesFromRun(run: WorkflowRun): DeliverableItem[] 
           items.push({
             fileId: f.fileId,
             filename: f.filename,
+            href: f.href,
             source: "Follow-up chat",
             createdAt: runDate, // approximate — we don't have per-message timestamps
           });
@@ -58,6 +64,13 @@ export function extractDeliverablesFromRun(run: WorkflowRun): DeliverableItem[] 
   }
 
   return items;
+}
+
+/** Resolve the right download URL for a deliverable. Cached template
+ *  runs only have a Storage `href` (no Anthropic file id); live runs
+ *  have a `fileId` we route through /api/ai/files. */
+function downloadHrefFor(item: DeliverableItem): string {
+  return item.href || `/api/ai/files/${item.fileId}`;
 }
 
 function getFileStatus(createdAt: Date): {
@@ -141,10 +154,10 @@ export function DeliverablesButton({
             </div>
 
             {/* Notice */}
-            <div className="px-4 py-2 bg-[#FFF8ED] border-b border-[#E7DED2]">
-              <p className="text-[10px] text-[#9B948B] flex items-center gap-1.5">
-                <Clock className="h-3 w-3 shrink-0" />
-                Files are available for download within 30 days of creation. Expired files cannot be recovered.
+            <div className="px-4 py-2.5 bg-[#FFF1DC] border-b border-[#E8A87C]/30">
+              <p className="text-xs text-[#A6571E] flex items-start gap-2 leading-snug">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>{tWf("expiryNotice")}</span>
               </p>
             </div>
 
@@ -164,9 +177,10 @@ export function DeliverablesButton({
                 <div className="divide-y divide-[#F1ECE4]">
                   {items.map((item, i) => {
                     const status = getFileStatus(item.createdAt);
+                    const dlHref = downloadHrefFor(item);
                     return (
                       <div
-                        key={`${item.fileId}-${i}`}
+                        key={`${item.fileId || item.href || item.filename}-${i}`}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-[#F6F3EE]/50 transition-colors"
                       >
                         {/* File icon */}
@@ -186,7 +200,7 @@ export function DeliverablesButton({
                             </p>
                           ) : (
                             <a
-                              href={`/api/ai/files/${item.fileId}`}
+                              href={dlHref}
                               download={item.filename}
                               className="text-sm font-medium text-[#007AFF] hover:underline truncate block"
                             >
@@ -228,7 +242,7 @@ export function DeliverablesButton({
                                 )}
                               </span>
                               <a
-                                href={`/api/ai/files/${item.fileId}`}
+                                href={dlHref}
                                 download={item.filename}
                                 className="p-1.5 rounded-lg text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
                                 title={tWf("download")}
@@ -294,11 +308,10 @@ export function DeliverablesModal({
         </div>
 
         {/* Notice */}
-        <div className="px-5 py-2.5 bg-[#FFF8ED] border-b border-[#E7DED2]">
-          <p className="text-[11px] text-[#9B948B] flex items-center gap-1.5">
-            <Clock className="h-3 w-3 shrink-0" />
-            Files are available for download within 30 days of creation. Expired
-            files cannot be recovered.
+        <div className="px-5 py-3 bg-[#FFF1DC] border-b border-[#E8A87C]/30">
+          <p className="text-xs text-[#A6571E] flex items-start gap-2 leading-snug">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{tWf("expiryNotice")}</span>
           </p>
         </div>
 
@@ -320,9 +333,10 @@ export function DeliverablesModal({
             <div className="divide-y divide-[#F1ECE4]">
               {items.map((item, i) => {
                 const status = getFileStatus(item.createdAt);
+                const dlHref = downloadHrefFor(item);
                 return (
                   <div
-                    key={`${item.fileId}-${i}`}
+                    key={`${item.fileId || item.href || item.filename}-${i}`}
                     className="flex items-center gap-3 px-5 py-3.5 hover:bg-[#F6F3EE]/50 transition-colors"
                   >
                     {/* File icon */}
@@ -342,7 +356,7 @@ export function DeliverablesModal({
                         </p>
                       ) : (
                         <a
-                          href={`/api/ai/files/${item.fileId}`}
+                          href={dlHref}
                           download={item.filename}
                           className="text-sm font-medium text-[#007AFF] hover:underline truncate block"
                         >
@@ -384,7 +398,7 @@ export function DeliverablesModal({
                             )}
                           </span>
                           <a
-                            href={`/api/ai/files/${item.fileId}`}
+                            href={dlHref}
                             download={item.filename}
                             className="p-1.5 rounded-lg text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
                             title="Download"

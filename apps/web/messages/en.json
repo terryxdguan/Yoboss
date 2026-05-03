@@ -171,7 +171,9 @@
     },
     "deliverables": {
       "noFiles": "No files generated",
-      "download": "Download"
+      "download": "Download",
+      "expiryNotice": "Files expire 30 days after creation — download now to keep them. Expired files cannot be recovered.",
+      "expiryNoticeShort": "Files expire in 30 days — download to keep"
     },
     "history": {
       "noRuns": "No runs yet",
