@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/db/admin";
 import { recoverRun } from "@/lib/workflows/recover-run";
 import { resumeStuckRun } from "@/lib/workflows/resume-stuck-run";
+import { retryRun } from "@/lib/workflows/retry-run";
+import { isRetryableFailureKind } from "@/lib/workflows/classify-failure";
+import type { WorkflowStepResult } from "@/lib/types/workflow";
 
 // Server-side sweeper for workflow runs whose Vercel function died
 // mid-stream and never came back. Two passes per run:
@@ -64,41 +67,80 @@ export async function GET(request: NextRequest) {
   const sweepStart = Date.now();
   const sweepDeadline = sweepStart + (maxDuration * 1000 - SWEEP_BUFFER_MS);
 
-  const { data: staleRuns, error } = await admin
-    .from("workflow_runs")
-    .select("id, started_at")
-    .eq("status", "running")
-    .lt("started_at", cutoff)
-    .order("started_at", { ascending: true })
-    .limit(MAX_CANDIDATES);
+  // Two pools to sweep:
+  //   1. status='running' older than STALE_AFTER_MS — original target,
+  //      Vercel function died mid-stream, recoverRun + resumeStuckRun.
+  //   2. status='failed' with transient/unknown failureKind — newly
+  //      added. Lets us auto-retry network-error type failures the
+  //      client gave up on. Skipped for quota/auth/permanent kinds.
+  const [{ data: stuckRunning, error: stuckErr }, { data: failedRetryable, error: failedErr }] =
+    await Promise.all([
+      admin
+        .from("workflow_runs")
+        .select("id, started_at, status, step_results")
+        .eq("status", "running")
+        .lt("started_at", cutoff)
+        .order("started_at", { ascending: true })
+        .limit(MAX_CANDIDATES),
+      admin
+        .from("workflow_runs")
+        .select("id, started_at, status, step_results, completed_at, session_id")
+        .eq("status", "failed")
+        .lt("completed_at", cutoff)
+        .not("session_id", "is", null)
+        .order("started_at", { ascending: true })
+        .limit(MAX_CANDIDATES),
+    ]);
 
-  if (error) {
-    console.error("[recover-stale-runs] Query failed:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (stuckErr || failedErr) {
+    const err = stuckErr || failedErr;
+    console.error("[recover-stale-runs] Query failed:", err);
+    return NextResponse.json({ error: err?.message }, { status: 500 });
   }
 
-  if (!staleRuns || staleRuns.length === 0) {
-    return NextResponse.json({ scanned: 0, recovered: 0, resumed: 0, failed: 0 });
+  // Filter failed runs down to those with a retryable failureKind on
+  // their first failed step. This is the gate that prevents auto-retry
+  // from burning Anthropic budget on quota/auth/permanent failures.
+  const retryableFailed = (failedRetryable || []).filter((r) => {
+    const steps = (r.step_results as WorkflowStepResult[]) || [];
+    const firstFailed = steps.find((s) => s.status === "failed");
+    return firstFailed && isRetryableFailureKind(firstFailed.failureKind);
+  });
+
+  // Combined work list — process stuck "running" runs first since
+  // those are higher-priority (currently visible to the user as
+  // perpetually loading).
+  const candidates: Array<{ id: string; mode: "stuck" | "retry" }> = [
+    ...(stuckRunning || []).map((r) => ({ id: r.id, mode: "stuck" as const })),
+    ...retryableFailed.map((r) => ({ id: r.id, mode: "retry" as const })),
+  ];
+
+  if (candidates.length === 0) {
+    return NextResponse.json({ scanned: 0, recovered: 0, resumed: 0, retried: 0, failed: 0 });
   }
 
-  console.log(`[recover-stale-runs] Found ${staleRuns.length} stale run(s) — sweeping`);
+  console.log(
+    `[recover-stale-runs] Found ${stuckRunning?.length || 0} stuck running + ${retryableFailed.length} retryable failed (skipped ${(failedRetryable?.length || 0) - retryableFailed.length} non-retryable failed) — sweeping`,
+  );
 
   let scanned = 0;
   let recovered = 0;
   let resumed = 0;
+  let retried = 0;
   let failed = 0;
   let deferred = 0;
   const results: Array<{
     runId: string;
+    mode: "stuck" | "retry";
     recover?: string;
     resume?: string;
+    retry?: string;
   }> = [];
 
-  for (const run of staleRuns) {
+  for (const cand of candidates) {
     const remainingMs = sweepDeadline - Date.now();
     if (remainingMs <= MIN_POLL_BUDGET_MS) {
-      // Out of budget — defer remaining runs to the next 15-min sweep.
-      deferred = staleRuns.length - scanned;
+      deferred = candidates.length - scanned;
       console.log(
         `[recover-stale-runs] Time budget exhausted, deferring ${deferred} run(s) to next sweep`,
       );
@@ -106,39 +148,55 @@ export async function GET(request: NextRequest) {
     }
 
     scanned++;
-    const entry: { runId: string; recover?: string; resume?: string } = { runId: run.id };
-    try {
-      // Pass 1: pull state from Anthropic events. Fast (~5-15s); time
-      // budget check skipped here.
-      const recoverResult = await recoverRun(run.id);
-      if (recoverResult.recovered) {
-        recovered++;
-        entry.recover = `${recoverResult.status} (${recoverResult.stepsRecovered}/${recoverResult.filesRecovered})`;
-      } else {
-        entry.recover = recoverResult.reason === "error" ? recoverResult.message : recoverResult.reason;
-      }
+    const entry: typeof results[number] = { runId: cand.id, mode: cand.mode };
 
-      // Pass 2: if recoverRun left status="running" (i.e. there's still
-      // a pending step), kick that step. Hand it whatever budget we
-      // have left — this lets a single long-step run consume most of
-      // the cron's budget when it needs to. resumeStuckRun is a no-op
-      // when the run has reached a terminal state.
-      const stillRunning =
-        recoverResult.recovered && recoverResult.status === "running";
-      if (stillRunning) {
-        const remainingForResume = sweepDeadline - Date.now() - 5_000; // leave 5s for DB writes
-        const resumeResult = await resumeStuckRun(run.id, {
+    try {
+      if (cand.mode === "stuck") {
+        // Stuck-running path: recoverRun pulls latest events, resumeStuckRun
+        // kicks the next pending step.
+        const recoverResult = await recoverRun(cand.id);
+        if (recoverResult.recovered) {
+          recovered++;
+          entry.recover = `${recoverResult.status} (${recoverResult.stepsRecovered}/${recoverResult.filesRecovered})`;
+        } else {
+          entry.recover = recoverResult.reason === "error" ? recoverResult.message : recoverResult.reason;
+        }
+
+        const stillRunning =
+          recoverResult.recovered && recoverResult.status === "running";
+        if (stillRunning) {
+          const remainingForResume = sweepDeadline - Date.now() - 5_000;
+          const resumeResult = await resumeStuckRun(cand.id, {
+            pollBudgetMs: Math.max(MIN_POLL_BUDGET_MS, remainingForResume),
+          });
+          if (resumeResult.resumed) {
+            resumed++;
+            entry.resume = `step ${resumeResult.stepIndex} ${resumeResult.stepStatus}`;
+          } else {
+            entry.resume = resumeResult.reason === "error" ? resumeResult.message : resumeResult.reason;
+          }
+        }
+
+        if (!recoverResult.recovered && !stillRunning) failed++;
+      } else {
+        // Retry-failed path: failed run with transient/unknown failure.
+        // retryRun resets the failed step → "pending", flips run to
+        // "running", then runs resumeStuckRun internally.
+        const remainingForResume = sweepDeadline - Date.now() - 5_000;
+        const retryResult = await retryRun(cand.id, {
           pollBudgetMs: Math.max(MIN_POLL_BUDGET_MS, remainingForResume),
         });
-        if (resumeResult.resumed) {
-          resumed++;
-          entry.resume = `step ${resumeResult.stepIndex} ${resumeResult.stepStatus}`;
+        if (retryResult.retried) {
+          retried++;
+          entry.retry = `step ${retryResult.stepIndex} ${retryResult.stepStatus}`;
         } else {
-          entry.resume = resumeResult.reason === "error" ? resumeResult.message : resumeResult.reason;
+          failed++;
+          entry.retry =
+            retryResult.reason === "error"
+              ? retryResult.message
+              : retryResult.reason;
         }
       }
-
-      if (!recoverResult.recovered && !stillRunning) failed++;
     } catch (err) {
       failed++;
       entry.recover = err instanceof Error ? err.message : "Unknown error";
@@ -148,13 +206,14 @@ export async function GET(request: NextRequest) {
 
   const elapsedMs = Date.now() - sweepStart;
   console.log(
-    `[recover-stale-runs] Done in ${(elapsedMs / 1000).toFixed(1)}s — scanned=${scanned} recovered=${recovered} resumed=${resumed} failed=${failed} deferred=${deferred}`,
+    `[recover-stale-runs] Done in ${(elapsedMs / 1000).toFixed(1)}s — scanned=${scanned} recovered=${recovered} resumed=${resumed} retried=${retried} failed=${failed} deferred=${deferred}`,
   );
 
   return NextResponse.json({
     scanned,
     recovered,
     resumed,
+    retried,
     failed,
     deferred,
     elapsedMs,

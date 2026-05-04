@@ -35,11 +35,36 @@ export interface GeneratedFile {
   href?: string;
 }
 
+/**
+ * Categorization of why a step failed. Stored on the step alongside the
+ * raw `error` string so retry logic + UI can decide whether replaying
+ * the step makes sense.
+ *
+ * - "transient": network blip, 429, 5xx, mid-stream disconnect — retry
+ *   probably succeeds. Cron sweeper auto-recovers these.
+ * - "quota":     402 QUOTA_EXCEEDED — retrying without topping up will
+ *   hit the same wall, so UI shows "Buy Credits" instead of "Retry".
+ * - "auth":      401 — session expired, user needs to re-login.
+ * - "permanent": 400 / Anthropic content policy / unrecoverable input
+ *   error. Retry will fail the same way.
+ * - "unknown":   uncategorized fallback. Treated as retryable for
+ *   safety (worst case it just re-fails).
+ *
+ * Older step results without this field are treated as "unknown".
+ */
+export type StepFailureKind =
+  | "transient"
+  | "quota"
+  | "auth"
+  | "permanent"
+  | "unknown";
+
 export interface WorkflowStepResult {
   stepId: string;
   status: "pending" | "running" | "success" | "failed";
   output?: string;
   error?: string;
+  failureKind?: StepFailureKind;
   durationMs?: number;
   files?: GeneratedFile[];
   toolActivity?: { type: string; label: string }[];

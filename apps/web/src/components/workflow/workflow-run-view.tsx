@@ -9,6 +9,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ALL_AGENTS, DEFAULT_AGENTS, DEFAULT_AGENT_AVATAR } from "@/lib/ai/agent-registry";
 import { parseSSEStream } from "@/lib/utils/sse-parser";
+import { classifyStepFailure, isRetryableFailureKind } from "@/lib/workflows/classify-failure";
 import { setAgentStatus } from "@/lib/stores/agent-status";
 import {
   createWorkflowRun,
@@ -191,6 +192,7 @@ export function WorkflowRunView({
     isHistoryMode ? (existingRun!.status as "success" | "failed") : "running"
   );
   const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   // Post-completion chat state
   const [inputText, setInputText] = useState("");
@@ -741,6 +743,10 @@ export function WorkflowRunView({
 
         const duration = Date.now() - startTime;
         const errorMsg = err instanceof Error ? err.message : "Unknown error";
+        // Classify so retry/cron paths can decide whether replaying this
+        // step is worth attempting (transient/unknown) or pointless until
+        // the user fixes something (quota/auth/permanent).
+        const failureKind = classifyStepFailure(err);
 
         // Update the streaming message to show error
         if (streamingMsgId.current) {
@@ -757,6 +763,7 @@ export function WorkflowRunView({
           ...updatedResults[i],
           status: "failed",
           error: errorMsg,
+          failureKind,
           durationMs: duration,
         };
         setStepResults([...updatedResults]);
@@ -1185,6 +1192,39 @@ export function WorkflowRunView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Click handler for the Retry pill that appears on failed runs.
+  // POSTs to the server-side retry endpoint (which resets the failed
+  // step → "pending", flips run.status → "running", and runs
+  // resumeStuckRun internally with a 770s polling budget). On success,
+  // hard-reload so the page re-fetches the now-running run and
+  // re-enters polling mode.
+  const handleRetry = async () => {
+    const rid = runIdRef.current || existingRun?.id;
+    if (!rid) return;
+    setRetrying(true);
+    try {
+      const res = await fetch("/api/workflows/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: rid }),
+      });
+      const data = await res.json();
+      if (res.ok && data.retried) {
+        // Run is now back to "running" with the failed step re-pended.
+        // Reload so initial-state derives the right view (history mode →
+        // polling mode) without us having to manually re-thread state.
+        window.location.reload();
+        return;
+      }
+      // Surface why the retry was blocked (quota / auth / permanent).
+      alert(data.error || `Retry failed: ${data.reason || "unknown"}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Retry failed");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleStop = async () => {
     // For polling mode: request server-side cancellation
     const rid = runIdRef.current || existingRun?.id;
@@ -1601,9 +1641,67 @@ export function WorkflowRunView({
             </span>
           )}
           {overallStatus === "failed" && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#D5847A]/10 text-[#D5847A]">
-              Failed
-            </span>
+            <>
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#D5847A]/10 text-[#D5847A]">
+                Failed
+              </span>
+              {/* Action button driven by the first failed step's failureKind:
+                  - transient/unknown → Retry (most network errors land here)
+                  - quota             → Buy Credits (links to pricing)
+                  - auth              → Sign in (route to login)
+                  - permanent         → no action; user must edit prompt */}
+              {(() => {
+                const firstFailed = stepResults.find((s) => s.status === "failed");
+                const kind = firstFailed?.failureKind;
+                if (isRetryableFailureKind(kind)) {
+                  return (
+                    <button
+                      onClick={handleRetry}
+                      disabled={retrying}
+                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#007AFF] text-white hover:bg-[#0066D6] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {retrying ? "Retrying…" : "Retry"}
+                    </button>
+                  );
+                }
+                if (kind === "quota") {
+                  return (
+                    <a
+                      href="/pricing"
+                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
+                    >
+                      Buy Credits
+                    </a>
+                  );
+                }
+                if (kind === "auth") {
+                  return (
+                    <a
+                      href="/login"
+                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
+                    >
+                      Sign in
+                    </a>
+                  );
+                }
+                if (kind === "permanent") {
+                  // No button — retry won't help. Render a passive hint
+                  // so the user knows the workflow itself needs editing
+                  // (typically a content-policy rejection or a malformed
+                  // prompt) instead of being puzzled by the missing
+                  // Retry button.
+                  return (
+                    <span className="text-xs text-[#9B948B] inline-flex items-center gap-1">
+                      <Info className="h-3 w-3" />
+                      Edit workflow before re-running
+                    </span>
+                  );
+                }
+                // No failed step found (shouldn't happen if status=failed)
+                // — bail out without rendering anything.
+                return null;
+              })()}
+            </>
           )}
           <DeliverablesButton items={deliverableItems} />
         </div>
