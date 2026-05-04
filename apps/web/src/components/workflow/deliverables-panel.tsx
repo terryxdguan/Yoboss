@@ -136,7 +136,7 @@ export function DeliverablesButton({
           <div className="fixed inset-0 z-50" onClick={() => setOpen(false)} />
 
           {/* Popover */}
-          <div className="absolute top-full left-0 mt-2 z-50 w-[420px] bg-[#FFFDF9] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
+          <div className="absolute top-full left-0 mt-2 z-50 w-[520px] bg-[#FFFDF9] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
               <div className="flex items-center gap-2">
@@ -181,28 +181,33 @@ export function DeliverablesButton({
                     return (
                       <div
                         key={`${item.fileId || item.href || item.filename}-${i}`}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F6F3EE]/50 transition-colors"
+                        className="flex items-start gap-3 px-4 py-3 hover:bg-[#F6F3EE]/50 transition-colors"
                       >
                         {/* File icon */}
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
                         >
                           <FileText
                             className={`h-4 w-4 ${status.expired ? "text-[#D5847A]" : "text-[#007AFF]"}`}
                           />
                         </div>
 
-                        {/* Info */}
+                        {/* Info — filename uses break-all so long names like
+                            grok_deep_research_report.html wrap inside the
+                            popover instead of getting truncated with an
+                            ellipsis. items-start on the parent keeps the
+                            icon and right-side badges aligned to the first
+                            line of the filename. */}
                         <div className="flex-1 min-w-0">
                           {status.expired ? (
-                            <p className="text-sm font-medium text-[#9B948B] truncate line-through">
+                            <p className="text-sm font-medium text-[#9B948B] line-through break-all">
                               {item.filename}
                             </p>
                           ) : (
                             <a
                               href={dlHref}
                               download={item.filename}
-                              className="text-sm font-medium text-[#007AFF] hover:underline truncate block"
+                              className="text-sm font-medium text-[#007AFF] hover:underline break-all block"
                             >
                               {item.filename}
                             </a>
@@ -337,28 +342,31 @@ export function DeliverablesModal({
                 return (
                   <div
                     key={`${item.fileId || item.href || item.filename}-${i}`}
-                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-[#F6F3EE]/50 transition-colors"
+                    className="flex items-start gap-3 px-5 py-3.5 hover:bg-[#F6F3EE]/50 transition-colors"
                   >
                     {/* File icon */}
                     <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
                     >
                       <FileText
                         className={`h-4.5 w-4.5 ${status.expired ? "text-[#D5847A]" : "text-[#007AFF]"}`}
                       />
                     </div>
 
-                    {/* Info */}
+                    {/* Info — see popover variant above for the rationale on
+                        break-all + items-start. Same fix applied here so
+                        the modal and popover render long filenames the
+                        same way. */}
                     <div className="flex-1 min-w-0">
                       {status.expired ? (
-                        <p className="text-sm font-medium text-[#9B948B] truncate line-through">
+                        <p className="text-sm font-medium text-[#9B948B] line-through break-all">
                           {item.filename}
                         </p>
                       ) : (
                         <a
                           href={dlHref}
                           download={item.filename}
-                          className="text-sm font-medium text-[#007AFF] hover:underline truncate block"
+                          className="text-sm font-medium text-[#007AFF] hover:underline break-all block"
                         >
                           {item.filename}
                         </a>
