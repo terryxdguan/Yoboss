@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/actions";
 import { TIMEZONES } from "@/lib/timezones";
 import type { UserQuota, AiUsageRecord } from "@/lib/types/database";
+import { trackPurchase } from "@/lib/meta-pixel";
 
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   free: { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", label: "Free" },
@@ -84,6 +85,26 @@ export default function AccountPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  // Fire Meta Pixel Purchase on Stripe checkout return. The success_url is
+  // ?checkout=success&kind=...&amount=<cents>&currency=<iso>. Dedupe with
+  // sessionStorage keyed on the Stripe checkout session, since refreshing
+  // the page would otherwise re-fire the event.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "success") return;
+    const amount = Number(params.get("amount"));
+    const currency = (params.get("currency") || "usd").toUpperCase();
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    // Use the full search string as a fingerprint — it's stable for one
+    // checkout return and changes if the user buys again.
+    const flagKey = `meta_pixel_purchase_fired:${window.location.search}`;
+    if (sessionStorage.getItem(flagKey)) return;
+
+    trackPurchase(amount, currency);
+    sessionStorage.setItem(flagKey, "1");
+  }, []);
 
   useEffect(() => {
     (async () => {

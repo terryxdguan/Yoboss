@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
+import { MetaPixel } from "@/components/meta-pixel";
 
 const STORAGE_KEY = "yoboss_cookie_consent";
 
@@ -68,7 +69,12 @@ export function CookieConsent() {
 
   return (
     <>
-      {consent === "accepted" && <Analytics />}
+      {consent === "accepted" && (
+        <>
+          <Analytics />
+          <MetaPixel />
+        </>
+      )}
       {consent === null && (
         <div
           role="dialog"
