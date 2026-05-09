@@ -2023,7 +2023,10 @@ export async function getDashboardData(): Promise<{
 export async function getBillingState() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // /pricing is a public page that calls this from a client effect; return
+  // null for anonymous visitors instead of throwing, so a normal "logged-out
+  // shopper viewing pricing" flow doesn't show up in Sentry as an error.
+  if (!user) return null;
 
   const { data: quota } = await supabase
     .from("user_quotas")
