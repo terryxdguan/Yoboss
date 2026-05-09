@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubSentryEvent } from "@/lib/observability/sentry-scrub";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -18,6 +19,11 @@ Sentry.init({
   // having anyway. Bump replaysSessionSampleRate later if we upgrade.
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
+
+  // Strip secret-shaped keys (Authorization headers, tokens, API keys,
+  // user-pasted message bodies) before any event is transported. Same
+  // scrubber as the server/edge configs.
+  beforeSend: (event) => scrubSentryEvent(event) as typeof event,
 
   enableLogs: true,
 

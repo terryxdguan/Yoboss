@@ -11,7 +11,15 @@ import type { WorkflowStepResult } from "@/lib/types/workflow";
 
 const allAgents = [...DEFAULT_AGENTS, ...ALL_AGENTS];
 
+// Defense-in-depth filename allowlist. Today every caller resolves
+// `promptFile` from the static `allAgents` registry, but the same helper
+// pattern in agent-run-step takes the field directly from request JSON
+// — keep the two helpers symmetric so future refactors don't reintroduce
+// the path-traversal LFI.
+const SAFE_PROMPT_FILE = /^[a-z0-9_-]+\.txt$/;
+
 async function loadPromptFile(promptFile: string): Promise<string> {
+  if (!SAFE_PROMPT_FILE.test(promptFile)) return "";
   const filePath = join(process.cwd(), "src", "lib", "ai", "agent-prompts", promptFile);
   try {
     return await readFile(filePath, "utf-8");
@@ -195,6 +203,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
   }
 
+  // Ownership gate. Required for both branches:
+  // - Manual: closes the IDOR where any authed user could POST another
+  //   user's workflowId and run it (billed to the attacker, but executing
+  //   the victim's prompt steps and writing into the attacker's history).
+  // - Cron: a leaked CRON_SECRET would otherwise let an attacker pass any
+  //   userId/workflowId pair and run user A's workflow against user B's
+  //   quota. With this check, the worst a leaked secret can do is run the
+  //   workflow under its actual owner's quota.
+  // Returning 404 (not 403) avoids leaking workflow existence.
+  if (workflow.user_id !== userId) {
+    return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
+  }
+
+  // If the caller passed an existingRunId, verify it actually belongs to
+  // this user and this workflow. Otherwise a leaked CRON_SECRET (or a
+  // crafted manual call) could update someone else's run row.
+  if (existingRunId) {
+    const { data: existingRun } = await supabase
+      .from("workflow_runs")
+      .select("user_id, workflow_id")
+      .eq("id", existingRunId)
+      .single();
+    if (
+      !existingRun ||
+      existingRun.user_id !== userId ||
+      existingRun.workflow_id !== workflowId
+    ) {
+      return NextResponse.json({ error: "Run not found" }, { status: 404 });
+    }
+  }
+
   // Quota gate. Without this, scheduled workflows kept billing the project
   // (we pay Anthropic) for users whose monthly cap was already exhausted —
   // see PR adding consecutive_quota_failures + cron-level pre-skip for
@@ -344,53 +383,48 @@ export async function POST(request: NextRequest) {
         ],
       });
 
-      // Poll with real-time tool activity updates to DB
-      let toolWritePending = false;
-      let toolWriteQueued: ToolActivityItem[] | null = null;
+      // Stream partial tool activity + output to DB while the agent works.
+      // Both fields live in the same workflow_runs.step_results jsonb row,
+      // so we share one throttle: at most one DB write per
+      // MIN_FLUSH_INTERVAL_MS regardless of event rate. A long agentic
+      // step routinely emits hundreds of events; previously each one
+      // triggered a full-row jsonb UPDATE on an unindexed table while the
+      // 2s client poll was reading the same row — the hottest write path
+      // in the app. The final state is always captured by the post-step
+      // `update({ step_results })` await below, so dropping intermediates
+      // only delays the progress UI by ≤ MIN_FLUSH_INTERVAL_MS.
+      const MIN_FLUSH_INTERVAL_MS = 1500;
+      let lastFlushAt = 0;
 
-      const flushToolActivity = async (tools: ToolActivityItem[]) => {
-        if (toolWritePending) {
-          toolWriteQueued = tools; // Queue latest, will flush after current write
-          return;
-        }
-        toolWritePending = true;
-        stepResults[i] = { ...stepResults[i], status: "running", toolActivity: tools };
+      const flushIfDue = async () => {
+        if (Date.now() - lastFlushAt < MIN_FLUSH_INTERVAL_MS) return;
+        lastFlushAt = Date.now();
         try {
-          await supabase.from("workflow_runs").update({ step_results: stepResults }).eq("id", runId);
+          await supabase
+            .from("workflow_runs")
+            .update({ step_results: stepResults })
+            .eq("id", runId);
         } catch (err) {
-          console.error("[WorkflowExec] Tool activity DB write failed:", err);
-        }
-        toolWritePending = false;
-        // Flush queued update if any
-        if (toolWriteQueued) {
-          const queued = toolWriteQueued;
-          toolWriteQueued = null;
-          await flushToolActivity(queued);
+          console.error("[WorkflowExec] Throttled DB flush failed:", err);
         }
       };
 
-      // Track partial output writes (same queue pattern as tool activity)
-      let outputWritePending = false;
-      let outputWriteQueued: string | null = null;
+      const flushToolActivity = (tools: ToolActivityItem[]) => {
+        stepResults[i] = { ...stepResults[i], status: "running", toolActivity: tools };
+        void flushIfDue();
+      };
 
-      const flushOutput = async (text: string) => {
-        if (outputWritePending) { outputWriteQueued = text; return; }
-        outputWritePending = true;
+      const flushOutput = (text: string) => {
         stepResults[i] = { ...stepResults[i], status: "running", output: text };
-        try {
-          await supabase.from("workflow_runs").update({ step_results: stepResults }).eq("id", runId);
-        } catch { /* non-blocking */ }
-        outputWritePending = false;
-        if (outputWriteQueued) {
-          const queued = outputWriteQueued;
-          outputWriteQueued = null;
-          await flushOutput(queued);
-        }
+        void flushIfDue();
       };
 
-      const stepResult = await pollSessionUntilIdle(client, session.id, seenIds,
-        (tools) => { flushToolActivity(tools); },
-        (text) => { flushOutput(text); },
+      const stepResult = await pollSessionUntilIdle(
+        client,
+        session.id,
+        seenIds,
+        flushToolActivity,
+        flushOutput,
       );
 
       const stepFiles: { fileId: string; filename: string }[] = [];

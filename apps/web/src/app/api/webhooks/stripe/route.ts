@@ -7,6 +7,12 @@ import { TIERS, tierFromPriceId } from "@/lib/stripe/config";
 // Stripe needs the raw body for signature verification — Next 16 route handlers
 // give us request.text() which preserves the original bytes.
 
+// Pin runtime: stripe.webhooks.constructEvent uses node:crypto, which is
+// not available on the edge runtime. Without an explicit pin, an
+// experimental.runtime='edge' flip in next.config would silently break
+// signature verification.
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");
   if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
@@ -28,6 +34,26 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Idempotency claim. Atomically record that we are processing this event
+  // BEFORE any side effects. Stripe retries deliveries on 5xx, network
+  // failures, and Dashboard replays — without this gate, repeated
+  // `checkout.session.completed` events double-credit user balances, and
+  // concurrent retries race on read-then-write updates.
+  //
+  // A unique-violation (Postgres SQLSTATE 23505) on event_id means another
+  // delivery already claimed this event — return 200 so Stripe stops
+  // retrying. Any other DB error short-circuits with 500 so Stripe retries.
+  const { error: claimErr } = await admin
+    .from("stripe_processed_events")
+    .insert({ event_id: event.id, event_type: event.type });
+  if (claimErr) {
+    if (claimErr.code === "23505") {
+      return NextResponse.json({ received: true, deduped: true });
+    }
+    console.error("[stripe webhook] Idempotency claim failed:", claimErr);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 
   try {
     switch (event.type) {
@@ -210,6 +236,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error("[stripe webhook] Handler error:", err);
+    // Roll back the idempotency claim so Stripe's next retry can attempt
+    // again. If THIS delete fails, Stripe will keep retrying but be
+    // deduped to a 200; recovery then requires manually deleting the
+    // stripe_processed_events row before re-replaying. Log loudly so
+    // that's noticeable.
+    try {
+      await admin.from("stripe_processed_events").delete().eq("event_id", event.id);
+    } catch (rollbackErr) {
+      console.error(
+        "[stripe webhook] Failed to roll back idempotency claim — manual cleanup required:",
+        rollbackErr,
+      );
+    }
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
 }

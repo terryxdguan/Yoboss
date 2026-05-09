@@ -12,7 +12,18 @@ import { join } from "path";
 // final file write reaches Anthropic Files API.
 export const maxDuration = 800;
 
+// Filenames in src/lib/ai/agent-prompts/ are all of the form
+// `lowercase_with_underscores.txt`. This regex enforces that exact shape
+// and rejects any path-separator, parent-directory, or NUL byte.
+//
+// `rolePromptFile` arrives in the request JSON, so without this check
+// `path.join` would happily collapse `../../../etc/passwd` and the agent
+// would echo whatever the function-image filesystem holds. Allowlisting
+// is the only correct posture.
+const SAFE_PROMPT_FILE = /^[a-z0-9_-]+\.txt$/;
+
 async function loadPromptFile(promptFile: string): Promise<string> {
+  if (!SAFE_PROMPT_FILE.test(promptFile)) return "";
   const filePath = join(
     process.cwd(),
     "src",

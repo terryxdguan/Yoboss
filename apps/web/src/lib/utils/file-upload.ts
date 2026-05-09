@@ -1,4 +1,8 @@
-import * as XLSX from "xlsx";
+// xlsx is ~500KB minified — too heavy for the eager-import path on the
+// goal page. We dynamic-import it inside parseExcel() so users who never
+// upload a spreadsheet don't pay for it. Type-only import keeps signatures
+// available without pulling the implementation into the client bundle.
+import type * as XLSXType from "xlsx";
 
 // --- Types ---
 
@@ -70,7 +74,8 @@ function readAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   });
 }
 
-function parseExcel(buffer: ArrayBuffer, filename: string): string {
+async function parseExcel(buffer: ArrayBuffer, filename: string): Promise<string> {
+  const XLSX: typeof XLSXType = await import("xlsx");
   const workbook = XLSX.read(buffer, { type: "array" });
   const parts: string[] = [];
 
@@ -125,7 +130,7 @@ export async function processFile(file: File): Promise<FileAttachment> {
     }
     case "excel": {
       const buffer = await readAsArrayBuffer(file);
-      const textContent = parseExcel(buffer, file.name);
+      const textContent = await parseExcel(buffer, file.name);
       return {
         type: "excel",
         filename: file.name,
