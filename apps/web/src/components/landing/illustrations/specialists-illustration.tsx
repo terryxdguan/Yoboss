@@ -24,14 +24,16 @@ interface Pill {
 }
 
 // Hand-tuned positions form a rough ring around the center (0.5, 0.5).
-// Tweaks favored avoiding label collisions over geometric purity.
+// Side pills sit at x≈0.2/0.8 (rather than tighter to the edges) so the
+// translate(-50%) centering doesn't clip wider labels at the card's
+// overflow-hidden boundary.
 const PILLS: Pill[] = [
   { label: "General Assistant", icon: Bot, x: 0.5, y: 0.07, color: "#9CC4A4" },
-  { label: "This week's plan", icon: Calendar, x: 0.92, y: 0.28, color: "#7FB3B3" },
-  { label: "Market Researcher", icon: Search, x: 0.92, y: 0.72, color: "#B58FA0" },
+  { label: "This week's plan", icon: Calendar, x: 0.82, y: 0.3, color: "#7FB3B3" },
+  { label: "Market Research", icon: Search, x: 0.82, y: 0.7, color: "#B58FA0" },
   { label: "And more", icon: Plus, x: 0.5, y: 0.93, color: "#9B948B" },
-  { label: "Shipped yesterday", icon: CheckCircle2, x: 0.08, y: 0.72, color: "#7FB38A" },
-  { label: "Content Writer", icon: PenSquare, x: 0.08, y: 0.28, color: "#D5847A" },
+  { label: "Shipped today", icon: CheckCircle2, x: 0.18, y: 0.7, color: "#7FB38A" },
+  { label: "Content Writer", icon: PenSquare, x: 0.18, y: 0.3, color: "#D5847A" },
 ];
 
 export function SpecialistsIllustration() {

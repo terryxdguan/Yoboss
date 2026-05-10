@@ -138,7 +138,7 @@ export function GetStartedModal({ open, onClose, onSubmit }: GetStartedModalProp
                         strokeWidth={1.75}
                         style={{ color }}
                       />
-                      <span className="truncate text-sm font-medium text-[#2B2B2B]">
+                      <span className="text-xs font-medium leading-snug text-[#2B2B2B]">
                         {tExamples(`${key}.title`)}
                       </span>
                     </button>
