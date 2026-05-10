@@ -77,11 +77,19 @@ export interface ChatMessage {
     data: AskQuestionData | GoalPlanData | WeeklyPlanData;
   } | null;
   toolActivity?: ToolActivity[]; // all tool calls observed during this turn
-  answered?: boolean; // for ask_question: has user answered?
+  answered?: boolean; // for ask_question OR adjustRequest: has user answered?
   /** Rehydrated from a draft chat where the assistant turn never finished
    *  (Vercel maxDuration hit, tab closed mid-stream, etc). UI shows a
    *  "continue from here" warning. */
   interrupted?: boolean;
+  /** Synthetic client-side flag. When set, the message renders an
+   *  AdjustRequestCard inline in the chat. Set by editPlan (kind="goal")
+   *  or requestEdit (kind="weekly"). Cleared (via answered:true) once the
+   *  user submits text. Not persisted to draft sessions — refresh = card
+   *  disappears, user can click Adjust again. */
+  adjustRequest?: {
+    kind: "goal" | "weekly";
+  };
 }
 
 // Chat flow stage

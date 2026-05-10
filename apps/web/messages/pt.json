@@ -734,6 +734,13 @@
       "skipAndContinue": "Pular e continuar",
       "freeTextHint": "⌘/Ctrl+Enter para enviar"
     },
+    "adjust": {
+      "goalPrompt": "O que você gostaria de ajustar no roadmap?",
+      "weeklyPrompt": "O que você gostaria de ajustar no plano semanal?",
+      "placeholder": "Conte-nos o que deve mudar — fases, prazos, foco, qualquer detalhe específico…",
+      "submit": "Enviar",
+      "hint": "⌘/Ctrl+Enter para enviar"
+    },
     "chatMessage": {
       "agentLabel": "Assistente",
       "drafting": "Rascunhando seu plano…",

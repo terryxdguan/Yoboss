@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AskQuestionCard } from "./ask-question-card";
+import { AdjustRequestCard } from "./adjust-request-card";
 import { LiveTimer } from "@/components/ui/live-timer";
 import type { ChatMessage as ChatMessageType, AskQuestionData, UserAnswer } from "@/lib/types/goal-chat";
 
@@ -15,12 +16,15 @@ const PLAN_DRAFTING_TOOLS = new Set(["create_goal_plan", "create_weekly_plan"]);
 interface ChatMessageProps {
   message: ChatMessageType;
   onAnswer?: (answer: UserAnswer) => void;
+  /** Called when the user submits text in an AdjustRequestCard. The
+   *  hook layer handles the rest (persistence + tool_result + API). */
+  onAdjustSubmit?: (text: string) => void;
   isStreaming?: boolean;
 }
 
 const AGENT_AVATAR = "/pink.png";
 
-export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps) {
+export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: ChatMessageProps) {
   const t = useTranslations("goals.chatMessage");
   const AGENT_LABEL = t("agentLabel");
   // User message: right-aligned blue bubble, no avatar
@@ -31,6 +35,36 @@ export function ChatMessage({ message, onAnswer, isStreaming }: ChatMessageProps
           <div className="bg-[#007AFF] text-white rounded-lg px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Synthetic adjust-request card. Rendered as an assistant-side bubble
+  // (left-aligned, with avatar) so it visually reads as the AI asking
+  // the user a follow-up question, mirroring the clarifying-question
+  // pattern. The card itself owns the textarea + submit affordance.
+  if (message.adjustRequest) {
+    return (
+      <div className="flex justify-start gap-3">
+        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
+          <Image
+            src={AGENT_AVATAR}
+            alt={AGENT_LABEL}
+            width={32}
+            height={32}
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="max-w-[85%] min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold text-[#2B2B2B]">{AGENT_LABEL}</span>
+          </div>
+          <AdjustRequestCard
+            kind={message.adjustRequest.kind}
+            onSubmit={(text) => onAdjustSubmit?.(text)}
+            disabled={message.answered ?? false}
+          />
         </div>
       </div>
     );

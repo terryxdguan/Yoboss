@@ -1001,54 +1001,20 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
   // and follows up with a plain-text "please adjust" user message.
   // ------------------------------------------------------------
 
+  // Click of "Adjust" on the roadmap preview. We don't fire the API
+  // here anymore — instead we push a synthetic adjust-prompt assistant
+  // message and wait for the user to type what they'd like changed.
+  // The actual tool_result + sendToApi happens in submitAdjustment.
   const editPlan = useCallback(async () => {
     setStage("chatting");
-    const editText = "I'd like to adjust the plan. What would you change?";
-    const userMsg: ChatMessage = {
+    const promptMsg: ChatMessage = {
       id: genId(),
-      role: "user",
-      content: editText,
+      role: "assistant",
+      content: "",
+      adjustRequest: { kind: "goal" },
     };
-    setMessages((prev) => [...prev, userMsg]);
-
-    // Send tool_result for the create_goal_plan call, then the edit message
-    const toolUseId = lastToolUseIdRef.current || "";
-    const toolResultMsg: AnthropicMessage = {
-      role: "user",
-      content: [
-        {
-          type: "tool_result",
-          tool_use_id: toolUseId,
-          content: "User wants to edit the plan",
-        },
-      ],
-    };
-    historyRef.current.push(toolResultMsg);
-
-    const editMsg: AnthropicMessage = { role: "user", content: editText };
-    historyRef.current.push(editMsg);
-
-    if (sessionIdRef.current) {
-      try {
-        // Persist the tool_result as a tool_result-tagged user row so
-        // rebuildDraftHistory can recreate the block. The actual content
-        // we write is the human-readable "User wants to edit the plan"
-        // string; the original JSON-less nature of this one is fine
-        // because it's not a structured answer.
-        await saveMessage(
-          sessionIdRef.current,
-          "user",
-          "User wants to edit the plan",
-          { toolResultFor: toolUseId }
-        );
-        await saveMessage(sessionIdRef.current, "user", editText);
-      } catch (err) {
-        console.error("[use-goal-session] editPlan persist failed:", err);
-      }
-    }
-
-    sendToApi([...historyRef.current]);
-  }, [sendToApi]);
+    setMessages((prev) => [...prev, promptMsg]);
+  }, []);
 
   // ------------------------------------------------------------
   // Weekly-planning equivalent of editPlan — clears the weekly preview
@@ -1056,50 +1022,101 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
   // existing /goals/create callers never accidentally hit this path.
   // ------------------------------------------------------------
 
+  // Weekly-planning equivalent of editPlan. Closes the preview modal
+  // (via setWeeklyPreview(null)) and pushes the synthetic adjust card.
+  // No API call until the user types — see submitAdjustment.
   const requestEdit = useCallback(async () => {
     if (intentRef.current !== "weekly-planning") return;
     setWeeklyPreview(null);
-    const editText =
-      "I'd like to adjust the weekly plan. What would you change?";
-    const userMsg: ChatMessage = {
+    const promptMsg: ChatMessage = {
       id: genId(),
-      role: "user",
-      content: editText,
+      role: "assistant",
+      content: "",
+      adjustRequest: { kind: "weekly" },
     };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, promptMsg]);
+  }, []);
 
-    const toolUseId = lastToolUseIdRef.current || "";
-    historyRef.current.push({
-      role: "user",
-      content: [
-        {
-          type: "tool_result",
-          tool_use_id: toolUseId,
-          content: "User wants to adjust the plan",
-        },
-      ],
-    });
-    historyRef.current.push({ role: "user", content: editText });
+  // ------------------------------------------------------------
+  // Called by AdjustRequestCard when the user submits text. Builds the
+  // proper tool_result + user-text pair against the most recent plan
+  // tool_use and fires sendToApi. The user's text is included in BOTH
+  // the tool_result content AND a follow-up user message — the
+  // redundancy lets the model still see intent if memory compression
+  // happens to drop one half of the pair.
+  // ------------------------------------------------------------
 
-    if (sessionIdRef.current) {
-      try {
-        await saveMessage(
-          sessionIdRef.current,
-          "user",
-          "User wants to adjust the plan",
-          { toolResultFor: toolUseId }
-        );
-        await saveMessage(sessionIdRef.current, "user", editText);
-      } catch (err) {
+  const submitAdjustment = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      if (isStreaming) return;
+
+      // Mark every outstanding adjust card as answered so the UI
+      // disables further input. (In practice there will only ever be
+      // one outstanding card at a time, but this is robust.)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.adjustRequest && !m.answered ? { ...m, answered: true } : m
+        )
+      );
+
+      // Push the user's reply as a normal chat bubble.
+      const userMsg: ChatMessage = {
+        id: genId(),
+        role: "user",
+        content: trimmed,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+
+      const toolUseId = lastToolUseIdRef.current;
+      if (!toolUseId) {
+        // Defensive: should never happen because the Adjust button only
+        // appears after a plan tool_use was emitted. Log so we notice
+        // in production rather than sending an orphaned user message.
         console.error(
-          "[use-goal-session] requestEdit persist failed:",
-          err
+          "[use-goal-session] submitAdjustment: missing tool_use_id"
         );
+        setError("Something went wrong. Please refresh and try again.");
+        return;
       }
-    }
 
-    sendToApi([...historyRef.current]);
-  }, [sendToApi]);
+      // Persist both halves so a refresh mid-stream doesn't lose the
+      // adjust request. Best-effort — we still send to the API even if
+      // these throw.
+      if (sessionIdRef.current) {
+        try {
+          await saveMessage(
+            sessionIdRef.current,
+            "user",
+            `Adjustment request: ${trimmed}`,
+            { toolResultFor: toolUseId }
+          );
+          await saveMessage(sessionIdRef.current, "user", trimmed);
+        } catch (err) {
+          console.error(
+            "[use-goal-session] submitAdjustment persist failed:",
+            err
+          );
+        }
+      }
+
+      historyRef.current.push({
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: toolUseId,
+            content: `User would like the following adjustments: ${trimmed}`,
+          },
+        ],
+      });
+      historyRef.current.push({ role: "user", content: trimmed });
+
+      sendToApi([...historyRef.current]);
+    },
+    [isStreaming, sendToApi]
+  );
 
   return {
     messages,
@@ -1116,5 +1133,6 @@ export function useGoalSession(options?: UseGoalSessionOptions) {
     confirmPlan,
     editPlan,
     requestEdit,
+    submitAdjustment,
   };
 }
