@@ -15,3 +15,6 @@ apps/web/test-cli*.js
 apps/web/test-cli-output*.txt
 apps/web/src/lib/ai/client.js
 supabase/.temp/
+
+# claude code worktrees (each subdir is its own checkout)
+.claude/worktrees/
