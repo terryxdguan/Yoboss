@@ -726,6 +726,13 @@
       "skipAndContinue": "Passer et continuer",
       "freeTextHint": "⌘/Ctrl+Entrée pour envoyer"
     },
+    "adjust": {
+      "goalPrompt": "Que souhaitez-vous ajuster dans la feuille de route ?",
+      "weeklyPrompt": "Que souhaitez-vous ajuster dans le plan hebdomadaire ?",
+      "placeholder": "Dites-nous ce qui doit changer — phases, calendrier, priorités, tout détail spécifique…",
+      "submit": "Envoyer",
+      "hint": "⌘/Ctrl+Entrée pour envoyer"
+    },
     "chatMessage": {
       "agentLabel": "Assistant",
       "drafting": "Rédaction de votre plan…",
