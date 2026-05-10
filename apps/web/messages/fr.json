@@ -706,6 +706,8 @@
       "back": "Retour",
       "landingTitle": "Quelle est la prochaine chose que vous voulez faire ?",
       "landingSubtitle": "Décrivez votre objectif et nous vous aiderons à créer un plan concret.",
+      "questionCountHintGoal": "Je vais poser 4 à 5 questions rapides (max 6) avant de rédiger votre plan.",
+      "questionCountHintWeekly": "Je vais poser environ 3 questions rapides (max 4) avant de rédiger le plan de cette semaine.",
       "messagePlaceholder": "Écrivez un message...",
       "loadingSession": "Chargement de la session…",
       "saveFailed": "Échec de l'enregistrement",

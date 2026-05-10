@@ -706,6 +706,8 @@
       "back": "Back",
       "landingTitle": "What's the next thing you want to do?",
       "landingSubtitle": "Describe your goal and we'll help you create an actionable plan.",
+      "questionCountHintGoal": "I'll ask 4–5 quick questions (max 6) before drafting your plan.",
+      "questionCountHintWeekly": "I'll ask about 3 quick questions (max 4) before drafting this week's plan.",
       "messagePlaceholder": "Type a message...",
       "loadingSession": "Loading session…",
       "saveFailed": "Save failed",

@@ -706,6 +706,8 @@
       "back": "Voltar",
       "landingTitle": "Qual é a próxima coisa que você quer fazer?",
       "landingSubtitle": "Descreva sua meta e ajudaremos a criar um plano acionável.",
+      "questionCountHintGoal": "Vou fazer 4 a 5 perguntas rápidas (máx. 6) antes de elaborar seu plano.",
+      "questionCountHintWeekly": "Vou fazer cerca de 3 perguntas rápidas (máx. 4) antes de elaborar o plano desta semana.",
       "messagePlaceholder": "Digite uma mensagem...",
       "loadingSession": "Carregando sessão…",
       "saveFailed": "Falha ao salvar",
