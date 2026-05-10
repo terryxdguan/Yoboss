@@ -13,6 +13,10 @@ interface AuthModalProps {
   // Parent surfaces the "check your email" toast — the modal closes
   // immediately so the user isn't staring at a stale form.
   onSignupConfirmationSent?: (email: string) => void;
+  // Where to land the user after auth completes. Defaults to /dashboard.
+  // The Get Started picker passes "/goals" so the wizard can auto-start
+  // from the pendingGoal cookie without a dashboard detour.
+  nextPath?: string;
 }
 
 interface PasswordStrength {
@@ -49,6 +53,7 @@ export function AuthModal({
   onClose,
   initialMode = "signup",
   onSignupConfirmationSent,
+  nextPath,
 }: AuthModalProps) {
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
@@ -79,12 +84,11 @@ export function AuthModal({
     setLoading(false);
   }, [open, initialMode]);
 
-  // Always land on /dashboard after auth. If the visitor typed a goal
-  // before signing up, the dashboard onboarding pre-fills its "Welcome"
-  // textarea from the pendingGoal cookie — letting the user press the
-  // button themselves instead of being dropped straight into the
-  // roadmap-creation AI flow.
-  const postAuthDestination = (): string => "/dashboard";
+  // Where to land the user after auth. Defaults to /dashboard so nav
+  // "Login"/"Sign Up" buttons preserve the original behavior. The Get
+  // Started picker passes "/goals" so the wizard auto-starts from the
+  // pendingGoal cookie without a dashboard detour.
+  const postAuthDestination = (): string => nextPath ?? "/dashboard";
 
   if (!open) return null;
 
