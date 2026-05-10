@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
   let priceId: string;
   let mode: "subscription" | "payment";
   let metadata: Record<string, string>;
+  // Display amount we expose in the success URL so the account page can
+  // fire Meta Pixel Purchase with the right value. This is the Stripe
+  // sticker price; promo codes / proration are not reflected, which is
+  // acceptable for client-side ad attribution (the merchant wants the
+  // intent value, not the post-discount).
+  let amountCents = 0;
+  const currency = "usd";
 
   if (kind === "subscription") {
     const tier = body.tier as SubscriptionTier;
@@ -90,12 +97,14 @@ export async function POST(request: NextRequest) {
     priceId = TIERS[tier].stripePriceId!;
     mode = "subscription";
     metadata = { kind: "subscription", tier, user_id: user.id };
+    amountCents = TIERS[tier].priceCents;
   } else if (kind === "credits") {
     const pack = CREDIT_PACKS.find((p) => p.id === body.pack);
     if (!pack) return NextResponse.json({ error: "Invalid pack" }, { status: 400 });
     priceId = pack.stripePriceId;
     mode = "payment";
     metadata = { kind: "credits", pack: pack.id, credits_cents: String(pack.creditsAddedCents), user_id: user.id };
+    amountCents = pack.priceCents;
   } else {
     return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
   }
@@ -110,7 +119,7 @@ export async function POST(request: NextRequest) {
       // on the Stripe webhook landing before the user's tier flips — if the
       // webhook fails (wrong endpoint URL, bad signing secret, etc.), the
       // user would otherwise see "plan is active" while still on Free tier.
-      success_url: `${appUrl}/account?checkout=success&kind=${kind}`,
+      success_url: `${appUrl}/account?checkout=success&kind=${kind}&amount=${amountCents}&currency=${currency}`,
       cancel_url: `${appUrl}/account?checkout=cancelled`,
       metadata,
       ...(mode === "subscription"

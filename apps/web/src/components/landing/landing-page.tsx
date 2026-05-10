@@ -1,21 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Check,
-  X,
-  AlertCircle,
-  Flag,
-  Calendar,
-  Users,
-  FileText,
-  MessageCircle,
-  Wallet,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, X, AlertCircle, Flag, Users, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { GoalInput } from "./goal-input";
-import { ExampleGoals } from "./example-goals";
 import { AuthModal } from "./auth-modal";
+import { GetStartedModal } from "./get-started-modal";
+import { LandingFeatureCard } from "./landing-feature-card";
+import { RoadmapIllustration } from "./illustrations/roadmap-illustration";
+import { SpecialistsIllustration } from "./illustrations/specialists-illustration";
+import { DeliverablesIllustration } from "./illustrations/deliverables-illustration";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { createClient } from "@/lib/db/client";
 import { setPendingGoal } from "@/lib/pending-goal";
@@ -41,11 +35,16 @@ function friendlyAuthError(
 
 export function LandingPage() {
   const t = useTranslations("landing");
-  const [goalText, setGoalText] = useState("");
+  const router = useRouter();
   const [authOpen, setAuthOpen] = useState(false);
   // Tracks which mode the modal should open in — set BEFORE setAuthOpen(true)
   // so the modal's open-time reset effect picks up the right initial mode.
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  // When the picker drives auth, we want post-auth to land on /goals so
+  // the wizard can auto-start from the pendingGoal cookie. Nav-driven
+  // auth leaves this undefined → AuthModal falls back to /dashboard.
+  const [authNextPath, setAuthNextPath] = useState<string | undefined>(undefined);
+  const [pickerOpen, setPickerOpen] = useState(false);
   // Holds the email of the just-signed-up user. Non-null = toast visible.
   const [signupToastEmail, setSignupToastEmail] = useState<string | null>(null);
   // Populated from ?error=... on mount — surfaces whatever Supabase sent
@@ -87,35 +86,56 @@ export function LandingPage() {
     return () => clearTimeout(timer);
   }, [signupToastEmail]);
 
+  // Nav-button auth: keeps the original /dashboard destination so
+  // returning users land where they expect.
   const openAuth = (mode: "login" | "signup") => {
     setAuthMode(mode);
+    setAuthNextPath(undefined);
     setAuthOpen(true);
   };
 
-  const handleSubmitGoal = (text: string) => {
-    setPendingGoal(text);
+  // Picker-driven submit: stash the goal in the pendingGoal cookie,
+  // close the picker, and either push straight to /goals (logged-in)
+  // or open AuthModal with nextPath="/goals" so the wizard auto-starts
+  // immediately after sign-in.
+  const handlePickerSubmit = (text: string) => {
+    if (!text.trim()) return;
+    setPendingGoal(text.trim());
+    setPickerOpen(false);
     if (loggedIn) {
-      // Already authenticated — skip the auth modal and drop them on
-      // /dashboard. The onboarding-dashboard reads pendingGoal and
-      // pre-fills its textarea with whatever they just typed.
-      window.location.href = "/dashboard";
+      router.push("/goals");
       return;
     }
-    openAuth("signup");
+    setAuthMode("signup");
+    setAuthNextPath("/goals");
+    setAuthOpen(true);
   };
 
-  const features: Array<{
-    icon: typeof Flag;
-    titleKey: string;
-    bodyKey: string;
-    color: string;
-  }> = [
-    { icon: Flag, titleKey: "feature1Title", bodyKey: "feature1Body", color: "#007AFF" },
-    { icon: Calendar, titleKey: "feature2Title", bodyKey: "feature2Body", color: "#7FB38A" },
-    { icon: Users, titleKey: "feature3Title", bodyKey: "feature3Body", color: "#C9A968" },
-    { icon: FileText, titleKey: "feature4Title", bodyKey: "feature4Body", color: "#D5847A" },
-    { icon: MessageCircle, titleKey: "feature5Title", bodyKey: "feature5Body", color: "#9B6B5C" },
-    { icon: Wallet, titleKey: "feature6Title", bodyKey: "feature6Body", color: "#7FB3B3" },
+  const features = [
+    {
+      icon: Flag,
+      titleKey: "feature1Title" as const,
+      bodyKey: "feature1Body" as const,
+      color: "#007AFF",
+      iconBg: "#E6F2FF",
+      illustration: <RoadmapIllustration />,
+    },
+    {
+      icon: Users,
+      titleKey: "feature2Title" as const,
+      bodyKey: "feature2Body" as const,
+      color: "#7FB38A",
+      iconBg: "#E6F2E8",
+      illustration: <SpecialistsIllustration />,
+    },
+    {
+      icon: FileText,
+      titleKey: "feature3Title" as const,
+      bodyKey: "feature3Body" as const,
+      color: "#D5847A",
+      iconBg: "#FBE6E3",
+      illustration: <DeliverablesIllustration />,
+    },
   ];
 
   return (
@@ -171,9 +191,9 @@ export function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* Hero + 3-card layout */}
       <main className="-mt-2">
-        <section className="max-w-4xl mx-auto px-6 text-center">
+        <section className="max-w-6xl mx-auto px-6 text-center">
           {/* Hero illustration */}
           <div className="relative mx-auto max-w-2xl">
             <div className="overflow-hidden max-h-[280px] md:max-h-[340px]">
@@ -183,53 +203,38 @@ export function LandingPage() {
                 className="w-full h-auto object-cover object-top"
               />
             </div>
-            {/* Attribution badge — sits above the green (headphones)
-                character. Positioned in % so it tracks the image as it
-                scales down on narrower viewports. */}
             <span className="absolute right-[2%] top-[28%] z-20 inline-flex items-center rounded-full border border-[#007AFF]/40 bg-[#FFFDF9] px-2.5 py-1 text-[10px] md:text-xs font-medium text-[#5E8FCE] shadow-[0_2px_8px_rgba(0,122,255,0.18)] whitespace-nowrap">
               {t("heroBadge")}
             </span>
           </div>
 
-          <p className="text-xl md:text-2xl text-[#2B2B2B] mb-4 max-w-4xl mx-auto whitespace-nowrap">
+          <p className="text-xl md:text-2xl text-[#2B2B2B] mt-2 mb-10 max-w-4xl mx-auto whitespace-normal md:whitespace-nowrap">
             {t("heroTagline")}
           </p>
 
-          <GoalInput
-            value={goalText}
-            onChange={setGoalText}
-            onSubmit={handleSubmitGoal}
-          />
-
-          <ExampleGoals onSelect={(text) => setGoalText(text)} />
-        </section>
-
-        {/* Features */}
-        <section id="features" className="max-w-6xl mx-auto px-6 mt-24 mb-20 scroll-mt-24">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#2B2B2B] mb-3">
-              {t("featuresTitle")}
-            </h2>
-            <p className="text-base text-[#6F6A64] max-w-2xl mx-auto">
-              {t("featuresSubtitle")}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map(({ icon: Icon, titleKey, bodyKey, color }) => (
-              <div
+          {/* 3 feature cards */}
+          <div id="features" className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left scroll-mt-24">
+            {features.map(({ icon, titleKey, bodyKey, color, iconBg, illustration }) => (
+              <LandingFeatureCard
                 key={titleKey}
-                className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-6 text-left hover:border-[#DDD3C7] hover:shadow-[0_8px_24px_rgba(30,34,39,0.06)] transition-all"
-              >
-                <div
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl mb-4"
-                  style={{ backgroundColor: `${color}1F`, color }}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-base font-semibold text-[#2B2B2B] mb-1.5">{t(titleKey)}</h3>
-                <p className="text-sm text-[#6F6A64] leading-relaxed">{t(bodyKey)}</p>
-              </div>
+                icon={icon}
+                iconColor={color}
+                iconBg={iconBg}
+                title={t(titleKey)}
+                body={t(bodyKey)}
+                illustration={illustration}
+              />
             ))}
+          </div>
+
+          {/* Get Started */}
+          <div className="mt-10 mb-20 flex justify-center">
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="bg-[#007AFF] text-white px-8 py-3 rounded-full text-base font-semibold hover:bg-[#0066D6] active:scale-95 transition-all shadow-[0_4px_16px_rgba(0,122,255,0.25)]"
+            >
+              {t("ctaGetStarted")}
+            </button>
           </div>
         </section>
 
@@ -249,9 +254,16 @@ export function LandingPage() {
         </footer>
       </main>
 
+      <GetStartedModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSubmit={handlePickerSubmit}
+      />
+
       <AuthModal
         open={authOpen}
         initialMode={authMode}
+        nextPath={authNextPath}
         onClose={() => setAuthOpen(false)}
         onSignupConfirmationSent={(email) => setSignupToastEmail(email)}
       />
