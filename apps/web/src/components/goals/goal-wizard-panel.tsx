@@ -281,6 +281,7 @@ function GoalCreationChat({
     answerQuestion,
     confirmPlan,
     editPlan,
+    submitAdjustment,
   } = useGoalSession({ initialDraft });
 
   const t = useTranslations("goals.wizard");
@@ -347,6 +348,7 @@ function GoalCreationChat({
             key={msg.id}
             message={msg}
             onAnswer={answerQuestion}
+            onAdjustSubmit={submitAdjustment}
             isStreaming={
               isStreaming && idx === messages.length - 1 && msg.role === "assistant"
             }
@@ -620,6 +622,7 @@ function WeeklyPlanningChat({
             key={m.id}
             message={m}
             onAnswer={sessionHook.answerQuestion}
+            onAdjustSubmit={sessionHook.submitAdjustment}
             isStreaming={
               sessionHook.isStreaming && i === sessionHook.messages.length - 1
             }
