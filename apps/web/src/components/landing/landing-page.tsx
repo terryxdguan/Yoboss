@@ -203,9 +203,6 @@ export function LandingPage() {
                 className="w-full h-auto object-cover object-top"
               />
             </div>
-            <span className="absolute right-[2%] top-[28%] z-20 inline-flex items-center rounded-full border border-[#007AFF]/40 bg-[#FFFDF9] px-2.5 py-1 text-[10px] md:text-xs font-medium text-[#5E8FCE] shadow-[0_2px_8px_rgba(0,122,255,0.18)] whitespace-nowrap">
-              {t("heroBadge")}
-            </span>
           </div>
 
           <p className="text-xl md:text-2xl text-[#2B2B2B] mt-2 mb-10 max-w-4xl mx-auto whitespace-normal md:whitespace-nowrap">

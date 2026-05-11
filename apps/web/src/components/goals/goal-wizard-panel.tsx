@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, X, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Send, X, Maximize2, Minimize2, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   useGoalSession,
@@ -59,6 +59,15 @@ function useResize(initial: number, min: number, max: number) {
   );
 
   return { width, onMouseDown };
+}
+
+function QuestionCountHint({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-[#007AFF]/20 bg-[#E6F2FF]/50 px-3 py-2 text-xs text-[#007AFF]">
+      <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+      <span className="leading-snug">{message}</span>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------
@@ -343,6 +352,7 @@ function GoalCreationChat({
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
       >
+        <QuestionCountHint message={t("questionCountHintGoal")} />
         {messages.map((msg, idx) => (
           <ChatMessage
             key={msg.id}
@@ -517,6 +527,7 @@ function WeeklyPlanningChat({
   setSaveError: (v: string | null) => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("goals.wizard");
   const sessionHook = useGoalSession({
     initialDraft: {
       sessionId,
@@ -617,6 +628,7 @@ function WeeklyPlanningChat({
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
       >
+        <QuestionCountHint message={t("questionCountHintWeekly")} />
         {sessionHook.messages.map((m, i) => (
           <ChatMessage
             key={m.id}
