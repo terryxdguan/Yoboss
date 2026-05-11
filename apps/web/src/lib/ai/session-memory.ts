@@ -13,6 +13,16 @@ export type MemoryCandidate = {
   importance: "low" | "medium" | "high";
 };
 
+function hasToolResultBlock(content: string | object[]): boolean {
+  if (!Array.isArray(content)) return false;
+  return content.some(
+    (block) =>
+      typeof block === "object" &&
+      block !== null &&
+      (block as { type?: string }).type === "tool_result",
+  );
+}
+
 /**
  * Generate a rolling summary of conversation history.
  * Combines the old summary with messages that are about to be "compressed".
@@ -47,15 +57,27 @@ export async function generateSessionSummary(
 
 /**
  * Build the messages array for an API call with session memory.
- * Returns: [summary context message (if any)] + last 5 messages
+ * Returns: [summary context message (if any)] + last N messages
+ *
+ * The slice is widened backward when its first message would be an orphan
+ * `tool_result` block (or any non-user role). Anthropic rejects a `tool_result`
+ * whose matching `tool_use` lives in a sliced-off assistant turn, and the
+ * summary-injection fallback below assumes the recent slice begins with a user
+ * message — so we walk back until both conditions hold.
  */
 export function buildMessagesWithMemory(
   summary: string | null,
   allMessages: { role: string; content: string | object[] }[],
 ): { role: string; content: string | object[] }[] {
-  const recent = allMessages.slice(-MAX_RECENT_MESSAGES);
+  let startIdx = Math.max(0, allMessages.length - MAX_RECENT_MESSAGES);
+  while (startIdx > 0) {
+    const msg = allMessages[startIdx];
+    if (msg.role === "user" && !hasToolResultBlock(msg.content)) break;
+    startIdx -= 1;
+  }
+  const recent = allMessages.slice(startIdx);
 
-  if (summary && allMessages.length > MAX_RECENT_MESSAGES) {
+  if (summary && startIdx > 0) {
     // Inject summary as the first user message context
     // We prepend it as a system-like context note before the recent messages
     const summaryNote = `[Previous conversation summary: ${summary}]`;

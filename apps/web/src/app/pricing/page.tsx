@@ -73,15 +73,20 @@ export default function PricingPage() {
     (async () => {
       try {
         const q = await getBillingState();
+        if (!q) {
+          // Anonymous visitor — keep defaults; CTAs render as sign-up.
+          setSignedIn(false);
+          return;
+        }
         setSignedIn(true);
-        const tier = (q?.tier as TierId) ?? "free";
+        const tier = (q.tier as TierId) ?? "free";
         setCurrentTier(tier);
         // Any non-free tier with a linked subscription id means Stripe has a
         // live subscription for this user, so plan changes must go through
         // the portal rather than creating a new checkout session.
-        setHasActiveSub(!!q?.stripe_subscription_id && tier !== "free");
+        setHasActiveSub(!!q.stripe_subscription_id && tier !== "free");
       } catch {
-        // Not authenticated — keep defaults; CTAs will switch to sign-up.
+        // Unexpected DB / network failure — fall back to logged-out CTAs.
         setSignedIn(false);
       } finally {
         setBillingLoaded(true);

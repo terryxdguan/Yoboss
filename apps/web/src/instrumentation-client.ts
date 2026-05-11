@@ -27,6 +27,22 @@ Sentry.init({
 
   enableLogs: true,
 
+  // Drop known noise that isn't actionable — both signal-zero patterns
+  // we've seen repeatedly in YOBOSS-WEB-* issues:
+  //
+  // 1. `Object Not Found Matching Id:N, MethodName:update, ParamCount:4` —
+  //    fingerprint of injected browser-extension code (commonly old
+  //    Outlook SafeLinks / page-translator extensions). No stack, not our
+  //    code, can't fix from our side.
+  // 2. `Lock broken by another request with the 'steal' option` — benign
+  //    Web Locks API rejection that fires every time Supabase's auth
+  //    client steals the lock from a stale tab. Expected behavior, not
+  //    an error users experience.
+  ignoreErrors: [
+    /Object Not Found Matching Id:\d+, MethodName:.+, ParamCount:\d+/,
+    /Lock broken by another request with the 'steal' option/,
+  ],
+
   // The Replay integration is added dynamically by CookieConsent only after
   // the user accepts cookies. Errors and perf are tracked unconditionally
   // (legitimate-interest basis); replay captures DOM and gets explicit
