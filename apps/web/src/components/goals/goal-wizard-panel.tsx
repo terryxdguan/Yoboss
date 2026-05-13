@@ -63,7 +63,7 @@ function useResize(initial: number, min: number, max: number) {
 
 function QuestionCountHint({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-[#007AFF]/20 bg-[#E6F2FF]/50 px-3 py-2 text-xs text-[#007AFF]">
+    <div className="flex items-start gap-2 rounded-lg border border-[#7C2DE8]/20 bg-[#F3ECFB]/50 px-3 py-2 text-xs text-[#7C2DE8]">
       <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
       <span className="leading-snug">{message}</span>
     </div>
@@ -151,7 +151,7 @@ export function GoalWizardPanel(props: GoalWizardPanelProps) {
       {!isFullscreen && (
         <div
           onMouseDown={onMouseDown}
-          className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#007AFF]/20 active:bg-[#007AFF]/30 transition-colors z-10"
+          className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#7C2DE8]/20 active:bg-[#7C2DE8]/30 transition-colors z-10"
         />
       )}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
@@ -165,13 +165,13 @@ export function GoalWizardPanel(props: GoalWizardPanelProps) {
             onClick={() => setIsFullscreen((v) => !v)}
             aria-label={isFullscreen ? tCommon("exitFullscreen") : tCommon("enterFullscreen")}
             title={isFullscreen ? tCommon("exitFullscreen") : tCommon("enterFullscreen")}
-            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <button
             onClick={props.onClose}
-            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -386,12 +386,12 @@ function GoalCreationChat({
             }}
             placeholder={t("messagePlaceholder")}
             disabled={isStreaming}
-            className="flex-1 border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9] disabled:opacity-50"
+            className="flex-1 border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/40 focus:border-transparent bg-[#FFFFFF] disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={!inputText.trim() || isStreaming}
-            className="h-9 w-9 flex items-center justify-center rounded-lg bg-[#007AFF] text-white hover:bg-[#0066D6] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-9 w-9 flex items-center justify-center rounded-lg bg-[#7C2DE8] text-white hover:bg-[#6921C7] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Send className="h-4 w-4" />
           </button>

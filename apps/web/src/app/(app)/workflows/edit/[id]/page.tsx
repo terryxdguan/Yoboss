@@ -337,10 +337,10 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-[0_2px_8px_rgba(0,122,255,0.3)] ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-[0_2px_8px_rgba(124,45,232,0.3)] ${
               saved
                 ? "bg-[#7FB38A] text-white"
-                : "bg-[#007AFF] text-white hover:bg-[#0066D6]"
+                : "bg-[#7C2DE8] text-white hover:bg-[#6921C7]"
             } disabled:opacity-50`}
           >
             {saving ? (
@@ -365,7 +365,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
             if (errors.name) setErrors((p) => ({ ...p, name: "" }));
           }}
           placeholder={t("namePlaceholder")}
-          className={`w-full px-3.5 py-2.5 rounded-xl border bg-[#FFFDF9] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 transition-colors ${errors.name ? "border-[#D5847A] focus:border-[#D5847A] focus:ring-[#D5847A]/20" : "border-[#DDD3C7] focus:border-[#007AFF] focus:ring-[#007AFF]/20"}`}
+          className={`w-full px-3.5 py-2.5 rounded-xl border bg-[#FFFFFF] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 transition-colors ${errors.name ? "border-[#D5847A] focus:border-[#D5847A] focus:ring-[#D5847A]/20" : "border-[#DDD3C7] focus:border-[#7C2DE8] focus:ring-[#7C2DE8]/20"}`}
         />
         {errors.name && (
           <p className="text-xs text-[#D5847A] mt-1">{errors.name}</p>
@@ -386,7 +386,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
           }}
           rows={3}
           placeholder={t("descPlaceholder")}
-          className={`w-full px-3.5 py-2.5 rounded-xl border bg-[#FFFDF9] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 transition-colors resize-y min-h-[80px] ${errors.description ? "border-[#D5847A] focus:border-[#D5847A] focus:ring-[#D5847A]/20" : "border-[#DDD3C7] focus:border-[#007AFF] focus:ring-[#007AFF]/20"}`}
+          className={`w-full px-3.5 py-2.5 rounded-xl border bg-[#FFFFFF] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 transition-colors resize-y min-h-[80px] ${errors.description ? "border-[#D5847A] focus:border-[#D5847A] focus:ring-[#D5847A]/20" : "border-[#DDD3C7] focus:border-[#7C2DE8] focus:ring-[#7C2DE8]/20"}`}
         />
         {errors.description && (
           <p className="text-xs text-[#D5847A] mt-1">{errors.description}</p>
@@ -403,7 +403,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           placeholder={t("topicPlaceholder")}
-          className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD3C7] bg-[#FFFDF9] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-colors"
+          className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDD3C7] bg-[#FFFFFF] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:border-[#7C2DE8] focus:ring-2 focus:ring-[#7C2DE8]/20 transition-colors"
         />
       </div>
 
@@ -412,7 +412,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
         <button
           onClick={handleAIGenerate}
           disabled={aiLoading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E6F2FF] text-[#007AFF] text-sm font-medium hover:bg-[#007AFF] hover:text-white transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F3ECFB] text-[#7C2DE8] text-sm font-medium hover:bg-[#7C2DE8] hover:text-white transition-colors disabled:opacity-50"
         >
           {aiLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -438,7 +438,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
           return (
             <div
               key={step.id}
-              className="border border-[#E7DED2] rounded-xl bg-[#FFFDF9] overflow-hidden"
+              className="border border-[#E7DED2] rounded-xl bg-[#FFFFFF] overflow-hidden"
             >
               {/* Step header */}
               <div className="flex items-center gap-2 px-4 py-3 bg-[#F6F3EE] border-b border-[#E7DED2]">
@@ -453,7 +453,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
                   onChange={(e) =>
                     handleUpdateStep(idx, "agentId", e.target.value)
                   }
-                  className="w-48 px-3 py-1.5 rounded-lg border border-[#DDD3C7] bg-white text-sm text-[#2B2B2B] focus:outline-none focus:border-[#007AFF] transition-colors shrink-0"
+                  className="w-48 px-3 py-1.5 rounded-lg border border-[#DDD3C7] bg-white text-sm text-[#2B2B2B] focus:outline-none focus:border-[#7C2DE8] transition-colors shrink-0"
                 >
                   <option value="">{t("selectEmployee")}</option>
                   {uniqueAgents.map((a) => (
@@ -476,7 +476,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
                 <button
                   onClick={() => handleEnhanceStep(idx)}
                   disabled={isEnhancing || enhancingStep !== null}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#007AFF] bg-[#E6F2FF] hover:bg-[#007AFF] hover:text-white transition-colors disabled:opacity-40 shrink-0"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#7C2DE8] bg-[#F3ECFB] hover:bg-[#7C2DE8] hover:text-white transition-colors disabled:opacity-40 shrink-0"
                   title={t("enhancePrompt")}
                 >
                   {isEnhancing ? (
@@ -525,7 +525,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
                   }
                   rows={Math.max(4, step.prompt.split("\n").length + 1)}
                   placeholder={t("stepPromptPlaceholder")}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-[#DDD3C7] bg-[#F6F3EE] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-colors resize-y min-h-[100px]"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-[#DDD3C7] bg-[#F6F3EE] text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:border-[#7C2DE8] focus:ring-2 focus:ring-[#7C2DE8]/20 transition-colors resize-y min-h-[100px]"
                 />
               </div>
             </div>
@@ -535,7 +535,7 @@ Return ONLY the enhanced prompt text, no explanation or markdown fences.`,
         {/* Add Step */}
         <button
           onClick={handleAddStep}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#DDD3C7] text-sm text-[#007AFF] hover:border-[#007AFF] hover:bg-[#E6F2FF]/30 font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#DDD3C7] text-sm text-[#7C2DE8] hover:border-[#7C2DE8] hover:bg-[#F3ECFB]/30 font-medium transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add Step

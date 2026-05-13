@@ -30,7 +30,7 @@ const EXAMPLE_KEYS: { key: string; icon: LucideIcon; color: string }[] = [
   { key: "marathon", icon: Timer, color: "#C9B88C" },
   { key: "language", icon: Globe, color: "#7BA8D9" },
   { key: "shop", icon: ShoppingBag, color: "#8BC5A3" },
-  { key: "trip", icon: Plane, color: "#007AFF" },
+  { key: "trip", icon: Plane, color: "#7C2DE8" },
 ];
 
 export function GetStartedModal({ open, onClose, onSubmit }: GetStartedModalProps) {
@@ -100,84 +100,86 @@ export function GetStartedModal({ open, onClose, onSubmit }: GetStartedModalProp
           role="dialog"
           aria-modal="true"
           aria-label={t("title")}
-          className="relative w-full max-w-2xl rounded-2xl bg-[#FFFDF9] p-6 shadow-[0_24px_64px_rgba(30,34,39,0.16)] outline-none md:p-8"
+          className="relative w-full max-w-2xl rounded-3xl bg-white shadow-[0_24px_64px_rgba(26,24,41,0.18)] outline-none overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Close */}
-          <button
-            onClick={onClose}
-            aria-label={t("closeAria")}
-            className="absolute right-4 top-4 rounded-md p-1.5 text-[#9B948B] transition-colors hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          {view === "examples" ? (
-            <>
-              <h2 className="mb-5 text-xl font-semibold text-[#2B2B2B] md:text-2xl">
-                {t("title")}
-              </h2>
-
-              {/* 6-cell example grid */}
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
-                {EXAMPLE_KEYS.map(({ key, icon: Icon, color }) => {
-                  const isPicked = picking === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => handlePick(key)}
-                      disabled={picking !== null}
-                      className={`group flex items-center gap-2 rounded-xl border px-3.5 py-3 text-left transition-all disabled:cursor-default ${
-                        isPicked
-                          ? "border-[#007AFF] bg-[#F8FBFF] shadow-[0_0_0_3px_rgba(0,122,255,0.15)]"
-                          : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
-                      }`}
-                    >
-                      <Icon
-                        className="h-4 w-4 shrink-0"
-                        strokeWidth={1.75}
-                        style={{ color }}
-                      />
-                      <span className="text-xs font-medium leading-snug text-[#2B2B2B]">
-                        {tExamples(`${key}.title`)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Customize */}
+          {/* Ink header strip — v1.1 mock §5.3 */}
+          <div className="relative bg-[#1A1829] px-6 pt-6 pb-7 md:px-8 md:pt-7 md:pb-8">
+            <button
+              onClick={onClose}
+              aria-label={t("closeAria")}
+              className="absolute right-4 top-4 rounded-md p-1.5 text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {view === "customize" && (
               <button
-                onClick={() => setView("customize")}
-                className="mt-3 w-full rounded-xl border border-[#DDD3C7] bg-[#FFFDF9] px-3.5 py-3 text-left text-sm font-medium text-[#2B2B2B] transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
+                onClick={() => setView("examples")}
+                className="mb-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-white/65 transition-colors hover:bg-white/10 hover:text-white"
               >
-                {t("customize")}
+                <ArrowLeft className="h-3.5 w-3.5" />
+                {t("back")}
               </button>
-            </>
-          ) : (
-            <>
-              {/* Customize header with Back */}
-              <div className="mb-4 flex items-center gap-3">
+            )}
+            <span
+              className="inline-block rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ backgroundColor: "rgba(124,45,232,0.22)", color: "#C9A8F7" }}
+            >
+              {t("eyebrow")}
+            </span>
+            <h2 className="mt-3 font-display text-2xl md:text-3xl font-bold leading-tight tracking-[-0.02em] text-white">
+              {view === "examples" ? t("title") : t("customizeTitle")}
+            </h2>
+            <p className="mt-1.5 text-sm text-white/65">{t("subtitle")}</p>
+          </div>
+
+          <div className="p-6 md:p-8">
+            {view === "examples" ? (
+              <>
+                {/* 6-cell example grid */}
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3">
+                  {EXAMPLE_KEYS.map(({ key, icon: Icon, color }) => {
+                    const isPicked = picking === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handlePick(key)}
+                        disabled={picking !== null}
+                        className={`group flex items-center gap-2 rounded-xl border px-3.5 py-3 text-left transition-all disabled:cursor-default ${
+                          isPicked
+                            ? "border-[#7C2DE8] bg-[#F3ECFB] shadow-[0_0_0_3px_rgba(124,45,232,0.18)]"
+                            : "border-[#E7DED2] bg-white hover:border-[#C9A8F7] hover:bg-[#F3ECFB]"
+                        }`}
+                      >
+                        <Icon
+                          className="h-4 w-4 shrink-0"
+                          strokeWidth={1.75}
+                          style={{ color }}
+                        />
+                        <span className="text-xs font-medium leading-snug text-[#1A1829]">
+                          {tExamples(`${key}.title`)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Customize */}
                 <button
-                  onClick={() => setView("examples")}
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-[#6F6A64] transition-colors hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
+                  onClick={() => setView("customize")}
+                  className="mt-3 w-full rounded-xl border border-[#DDD3C7] bg-white px-3.5 py-3 text-left text-sm font-medium text-[#1A1829] transition-colors hover:border-[#C9A8F7] hover:bg-[#F3ECFB]"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  {t("back")}
+                  {t("customize")}
                 </button>
-              </div>
-
-              <h2 className="mb-5 text-xl font-semibold text-[#2B2B2B] md:text-2xl">
-                {t("customizeTitle")}
-              </h2>
-
+              </>
+            ) : (
               <GoalInput
                 value={customText}
                 onChange={setCustomText}
                 onSubmit={handleCustomSubmit}
               />
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </>

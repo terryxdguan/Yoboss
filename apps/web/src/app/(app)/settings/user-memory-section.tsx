@@ -197,7 +197,7 @@ export function UserMemorySection({
             return (
               <li
                 key={entry.id}
-                className="group rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2.5 hover:border-[#DDD3C7]"
+                className="group rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-2.5 hover:border-[#DDD3C7]"
               >
                 <div className="flex items-start gap-2.5">
                   <span

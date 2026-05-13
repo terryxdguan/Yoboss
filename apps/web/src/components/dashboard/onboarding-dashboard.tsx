@@ -194,10 +194,10 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
             <section className="relative">
               <div
                 aria-hidden
-                className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#007AFF] opacity-50 blur-xl"
+                className="pointer-events-none absolute -inset-2 animate-glow-pulse rounded-3xl bg-[#C9A8F7] blur-2xl"
               />
 
-              <div className="relative rounded-2xl border-2 border-[#007AFF] bg-[#FFFDF9] p-5 shadow-[0_8px_28px_rgba(0,122,255,0.18)]">
+              <div className="relative rounded-2xl border border-[#C9A8F7] bg-[#FFFFFF] p-5 shadow-[0_8px_28px_rgba(124,45,232,0.10)]">
               {/* Top row: copy on the left, planner illustration on the right.
                   Image container is wider than tall (2:1) and uses object-cover
                   to crop the whitespace baked into the PNG so the figure sits
@@ -239,7 +239,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                       return (
                         <>
                           {before}
-                          <kbd className="rounded border border-[#E7DED2] bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] font-medium text-[#6F6A64]">
+                          <kbd className="rounded border border-[#E7DED2] bg-[#F6F3EE] px-1.5 py-0.5 text-[10px] font-medium text-[#6F6A64]">
                             Tab
                           </kbd>
                           {after}
@@ -249,7 +249,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                   </span>
                   <button
                     onClick={handleStep1}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#007AFF] px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0066D6]"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#7C2DE8] px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6921C7]"
                   >
                     {t("createRoadmap")}
                     <ArrowRight className="h-4 w-4" />
@@ -266,7 +266,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                       key={labelKey}
                       type="button"
                       onClick={() => setGoalText(tExamples(`${exKey}.text`))}
-                      className="rounded-full border border-[#E7DED2] bg-[#FFFDF9] px-3 py-1 text-xs text-[#6F6A64] transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF] hover:text-[#2B2B2B]"
+                      className="rounded-full border border-[#E7DED2] bg-[#FFFFFF] px-3 py-1 text-xs text-[#6F6A64] transition-colors hover:border-[#C9A8F7] hover:bg-[#F3ECFB] hover:text-[#2B2B2B]"
                     >
                       {t(labelKey)}
                     </button>
@@ -278,9 +278,9 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
           )}
 
           {/* Today's next steps */}
-          <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+          <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
             <div className="mb-4">
-              <div className="mb-2 inline-flex rounded-full bg-[#E6F2FF] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
+              <div className="mb-2 inline-flex rounded-full bg-[#F3ECFB] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
                 {t("stepsBadge")}
               </div>
               <h2 className="text-base font-semibold text-[#2B2B2B]">
@@ -301,7 +301,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                     className={`flex items-center gap-3 rounded-lg border px-3 py-3 transition-colors ${
                       step.locked
                         ? "border-[#E7DED2] bg-[#F8F5EF] opacity-70"
-                        : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
+                        : "border-[#E7DED2] bg-[#FFFFFF] hover:border-[#C9A8F7] hover:bg-[#F3ECFB]"
                     }`}
                   >
                     <span
@@ -323,10 +323,10 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold text-[#007AFF]">
+                            <span className="text-[11px] font-semibold text-[#7C2DE8]">
                               {step.label}
                             </span>
-                            <span className="rounded bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] text-[#6F6A64]">
+                            <span className="rounded bg-[#F6F3EE] px-1.5 py-0.5 text-[10px] text-[#6F6A64]">
                               {step.locked ? t("stepStatusLocked") : step.tag}
                             </span>
                             <span
@@ -356,7 +356,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                           className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
                             step.locked
                               ? "bg-[#EDE8E1] text-[#9B948B]"
-                              : "bg-[#E6F2FF] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
+                              : "bg-[#F3ECFB] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
                           }`}
                         >
                           {action}
@@ -380,7 +380,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
 
         {/* Right column — Employee */}
         <aside className="space-y-5">
-          <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+          <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F4C7C3]">
@@ -416,7 +416,7 @@ export function OnboardingDashboard({ onboarding }: OnboardingDashboardProps) {
                     className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2FF] text-[#007AFF]">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F3ECFB] text-[#7C2DE8]">
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>

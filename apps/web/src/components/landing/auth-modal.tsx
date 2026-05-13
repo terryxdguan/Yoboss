@@ -44,7 +44,7 @@ function getPasswordStrength(
     t("passwordGood"),
     t("passwordStrong"),
   ];
-  const colors = ["#D5847A", "#D5847A", "#D4B06A", "#007AFF", "#7FB38A"];
+  const colors = ["#D5847A", "#D5847A", "#D4B06A", "#7C2DE8", "#7FB38A"];
   return { score, label: labels[score], color: colors[score], checks };
 }
 
@@ -192,17 +192,26 @@ export function AuthModal({
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-[#FFFDF9] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.12)] w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-3xl shadow-[0_24px_64px_rgba(26,24,41,0.18)] w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors"
+            className="absolute top-4 right-4 p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
 
-          <h2 className="text-2xl font-bold text-[#2B2B2B] mb-1">
+          {mode === "signup" && (
+            <span
+              className="inline-block mb-3 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{ backgroundColor: "#F3ECFB", color: "#7C2DE8" }}
+            >
+              {t("signupBadge")}
+            </span>
+          )}
+
+          <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1A1829] tracking-[-0.02em] leading-tight mb-1.5">
             {mode === "signup" ? t("createAccount") : t("welcomeBack")}
           </h2>
           <p className="text-sm text-[#6F6A64] mb-6">
@@ -213,7 +222,7 @@ export function AuthModal({
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 border border-[#DDD3C7] rounded-lg px-4 py-3 text-sm font-medium text-[#2B2B2B] hover:bg-[#F6F3EE] active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 border border-[#E7DED2] rounded-xl px-4 py-3 text-sm font-medium text-[#1A1829] bg-white hover:bg-[#F6F3EE] active:scale-[0.98] transition-all disabled:opacity-50"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -241,12 +250,12 @@ export function AuthModal({
                 type="email"
                 value={email}
                 onChange={(e) => validateEmail(e.target.value)}
-                className={`w-full border rounded-lg px-4 py-2.5 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:border-transparent bg-[#FFFDF9] ${
+                className={`w-full border rounded-xl px-4 py-3 text-sm text-[#1A1829] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:border-transparent bg-white ${
                   emailError
                     ? "border-[#D5847A] focus:ring-[#D5847A]/40"
                     : email && isValidEmail
                       ? "border-[#7FB38A] focus:ring-[#7FB38A]/40"
-                      : "border-[#DDD3C7] focus:ring-[#007AFF]/40"
+                      : "border-[#E7DED2] focus:ring-[#7C2DE8]/40"
                 }`}
                 placeholder={t("emailPlaceholder")}
                 required
@@ -269,7 +278,7 @@ export function AuthModal({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-[#DDD3C7] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9]"
+                  className="w-full border border-[#E7DED2] rounded-xl px-4 py-3 pr-10 text-sm text-[#1A1829] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/40 focus:border-transparent bg-white"
                   placeholder={
                     mode === "signup"
                       ? t("passwordCreatePlaceholder")
@@ -348,7 +357,7 @@ export function AuthModal({
                 loading ||
                 (mode === "signup" ? !canSubmitSignup : !canSubmitLogin)
               }
-              className="w-full bg-[#007AFF] text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-[#7C2DE8] text-white rounded-xl px-4 py-3 text-sm font-semibold hover:bg-[#6921C7] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 shadow-brand"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading
@@ -367,7 +376,7 @@ export function AuthModal({
                 {t("haveAccount")}{" "}
                 <button
                   onClick={() => setMode("login")}
-                  className="text-[#007AFF] font-medium hover:underline"
+                  className="text-[#7C2DE8] font-medium hover:underline"
                 >
                   {t("switchToLogin")}
                 </button>
@@ -377,7 +386,7 @@ export function AuthModal({
                 {t("noAccount")}{" "}
                 <button
                   onClick={() => setMode("signup")}
-                  className="text-[#007AFF] font-medium hover:underline"
+                  className="text-[#7C2DE8] font-medium hover:underline"
                 >
                   {t("switchToSignup")}
                 </button>

@@ -58,7 +58,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
       <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="relative bg-[#FFFFFF] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div>
@@ -66,7 +66,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -81,7 +81,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("searchPlaceholder")}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#F6F3EE] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#F6F3EE] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#7C2DE8]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
             />
           </div>
         </div>
@@ -95,8 +95,8 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   activeCategory === cat
-                    ? "bg-[#007AFF] text-white"
-                    : "bg-[#F1ECE4] text-[#6F6A64] hover:bg-[#E7DED2]"
+                    ? "bg-[#7C2DE8] text-white"
+                    : "bg-[#F6F3EE] text-[#6F6A64] hover:bg-[#E7DED2]"
                 }`}
               >
                 {CATEGORY_DISPLAY[cat]}
@@ -121,12 +121,12 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
                     className={`rounded-xl border p-3.5 transition-all ${
                       isHired
                         ? "border-[#7FB38A]/30 bg-[#7FB38A]/5"
-                        : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#DDD3C7] hover:shadow-[0_4px_12px_rgba(30,34,39,0.06)]"
+                        : "border-[#E7DED2] bg-[#FFFFFF] hover:border-[#DDD3C7] hover:shadow-[0_4px_12px_rgba(30,34,39,0.06)]"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</p>
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#F1ECE4] text-[#9B948B] shrink-0">
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#F6F3EE] text-[#9B948B] shrink-0">
                         {CATEGORY_LABELS[agent.category]}
                       </span>
                     </div>
@@ -143,7 +143,7 @@ export function HireModal({ hiredIds, onHire, onClose }: HireModalProps) {
                     ) : (
                       <button
                         onClick={() => onHire(agent.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#007AFF] text-white text-[11px] font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7C2DE8] text-white text-[11px] font-medium hover:bg-[#6921C7] active:scale-[0.97] transition-all"
                       >
                         <UserPlus className="h-3.5 w-3.5" />
                         {tMarket("hire")}

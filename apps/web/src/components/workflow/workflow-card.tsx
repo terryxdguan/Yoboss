@@ -69,7 +69,7 @@ export function WorkflowCard({
   const hiddenCount = agentLabels.length - MAX_VISIBLE_AGENTS;
 
   return (
-    <div className="group bg-[#FFFDF9] rounded-xl border border-[#E7DED2] p-5 transition-all hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7]">
+    <div className="group bg-[#FFFFFF] rounded-xl border border-[#E7DED2] p-5 transition-all hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7]">
       {/* Top row */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
@@ -86,26 +86,26 @@ export function WorkflowCard({
 
       {/* Step badges — hidden in compact mode */}
       {!compact && <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-        <span className="text-[10px] font-medium text-[#9B948B] bg-[#F1ECE4] px-2 py-0.5 rounded-md">
+        <span className="text-[10px] font-medium text-[#9B948B] bg-[#F6F3EE] px-2 py-0.5 rounded-md">
           {workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}
         </span>
         {visibleLabels.map((label, i) => (
           <span
             key={i}
-            className="text-[10px] text-[#6F6A64] bg-[#E6F2FF] px-2 py-0.5 rounded-md"
+            className="text-[10px] text-[#6F6A64] bg-[#F3ECFB] px-2 py-0.5 rounded-md"
           >
             {label}
           </span>
         ))}
         {hiddenCount > 0 && (
           <span
-            className="text-[10px] text-[#007AFF] bg-[#E6F2FF] px-2 py-0.5 rounded-md cursor-pointer hover:bg-[#007AFF] hover:text-white transition-colors relative"
+            className="text-[10px] text-[#7C2DE8] bg-[#F3ECFB] px-2 py-0.5 rounded-md cursor-pointer hover:bg-[#7C2DE8] hover:text-white transition-colors relative"
             onMouseEnter={() => setShowAllAgents(true)}
             onMouseLeave={() => setShowAllAgents(false)}
           >
             +{hiddenCount}
             {showAllAgents && (
-              <div className="absolute left-0 top-full mt-1 z-20 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg shadow-[0_8px_24px_rgba(43,43,43,0.12)] p-2 min-w-[140px]">
+              <div className="absolute left-0 top-full mt-1 z-20 bg-[#FFFFFF] border border-[#E7DED2] rounded-lg shadow-[0_8px_24px_rgba(43,43,43,0.12)] p-2 min-w-[140px]">
                 {agentLabels.slice(MAX_VISIBLE_AGENTS).map((label, i) => (
                   <div key={i} className="text-[11px] text-[#6F6A64] py-0.5 px-1">
                     {label}
@@ -133,10 +133,10 @@ export function WorkflowCard({
           className="flex items-center gap-2 mt-3 w-full text-left group/status"
         >
           <span className="relative w-2 h-2 shrink-0">
-            <span className="absolute inset-0 rounded-full bg-[#007AFF] animate-ping opacity-75" />
-            <span className="relative block w-2 h-2 rounded-full bg-[#007AFF]" />
+            <span className="absolute inset-0 rounded-full bg-[#7C2DE8] animate-ping opacity-75" />
+            <span className="relative block w-2 h-2 rounded-full bg-[#7C2DE8]" />
           </span>
-          <span className="text-[10px] text-[#007AFF] font-medium group-hover/status:underline">
+          <span className="text-[10px] text-[#7C2DE8] font-medium group-hover/status:underline">
             Running — click to view progress
           </span>
         </button>
@@ -156,7 +156,7 @@ export function WorkflowCard({
       ) : null}
 
       {workflow.schedule_enabled && workflow.schedule_cron && (
-        <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-medium text-[#007AFF]">
+        <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-medium text-[#7C2DE8]">
           <CalendarClock className="h-3 w-3" />
           {formatScheduleLabel(workflow.schedule_cron)}
         </div>
@@ -171,7 +171,7 @@ export function WorkflowCard({
             <TooltipTrigger
               onClick={onRun}
               disabled={workflow.status === "running"}
-              className="p-1.5 rounded-lg bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors shadow-[0_2px_6px_rgba(0,122,255,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 rounded-lg bg-[#7C2DE8] text-white hover:bg-[#6921C7] transition-colors shadow-[0_2px_6px_rgba(124,45,232,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play className="h-3.5 w-3.5" />
             </TooltipTrigger>
@@ -186,7 +186,7 @@ export function WorkflowCard({
           <Tooltip>
             <TooltipTrigger
               onClick={onHistory}
-              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
             >
               <Clock className="h-3.5 w-3.5" />
             </TooltipTrigger>
@@ -196,7 +196,7 @@ export function WorkflowCard({
             <Tooltip>
               <TooltipTrigger
                 onClick={onSchedule}
-                className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+                className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
               >
                 <CalendarClock className="h-3.5 w-3.5" />
               </TooltipTrigger>
@@ -210,7 +210,7 @@ export function WorkflowCard({
           <Tooltip>
             <TooltipTrigger
               onClick={onEdit}
-              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+              className="p-1.5 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
             >
               <Pencil className="h-3.5 w-3.5" />
             </TooltipTrigger>
@@ -223,7 +223,7 @@ export function WorkflowCard({
                 className={`p-1.5 rounded-lg transition-colors ${
                   isFavorite
                     ? "text-[#D5847A] hover:bg-[#D5847A]/10"
-                    : "text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B]"
+                    : "text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B]"
                 }`}
               >
                 <Heart className={`h-3.5 w-3.5 ${isFavorite ? "fill-[#D5847A]" : ""}`} />

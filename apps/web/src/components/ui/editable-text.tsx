@@ -113,7 +113,7 @@ export function EditableText({
       onKeyDown: handleKeyDown,
       onBlur: commit,
       placeholder,
-      className: `${className} bg-[#FFFDF9] border border-[#007AFF] rounded-md px-2 py-1 -mx-2 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 w-full`,
+      className: `${className} bg-[#FFFFFF] border border-[#7C2DE8] rounded-md px-2 py-1 -mx-2 focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/30 w-full`,
     };
     if (multiline) {
       return (
@@ -147,7 +147,7 @@ export function EditableText({
       title="Double-click to edit"
       className={`${className} ${
         hasValue ? "" : "italic text-[#9B948B]"
-      } inline-block cursor-text rounded-md px-2 -mx-2 py-0.5 -my-0.5 hover:bg-[#F1ECE4]/70 transition-colors`}
+      } inline-block cursor-text rounded-md px-2 -mx-2 py-0.5 -my-0.5 hover:bg-[#F6F3EE]/70 transition-colors`}
     >
       {displayText}
     </span>

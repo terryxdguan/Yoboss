@@ -39,7 +39,7 @@ export function AppShell({ children, userAvatar, userName }: AppShellProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F6F3EE]">
+    <div className="min-h-screen bg-[#FDFAF6]">
       <TopNav userAvatar={userAvatar} userName={userName} />
       <Sidebar />
 

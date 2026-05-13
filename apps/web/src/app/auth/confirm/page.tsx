@@ -69,11 +69,11 @@ export default function ConfirmEmailPage() {
   }, [t]);
 
   return (
-    <div className="min-h-screen bg-[#F6F3EE] flex items-center justify-center p-6">
-      <div className="bg-[#FFFDF9] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.08)] p-8 max-w-md w-full text-center">
+    <div className="min-h-screen bg-[#FDFAF6] flex items-center justify-center p-6">
+      <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.08)] p-8 max-w-md w-full text-center">
         {status === "verifying" ? (
           <>
-            <Loader2 className="h-8 w-8 text-[#007AFF] animate-spin mx-auto mb-4" />
+            <Loader2 className="h-8 w-8 text-[#7C2DE8] animate-spin mx-auto mb-4" />
             <h1 className="text-xl font-bold text-[#2B2B2B] mb-1">
               {t("verifyingTitle")}
             </h1>
@@ -90,7 +90,7 @@ export default function ConfirmEmailPage() {
             <p className="text-sm text-[#6F6A64] mb-6">{errorMsg}</p>
             <a
               href="/"
-              className="inline-block bg-[#007AFF] text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all"
+              className="inline-block bg-[#7C2DE8] text-white rounded-xl px-5 py-2.5 text-sm font-semibold hover:bg-[#6921C7] active:scale-[0.98] transition-all"
             >
               {t("backHome")}
             </a>

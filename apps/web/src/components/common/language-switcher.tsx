@@ -50,7 +50,7 @@ export function LanguageSwitcher({
           onClick={() => setOpen((o) => !o)}
           disabled={isPending}
           aria-label={tNav("changeLanguage")}
-          className="h-10 w-10 flex items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFDF9] text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors disabled:opacity-60"
+          className="h-10 w-10 flex items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFFFF] text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors disabled:opacity-60"
         >
           <Globe className="h-5 w-5" />
         </button>
@@ -59,7 +59,7 @@ export function LanguageSwitcher({
           type="button"
           onClick={() => setOpen((o) => !o)}
           disabled={isPending}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#E7DED2] bg-white text-sm font-medium text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#E7DED2] bg-white text-sm font-medium text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors disabled:opacity-60"
         >
           <Globe className="h-4 w-4 text-[#6F6A64]" />
           <span>{localeNames[currentLocale] ?? localeNames.en}</span>
@@ -68,7 +68,7 @@ export function LanguageSwitcher({
 
       {open && (
         <div
-          className={`absolute z-50 ${variant === "icon" ? "right-0" : "left-0"} top-full mt-2 w-44 bg-[#FFFDF9] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden`}
+          className={`absolute z-50 ${variant === "icon" ? "right-0" : "left-0"} top-full mt-2 w-44 bg-[#FFFFFF] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden`}
         >
           {locales.map((locale) => {
             const selected = locale === currentLocale;
@@ -78,7 +78,7 @@ export function LanguageSwitcher({
                 type="button"
                 onClick={() => handleSelect(locale)}
                 className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left hover:bg-[#F6F3EE] transition-colors ${
-                  selected ? "text-[#007AFF] font-semibold" : "text-[#2B2B2B]"
+                  selected ? "text-[#7C2DE8] font-semibold" : "text-[#2B2B2B]"
                 }`}
               >
                 <span>{localeNames[locale]}</span>

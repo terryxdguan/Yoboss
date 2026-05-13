@@ -24,12 +24,12 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
   const [confirmFire, setConfirmFire] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] shadow-[0_8px_24px_rgba(30,34,39,0.05)] overflow-hidden">
+    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] shadow-[0_8px_24px_rgba(30,34,39,0.05)] overflow-hidden">
       {/* Header */}
       <div className="flex items-start justify-between p-6 border-b border-[#E7DED2]">
         <div className="flex items-start gap-4">
           {/* Avatar */}
-          <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F1ECE4] shrink-0">
+          <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#F6F3EE] shrink-0">
             <Image
               src={agent.avatar || DEFAULT_AGENT_AVATAR}
               alt={agent.label}
@@ -42,7 +42,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-[#2B2B2B]">{agent.label}</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7C2DE8]/10 text-[#7C2DE8]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
             </div>
@@ -63,7 +63,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
                 </button>
                 <button
                   onClick={() => setConfirmFire(false)}
-                  className="px-3 py-1.5 rounded-lg border border-[#DDD3C7] text-xs text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+                  className="px-3 py-1.5 rounded-lg border border-[#DDD3C7] text-xs text-[#6F6A64] hover:bg-[#F6F3EE] transition-colors"
                 >
                   {tList("fireCancel")}
                 </button>
@@ -80,7 +80,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
           )}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -107,7 +107,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             onClick={() => setTab("current")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === "current"
-                ? "border-[#007AFF] text-[#007AFF]"
+                ? "border-[#7C2DE8] text-[#7C2DE8]"
                 : "border-transparent text-[#9B948B] hover:text-[#6F6A64]"
             }`}
           >
@@ -117,7 +117,7 @@ export function AgentDetail({ agent, isDefault, onFire, onClose }: AgentDetailPr
             onClick={() => setTab("history")}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === "history"
-                ? "border-[#007AFF] text-[#007AFF]"
+                ? "border-[#7C2DE8] text-[#7C2DE8]"
                 : "border-transparent text-[#9B948B] hover:text-[#6F6A64]"
             }`}
           >

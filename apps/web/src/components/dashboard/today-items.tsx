@@ -197,27 +197,27 @@ export function DashboardTodayItems({
   }
 
   return (
-    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-6 shadow-[0_4px_16px_rgba(30,34,39,0.04)]">
+    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] p-6 shadow-[0_4px_16px_rgba(30,34,39,0.04)]">
       {/* Header: title + add button + tabs */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-[#2B2B2B]">{t("title")}</h2>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#007AFF] text-white text-xs font-semibold hover:bg-[#0066D6] transition-colors shadow-[0_2px_8px_rgba(0,122,255,0.25)]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7C2DE8] text-white text-xs font-semibold hover:bg-[#6921C7] transition-colors shadow-[0_2px_8px_rgba(124,45,232,0.25)]"
           >
             <Plus className="h-3.5 w-3.5" />
             {t("add")}
           </button>
         </div>
         {/* Pending/Done toggle — design-system pill: selected half is
-            #69B2FF/white, unselected half is transparent over the shared
+            #7C2DE8/white, unselected half is transparent over the shared
             #F5F5F5 track. */}
-        <div className="flex items-center rounded-full bg-[#F5F5F5] p-0.5">
+        <div className="flex items-center rounded-full bg-[#F6F3EE] p-0.5">
           <button
             onClick={() => setTab("pending")}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              tab === "pending" ? "bg-[#69B2FF] text-white" : "text-[#000000]/60 hover:text-[#000000]/80"
+              tab === "pending" ? "bg-[#7C2DE8] text-white" : "text-[#000000]/60 hover:text-[#000000]/80"
             }`}
           >
             {t("pending", { count: pendingItems.length })}
@@ -225,7 +225,7 @@ export function DashboardTodayItems({
           <button
             onClick={() => setTab("done")}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              tab === "done" ? "bg-[#69B2FF] text-white" : "text-[#000000]/60 hover:text-[#000000]/80"
+              tab === "done" ? "bg-[#7C2DE8] text-white" : "text-[#000000]/60 hover:text-[#000000]/80"
             }`}
           >
             {t("done", { count: doneItems.length })}
@@ -245,7 +245,7 @@ export function DashboardTodayItems({
         <div className="flex items-center gap-1">
           {(
             [
-              { key: "schedule", labelKey: "schedule", border: "border-[#007AFF]/50" },
+              { key: "schedule", labelKey: "schedule", border: "border-[#7C2DE8]/50" },
               { key: "todo", labelKey: "todo", border: "border-[#7FB38A]/50" },
             ] as const
           ).map(({ key, labelKey, border }) => {
@@ -258,7 +258,7 @@ export function DashboardTodayItems({
                 onClick={() => toggleCategory(key)}
                 aria-pressed={!hidden}
                 title={hidden ? t("showItems", { label }) : t("hideItems", { label })}
-                className={`flex items-center gap-1.5 text-[11px] rounded-md px-2 py-1 transition-colors hover:bg-[#F1ECE4] ${
+                className={`flex items-center gap-1.5 text-[11px] rounded-md px-2 py-1 transition-colors hover:bg-[#F6F3EE] ${
                   hidden
                     ? "text-[#9B948B] line-through opacity-60"
                     : "text-[#6F6A64]"
@@ -276,8 +276,8 @@ export function DashboardTodayItems({
 
       {/* Unified item grid */}
       {visibleItems.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-8 text-center mb-6">
-          <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F1ECE4] flex items-center justify-center">
+        <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFFFF] p-8 text-center mb-6">
+          <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F6F3EE] flex items-center justify-center">
             <ListChecks className="h-5 w-5 text-[#9B948B]" />
           </div>
           <p className="text-sm text-[#6F6A64]">
@@ -286,7 +286,7 @@ export function DashboardTodayItems({
           {tab === "pending" && (
             <button
               onClick={() => setShowAdd(true)}
-              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#007AFF] bg-[#E6F2FF] hover:bg-[#007AFF]/20 transition-colors"
+              className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#7C2DE8] bg-[#F3ECFB] hover:bg-[#7C2DE8]/20 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               {t("addTask")}
@@ -325,7 +325,7 @@ export function DashboardTodayItems({
           {/* Add more card */}
           <button
             onClick={() => setShowAdd(true)}
-            className="rounded-lg border border-dashed border-[#DDD3C7] bg-transparent flex flex-col items-center justify-center py-6 text-[#9B948B] hover:border-[#007AFF] hover:text-[#007AFF] transition-colors cursor-pointer min-h-[80px]"
+            className="rounded-lg border border-dashed border-[#DDD3C7] bg-transparent flex flex-col items-center justify-center py-6 text-[#9B948B] hover:border-[#7C2DE8] hover:text-[#7C2DE8] transition-colors cursor-pointer min-h-[80px]"
           >
             <Plus className="h-5 w-5 mb-1" />
             <span className="text-xs">{t("addMore")}</span>
@@ -337,10 +337,10 @@ export function DashboardTodayItems({
       {showAdd && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => setShowAdd(false)} />
-          <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-md">
+          <div className="relative bg-[#FFFFFF] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-md">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
               <h2 className="text-lg font-semibold text-[#2B2B2B]">{t("modalTitle")}</h2>
-              <button onClick={() => setShowAdd(false)} className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4]">
+              <button onClick={() => setShowAdd(false)} className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE]">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -354,7 +354,7 @@ export function DashboardTodayItems({
                   onChange={(e) => setNewText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && newText.trim()) handleAddTodo(); }}
                   placeholder={t("fieldTaskPlaceholder")}
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/30 focus:border-[#7C2DE8]"
                 />
               </div>
 
@@ -364,7 +364,7 @@ export function DashboardTodayItems({
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/30 focus:border-[#7C2DE8]"
                 >
                   <optgroup label={t("groupPersonal")}>
                     {allTags.map(tag => (
@@ -389,7 +389,7 @@ export function DashboardTodayItems({
                 <div className="relative">
                   <button
                     onClick={() => setShowDeadlinePicker(!showDeadlinePicker)}
-                    className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-left text-[#6F6A64] hover:border-[#007AFF] transition-colors"
+                    className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-left text-[#6F6A64] hover:border-[#7C2DE8] transition-colors"
                   >
                     {newDeadline ? formatDeadlineShort(newDeadline) : t("fieldDeadlinePlaceholder")}
                   </button>
@@ -409,7 +409,7 @@ export function DashboardTodayItems({
                 <select
                   value={newPriority}
                   onChange={(e) => setNewPriority(e.target.value as "high" | "medium" | "low")}
-                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#DDD3C7] rounded-xl text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/30 focus:border-[#7C2DE8]"
                 >
                   <option value="high">{t("priorityHigh")}</option>
                   <option value="medium">{t("priorityMedium")}</option>
@@ -420,14 +420,14 @@ export function DashboardTodayItems({
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E7DED2]">
               <button
                 onClick={() => setShowAdd(false)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-medium text-[#6F6A64] hover:bg-[#F6F3EE] transition-colors"
               >
                 {tCommon("cancel")}
               </button>
               <button
                 onClick={handleAddTodo}
                 disabled={!newText.trim()}
-                className="px-5 py-2 rounded-xl text-sm font-medium bg-[#007AFF] text-white hover:bg-[#0066D6] disabled:opacity-40 transition-colors shadow-[0_2px_8px_rgba(0,122,255,0.3)]"
+                className="px-5 py-2 rounded-xl text-sm font-medium bg-[#7C2DE8] text-white hover:bg-[#6921C7] disabled:opacity-40 transition-colors shadow-[0_2px_8px_rgba(124,45,232,0.3)]"
               >
                 {t("submit")}
               </button>

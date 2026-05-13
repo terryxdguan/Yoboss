@@ -3,12 +3,12 @@ import type { DigestData, DigestItem } from "./digest-data";
 // Brand tokens — kept in sync with apps/web/src/app/globals.css :root.
 const C = {
   bg: "#F6F3EE",
-  card: "#FFFDF9",
+  card: "#FFFFFF",
   fg: "#2B2B2B",
   muted: "#6F6A64",
   faint: "#9B948B",
-  primary: "#007AFF",
-  primaryFg: "#FFFDF9",
+  primary: "#7C2DE8",
+  primaryFg: "#FFFFFF",
   sage: "#8DCB96",
   border: "#DDD3C7",
   inputBorder: "#E7DED2",

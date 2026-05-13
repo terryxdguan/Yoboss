@@ -4,11 +4,11 @@ import { verifyUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 
 const C = {
   bg: "#F6F3EE",
-  card: "#FFFDF9",
+  card: "#FFFFFF",
   fg: "#2B2B2B",
   muted: "#6F6A64",
-  primary: "#007AFF",
-  primaryFg: "#FFFDF9",
+  primary: "#7C2DE8",
+  primaryFg: "#FFFFFF",
   border: "#DDD3C7",
 };
 

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default async function PrivacyPage() {
   const t = await getTranslations("privacy");
   return (
-    <div className="min-h-screen bg-[#F6F3EE]">
+    <div className="min-h-screen bg-[#FDFAF6]">
       <div className="max-w-3xl mx-auto px-6 pt-6 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold tracking-tighter text-[#2B2B2B]">
           YoBoss
@@ -84,7 +84,7 @@ export default async function PrivacyPage() {
             <h2 className="text-xl font-semibold text-[#2B2B2B]">{t("s8Title")}</h2>
             <p>
               {t("s8Body")}
-              <a href="mailto:contact@mail.yoboss.ai" className="text-[#007AFF] hover:underline">
+              <a href="mailto:contact@mail.yoboss.ai" className="text-[#7C2DE8] hover:underline">
                 contact@mail.yoboss.ai
               </a>
               .

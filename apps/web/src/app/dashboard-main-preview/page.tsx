@@ -113,9 +113,9 @@ export default function DashboardMainPreviewPage() {
   return (
     <main className="min-h-screen bg-[#F6F3EE] text-[#2B2B2B]">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[232px_1fr]">
-        <aside className="hidden border-r border-[#E7DED2] bg-[#FFFDF9]/60 px-4 py-5 lg:block">
+        <aside className="hidden border-r border-[#E7DED2] bg-[#FFFFFF]/60 px-4 py-5 lg:block">
           <div className="mb-8 flex items-center gap-2 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#007AFF] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#7C2DE8] text-white">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -135,7 +135,7 @@ export default function DashboardMainPreviewPage() {
                 key={label}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${
                   active
-                    ? "bg-[#E6F2FF] text-[#2B2B2B]"
+                    ? "bg-[#F3ECFB] text-[#2B2B2B]"
                     : "text-[#6F6A64]"
                 }`}
               >
@@ -155,12 +155,12 @@ export default function DashboardMainPreviewPage() {
             </div>
           </div>
 
-          <div className="mt-8 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-3">
+          <div className="mt-8 rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-3">
             <p className="text-xs font-semibold text-[#2B2B2B]">
               AI capacity today
             </p>
-            <div className="mt-3 h-2 rounded-full bg-[#F1ECE4]">
-              <div className="h-2 w-[68%] rounded-full bg-[#007AFF]" />
+            <div className="mt-3 h-2 rounded-full bg-[#F6F3EE]">
+              <div className="h-2 w-[68%] rounded-full bg-[#7C2DE8]" />
             </div>
             <p className="mt-2 text-xs text-[#6F6A64]">
               4 active runs, 2 waiting for review
@@ -171,7 +171,7 @@ export default function DashboardMainPreviewPage() {
         <section className="min-w-0 px-4 py-5 md:px-8 lg:px-10">
           <header className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#007AFF]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7C2DE8]">
                 Dashboard
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-[32px]">
@@ -183,11 +183,11 @@ export default function DashboardMainPreviewPage() {
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#CFC3B5] bg-[#FFFDF9] px-4 py-2.5 text-sm font-semibold text-[#6F6A64]">
+              <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#CFC3B5] bg-[#FFFFFF] px-4 py-2.5 text-sm font-semibold text-[#6F6A64]">
                 Ask AI
                 <MessageSquare className="h-4 w-4" />
               </button>
-              <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-4 py-2.5 text-sm font-semibold text-white">
+              <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7C2DE8] px-4 py-2.5 text-sm font-semibold text-white">
                 Create task
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -203,13 +203,13 @@ export default function DashboardMainPreviewPage() {
             ].map(({ label, value, icon: Icon }) => (
               <div
                 key={label}
-                className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-4"
+                className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-4"
               >
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#9B948B]">
                     {label}
                   </p>
-                  <Icon className="h-4 w-4 text-[#007AFF]" />
+                  <Icon className="h-4 w-4 text-[#7C2DE8]" />
                 </div>
                 <p className="mt-3 text-2xl font-semibold">{value}</p>
               </div>
@@ -218,7 +218,7 @@ export default function DashboardMainPreviewPage() {
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_390px]">
             <div className="space-y-5">
-              <section className="rounded-lg border border-[#D7CABB] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#D7CABB] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">
@@ -229,7 +229,7 @@ export default function DashboardMainPreviewPage() {
                       AI handoffs.
                     </p>
                   </div>
-                  <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#CFC3B5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-[#6F6A64]">
+                  <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#CFC3B5] bg-[#FFFFFF] px-3 py-2 text-sm font-semibold text-[#6F6A64]">
                     Plan my day
                     <Sparkles className="h-4 w-4" />
                   </button>
@@ -239,9 +239,9 @@ export default function DashboardMainPreviewPage() {
                   {focusItems.map((item) => (
                     <button
                       key={item.title}
-                      className="group flex w-full items-center gap-3 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-3 text-left transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
+                      className="group flex w-full items-center gap-3 rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-3 text-left transition-colors hover:border-[#C9A8F7] hover:bg-[#F3ECFB]"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F6F3EE] text-[#007AFF]">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F6F3EE] text-[#7C2DE8]">
                         <Play className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -270,7 +270,7 @@ export default function DashboardMainPreviewPage() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">Active goals</h2>
@@ -288,7 +288,7 @@ export default function DashboardMainPreviewPage() {
                   {goals.map((goal) => (
                     <button
                       key={goal.name}
-                      className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-4 text-left transition-colors hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
+                      className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-4 text-left transition-colors hover:border-[#C9A8F7] hover:bg-[#F3ECFB]"
                     >
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
@@ -297,7 +297,7 @@ export default function DashboardMainPreviewPage() {
                             {goal.phase}
                           </p>
                         </div>
-                        <span className="rounded-full bg-[#FFFDF9] px-2 py-0.5 text-xs font-semibold text-[#6F6A64]">
+                        <span className="rounded-full bg-[#FFFFFF] px-2 py-0.5 text-xs font-semibold text-[#6F6A64]">
                           {goal.progress}%
                         </span>
                       </div>
@@ -310,7 +310,7 @@ export default function DashboardMainPreviewPage() {
                       <p className="mt-3 text-xs leading-relaxed text-[#6F6A64]">
                         {goal.next}
                       </p>
-                      <p className="mt-2 text-[11px] font-semibold text-[#007AFF]">
+                      <p className="mt-2 text-[11px] font-semibold text-[#7C2DE8]">
                         {goal.weekly}
                       </p>
                     </button>
@@ -318,7 +318,7 @@ export default function DashboardMainPreviewPage() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">Weekly plan</h2>
@@ -326,7 +326,7 @@ export default function DashboardMainPreviewPage() {
                       A compact view of where your effort is going this week.
                     </p>
                   </div>
-                  <CalendarDays className="h-5 w-5 text-[#007AFF]" />
+                  <CalendarDays className="h-5 w-5 text-[#7C2DE8]" />
                 </div>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
                   {schedule.map((day) => (
@@ -334,7 +334,7 @@ export default function DashboardMainPreviewPage() {
                       key={day.day}
                       className={`rounded-lg border px-3 py-3 ${
                         day.active
-                          ? "border-[#9FC3EF] bg-[#F3F8FE]"
+                          ? "border-[#C9A8F7] bg-[#F3F8FE]"
                           : "border-[#E7DED2] bg-[#F6F3EE]"
                       }`}
                     >
@@ -343,7 +343,7 @@ export default function DashboardMainPreviewPage() {
                           {day.day}
                         </p>
                         {day.active && (
-                          <span className="h-2 w-2 rounded-full bg-[#007AFF]" />
+                          <span className="h-2 w-2 rounded-full bg-[#7C2DE8]" />
                         )}
                       </div>
                       <p className="mt-2 text-sm font-semibold">{day.label}</p>
@@ -355,7 +355,7 @@ export default function DashboardMainPreviewPage() {
             </div>
 
             <aside className="space-y-5">
-              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">AI work queue</h2>
@@ -373,13 +373,13 @@ export default function DashboardMainPreviewPage() {
                       className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-3"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2FF] text-[#007AFF]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F3ECFB] text-[#7C2DE8]">
                           <Icon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-semibold">{title}</p>
-                            <span className="rounded-full bg-[#FFFDF9] px-2 py-0.5 text-[10px] font-semibold text-[#6F6A64]">
+                            <span className="rounded-full bg-[#FFFFFF] px-2 py-0.5 text-[10px] font-semibold text-[#6F6A64]">
                               {status}
                             </span>
                           </div>
@@ -394,7 +394,7 @@ export default function DashboardMainPreviewPage() {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">Needs decision</h2>
@@ -408,7 +408,7 @@ export default function DashboardMainPreviewPage() {
                   {decisions.map((decision) => (
                     <button
                       key={decision}
-                      className="flex w-full items-center gap-3 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-3 text-left hover:border-[#F0C9C5] hover:bg-[#FFF5F3]"
+                      className="flex w-full items-center gap-3 rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-3 text-left hover:border-[#F0C9C5] hover:bg-[#FFF5F3]"
                     >
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-[#CFC3B5]" />
                       <span className="min-w-0 flex-1 text-sm font-medium">

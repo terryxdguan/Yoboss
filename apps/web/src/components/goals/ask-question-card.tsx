@@ -74,7 +74,7 @@ export function AskQuestionCard({
 
   if (isFreeTextOnly) {
     return (
-      <div className="border border-[#E7DED2] rounded-lg bg-[#FFFDF9] p-4 mt-2">
+      <div className="border border-[#E7DED2] rounded-lg bg-[#FFFFFF] p-4 mt-2">
         <p className="text-sm font-medium text-[#2B2B2B] mb-3">
           {data.question}
         </p>
@@ -90,13 +90,13 @@ export function AskQuestionCard({
               handleFreeTextSubmit();
             }
           }}
-          className="w-full resize-none border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9] mb-3 disabled:opacity-60"
+          className="w-full resize-none border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/40 focus:border-transparent bg-[#FFFFFF] mb-3 disabled:opacity-60"
         />
         {!disabled && (
           <div className="flex items-center gap-2">
             <button
               onClick={handleFreeTextSubmit}
-              className="bg-[#007AFF] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all"
+              className="bg-[#7C2DE8] text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-[#6921C7] active:scale-[0.98] transition-all"
             >
               {otherText.trim() ? t("submit") : t("skipAndContinue")}
             </button>
@@ -108,7 +108,7 @@ export function AskQuestionCard({
   }
 
   return (
-    <div className="border border-[#E7DED2] rounded-lg bg-[#FFFDF9] p-4 mt-2">
+    <div className="border border-[#E7DED2] rounded-lg bg-[#FFFFFF] p-4 mt-2">
       <p className="text-sm font-medium text-[#2B2B2B] mb-3">
         {data.question}
       </p>
@@ -123,8 +123,8 @@ export function AskQuestionCard({
               disabled={disabled}
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all border ${
                 isSelected
-                  ? "bg-[#E6F2FF] border-[#007AFF] text-[#2B2B2B]"
-                  : "bg-[#F1ECE4] border-transparent text-[#2B2B2B] hover:border-[#DDD3C7]"
+                  ? "bg-[#F3ECFB] border-[#7C2DE8] text-[#2B2B2B]"
+                  : "bg-[#F6F3EE] border-transparent text-[#2B2B2B] hover:border-[#DDD3C7]"
               } ${disabled ? "opacity-60 cursor-default" : "cursor-pointer"}`}
             >
               <span className="flex items-center gap-2.5">
@@ -133,8 +133,8 @@ export function AskQuestionCard({
                     data.allow_multiple ? "" : "-full"
                   } border ${
                     isSelected
-                      ? "bg-[#007AFF] border-[#007AFF]"
-                      : "border-[#DDD3C7] bg-[#FFFDF9]"
+                      ? "bg-[#7C2DE8] border-[#7C2DE8]"
+                      : "border-[#DDD3C7] bg-[#FFFFFF]"
                   }`}
                   style={{ width: 18, height: 18 }}
                 >
@@ -153,8 +153,8 @@ export function AskQuestionCard({
               disabled={disabled}
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all border ${
                 showOther
-                  ? "bg-[#E6F2FF] border-[#007AFF] text-[#2B2B2B]"
-                  : "bg-[#F1ECE4] border-transparent text-[#2B2B2B] hover:border-[#DDD3C7]"
+                  ? "bg-[#F3ECFB] border-[#7C2DE8] text-[#2B2B2B]"
+                  : "bg-[#F6F3EE] border-transparent text-[#2B2B2B] hover:border-[#DDD3C7]"
               } ${disabled ? "opacity-60 cursor-default" : "cursor-pointer"}`}
             >
               <span className="flex items-center gap-2.5">
@@ -163,8 +163,8 @@ export function AskQuestionCard({
                     data.allow_multiple ? "" : "-full"
                   } border ${
                     showOther
-                      ? "bg-[#007AFF] border-[#007AFF]"
-                      : "border-[#DDD3C7] bg-[#FFFDF9]"
+                      ? "bg-[#7C2DE8] border-[#7C2DE8]"
+                      : "border-[#DDD3C7] bg-[#FFFFFF]"
                   }`}
                   style={{ width: 18, height: 18 }}
                 >
@@ -179,7 +179,7 @@ export function AskQuestionCard({
                 value={otherText}
                 onChange={(e) => setOtherText(e.target.value)}
                 placeholder={t("otherPlaceholder")}
-                className="w-full border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9]"
+                className="w-full border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/40 focus:border-transparent bg-[#FFFFFF]"
                 disabled={disabled}
               />
             )}
@@ -191,7 +191,7 @@ export function AskQuestionCard({
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="bg-[#007AFF] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-[#7C2DE8] text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-[#6921C7] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {t("continue")}
         </button>

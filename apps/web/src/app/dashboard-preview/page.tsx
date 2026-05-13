@@ -162,9 +162,9 @@ export default function DashboardPreviewPage() {
   return (
     <main className="min-h-screen bg-[#F6F3EE] text-[#2B2B2B]">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[232px_1fr]">
-        <aside className="hidden border-r border-[#E7DED2] bg-[#FFFDF9]/55 px-4 py-5 lg:block">
+        <aside className="hidden border-r border-[#E7DED2] bg-[#FFFFFF]/55 px-4 py-5 lg:block">
           <div className="mb-8 flex items-center gap-2 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#007AFF] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#7C2DE8] text-white">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function DashboardPreviewPage() {
                 key={label}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${
                   active
-                    ? "bg-[#E6F2FF] text-[#2B2B2B]"
+                    ? "bg-[#F3ECFB] text-[#2B2B2B]"
                     : "text-[#6F6A64]"
                 }`}
               >
@@ -208,7 +208,7 @@ export default function DashboardPreviewPage() {
         <section className="min-w-0 px-4 py-5 md:px-8 lg:px-10">
           <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#007AFF]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7C2DE8]">
                 Dashboard
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-[32px]">
@@ -219,7 +219,7 @@ export default function DashboardPreviewPage() {
                 and execute the work with AI agents.
               </p>
             </div>
-            <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#CFC3B5] bg-[#FFFDF9] px-4 py-2.5 text-sm font-semibold text-[#6F6A64]">
+            <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#CFC3B5] bg-[#FFFFFF] px-4 py-2.5 text-sm font-semibold text-[#6F6A64]">
               Ask AI
               <MessageSquare className="h-4 w-4" />
             </button>
@@ -229,15 +229,15 @@ export default function DashboardPreviewPage() {
             <div className="space-y-5">
               <section
                 ref={roadmapSectionRef}
-                className={`rounded-lg border bg-[#FFFDF9] p-5 shadow-[0_8px_28px_rgba(43,43,43,0.05)] transition-colors ${
+                className={`rounded-lg border bg-[#FFFFFF] p-5 shadow-[0_8px_28px_rgba(43,43,43,0.05)] transition-colors ${
                   highlightRoadmap
-                    ? "border-[#007AFF] ring-4 ring-[#007AFF]/15"
+                    ? "border-[#7C2DE8] ring-4 ring-[#7C2DE8]/15"
                     : "border-[#D7CABB]"
                 }`}
               >
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#E6F2FF] px-3 py-1.5 text-xs font-semibold text-[#5E8FCE]">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#F3ECFB] px-3 py-1.5 text-xs font-semibold text-[#5E8FCE]">
                       <Sparkles className="h-3.5 w-3.5" />
                       Recommended first action
                     </div>
@@ -267,7 +267,7 @@ export default function DashboardPreviewPage() {
                       {examples.map((item) => (
                         <span
                           key={item}
-                          className="rounded-full border border-[#E7DED2] bg-[#FFFDF9] px-3 py-1 text-xs text-[#6F6A64]"
+                          className="rounded-full border border-[#E7DED2] bg-[#FFFFFF] px-3 py-1 text-xs text-[#6F6A64]"
                         >
                           {item}
                         </span>
@@ -278,7 +278,7 @@ export default function DashboardPreviewPage() {
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                         roadmapCreated
                           ? "bg-[#EAF5EC] text-[#3F7C4A]"
-                          : "bg-[#007AFF] text-white"
+                          : "bg-[#7C2DE8] text-white"
                       }`}
                     >
                       {roadmapCreated ? "Roadmap created" : "Create roadmap"}
@@ -291,7 +291,7 @@ export default function DashboardPreviewPage() {
               {roadmapCreated && (
                 <section
                   ref={roadmapWorkspaceRef}
-                  className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5"
+                  className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5"
                 >
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -308,7 +308,7 @@ export default function DashboardPreviewPage() {
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                         weeklyPlanCreated
                           ? "bg-[#EAF5EC] text-[#3F7C4A]"
-                          : "bg-[#007AFF] text-white"
+                          : "bg-[#7C2DE8] text-white"
                       }`}
                     >
                       {weeklyPlanCreated
@@ -333,10 +333,10 @@ export default function DashboardPreviewPage() {
                 </section>
               )}
 
-              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <div className="mb-2 inline-flex rounded-full bg-[#E6F2FF] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
+                    <div className="mb-2 inline-flex rounded-full bg-[#F3ECFB] px-2.5 py-1 text-[11px] font-semibold text-[#5E8FCE]">
                       3-step setup
                     </div>
                     <h2 className="text-base font-semibold">
@@ -362,7 +362,7 @@ export default function DashboardPreviewPage() {
                         onClick={() => setActiveStepTab(tab.id)}
                         className={`rounded-md px-3 py-1.5 text-xs font-semibold ${
                           activeStepTab === tab.id
-                            ? "bg-[#FFFDF9] text-[#2B2B2B] shadow-sm"
+                            ? "bg-[#FFFFFF] text-[#2B2B2B] shadow-sm"
                             : "text-[#6F6A64]"
                         }`}
                       >
@@ -407,7 +407,7 @@ export default function DashboardPreviewPage() {
                         className={`flex items-center gap-3 rounded-lg border px-3 py-3 transition-colors ${
                           blocked
                             ? "border-[#E7DED2] bg-[#F8F5EF] opacity-70"
-                            : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#9FC3EF] hover:bg-[#F8FBFF]"
+                            : "border-[#E7DED2] bg-[#FFFFFF] hover:border-[#C9A8F7] hover:bg-[#F3ECFB]"
                         }`}
                       >
                         <button
@@ -432,10 +432,10 @@ export default function DashboardPreviewPage() {
                           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-semibold text-[#007AFF]">
+                                <span className="text-[11px] font-semibold text-[#7C2DE8]">
                                   {task.time}
                                 </span>
-                                <span className="rounded bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] text-[#6F6A64]">
+                                <span className="rounded bg-[#F6F3EE] px-1.5 py-0.5 text-[10px] text-[#6F6A64]">
                                   {blocked ? "Locked" : task.tag}
                                 </span>
                               </div>
@@ -454,7 +454,7 @@ export default function DashboardPreviewPage() {
                               className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
                                 blocked
                                   ? "bg-[#EDE8E1] text-[#9B948B]"
-                                  : "bg-[#E6F2FF] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
+                                  : "bg-[#F3ECFB] text-[#5E8FCE] group-hover:bg-[#DCEEFF]"
                               }`}
                             >
                               {actionLabel}
@@ -483,7 +483,7 @@ export default function DashboardPreviewPage() {
               {showTodoWorkspace && (
                 <section
                   ref={todosWorkspaceRef}
-                  className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5"
+                  className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5"
                 >
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -497,7 +497,7 @@ export default function DashboardPreviewPage() {
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${
                         todoItemCreated
                           ? "bg-[#EAF5EC] text-[#3F7C4A]"
-                          : "bg-[#007AFF] text-white"
+                          : "bg-[#7C2DE8] text-white"
                       }`}
                     >
                       {todoItemCreated
@@ -514,7 +514,7 @@ export default function DashboardPreviewPage() {
             </div>
 
             <aside className="space-y-5">
-              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFDF9] p-5">
+              <section className="rounded-lg border border-[#E7DED2] bg-[#FFFFFF] p-5">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F4C7C3] text-[#8A5F5A]">
                     <Bot className="h-5 w-5" />
@@ -542,7 +542,7 @@ export default function DashboardPreviewPage() {
                         className="rounded-lg border border-[#E7DED2] bg-[#F6F3EE] p-3"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6F2FF] text-[#007AFF]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F3ECFB] text-[#7C2DE8]">
                             <Icon className="h-4 w-4" />
                           </div>
                           <div>

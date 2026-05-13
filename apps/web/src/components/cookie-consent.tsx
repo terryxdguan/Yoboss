@@ -79,12 +79,12 @@ export function CookieConsent() {
         <div
           role="dialog"
           aria-label={t("ariaLabel")}
-          className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-2xl rounded-xl border border-[#E7DED2] bg-[#FFFDF9] shadow-lg p-4 sm:p-5"
+          className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-2xl rounded-xl border border-[#E7DED2] bg-[#FFFFFF] shadow-lg p-4 sm:p-5"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[#2B2B2B]">
               {t("body")}{" "}
-              <Link href="/privacy" className="text-[#007AFF] hover:underline">
+              <Link href="/privacy" className="text-[#7C2DE8] hover:underline">
                 {t("learnMore")}
               </Link>
             </p>
@@ -92,14 +92,14 @@ export function CookieConsent() {
               <button
                 type="button"
                 onClick={decline}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F6F3EE] transition-colors"
               >
                 {t("decline")}
               </button>
               <button
                 type="button"
                 onClick={accept}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#7C2DE8] text-white hover:bg-[#6921C7] transition-colors"
               >
                 {t("accept")}
               </button>

@@ -97,7 +97,7 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
       />
 
       {/* Modal */}
-      <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="relative bg-[#FFFFFF] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
           <div>
@@ -108,7 +108,7 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -124,7 +124,7 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
 
           {!loading && runs.length === 0 && (
             <div className="text-center py-16">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F1ECE4] flex items-center justify-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F6F3EE] flex items-center justify-center">
                 <Clock className="h-6 w-6 text-[#9B948B]" />
               </div>
               <p className="text-sm font-medium text-[#2B2B2B]">{t("noRuns")}</p>
@@ -142,7 +142,7 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
                 return (
                   <div
                     key={run.id}
-                    className="border border-[#E7DED2] rounded-xl bg-[#FFFDF9] overflow-hidden"
+                    className="border border-[#E7DED2] rounded-xl bg-[#FFFFFF] overflow-hidden"
                   >
                     <div className="flex items-center gap-3 px-4 py-3">
                       {run.status === "success" ? (
@@ -190,14 +190,14 @@ export function WorkflowHistory({ workflow, onClose }: WorkflowHistoryProps) {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setDetailRun(run)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7C2DE8] hover:bg-[#F3ECFB] transition-colors"
                         >
                           View Detail
                           <ChevronRight className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => setDeliverablesRun(run)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F6F3EE] transition-colors"
                           title={t("deliverables")}
                         >
                           <Package className="h-3.5 w-3.5" />

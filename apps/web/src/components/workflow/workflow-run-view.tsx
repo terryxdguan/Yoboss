@@ -1630,7 +1630,7 @@ export function WorkflowRunView({
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-[#FFFDF9] border-b border-[#E7DED2]">
+      <div className="flex items-center justify-between px-6 py-3 bg-[#FFFFFF] border-b border-[#E7DED2]">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-[#2B2B2B]">
             {workflow.name}
@@ -1658,7 +1658,7 @@ export function WorkflowRunView({
                     <button
                       onClick={handleRetry}
                       disabled={retrying}
-                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#007AFF] text-white hover:bg-[#0066D6] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#7C2DE8] text-white hover:bg-[#6921C7] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                     >
                       {retrying ? "Retrying…" : "Retry"}
                     </button>
@@ -1668,7 +1668,7 @@ export function WorkflowRunView({
                   return (
                     <a
                       href="/pricing"
-                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
+                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#7C2DE8] text-white hover:bg-[#6921C7] transition-colors"
                     >
                       Buy Credits
                     </a>
@@ -1678,7 +1678,7 @@ export function WorkflowRunView({
                   return (
                     <a
                       href="/login"
-                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
+                      className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#7C2DE8] text-white hover:bg-[#6921C7] transition-colors"
                     >
                       Sign in
                     </a>
@@ -1717,7 +1717,7 @@ export function WorkflowRunView({
           )}
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -1725,14 +1725,14 @@ export function WorkflowRunView({
       </div>
 
       {/* Progress bar */}
-      <div className="px-6 py-4 bg-[#FFFDF9] border-b border-[#E7DED2]">
+      <div className="px-6 py-4 bg-[#FFFFFF] border-b border-[#E7DED2]">
         <div className="flex items-center justify-center gap-0">
           {workflow.steps.map((step, idx) => {
             const result = stepResults[idx];
             const status = result?.status || "pending";
             let dotColor = "#DDD3C7";
             if (status === "success") dotColor = "#7FB38A";
-            else if (status === "running") dotColor = "#007AFF";
+            else if (status === "running") dotColor = "#7C2DE8";
             else if (status === "failed") dotColor = "#D5847A";
 
             const agent = findAgent(step.agentId);
@@ -1781,7 +1781,7 @@ export function WorkflowRunView({
           if (msg.type === "user") {
             return (
               <div key={msg.id} className="flex justify-end">
-                <div className="max-w-[75%] rounded-xl px-4 py-3 text-sm bg-[#007AFF] text-white">
+                <div className="max-w-[75%] rounded-xl px-4 py-3 text-sm bg-[#7C2DE8] text-white">
                   <span className="whitespace-pre-wrap">{msg.content}</span>
                 </div>
               </div>
@@ -1792,7 +1792,7 @@ export function WorkflowRunView({
           return (
             <div key={msg.id} className="flex justify-start gap-3">
               {/* Avatar */}
-              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
+              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F6F3EE] mt-1">
                 <Image
                   src={msg.agentAvatar || DEFAULT_AGENT_AVATAR}
                   alt={msg.agentLabel || "Employee"}
@@ -1810,7 +1810,7 @@ export function WorkflowRunView({
                     {msg.agentLabel || "General Assistant"}
                   </span>
                   {msg.type === "step" && msg.stepIndex !== undefined && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F1ECE4] text-[#9B948B] font-medium">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F6F3EE] text-[#9B948B] font-medium">
                       Step {msg.stepIndex + 1}
                     </span>
                   )}
@@ -1820,7 +1820,7 @@ export function WorkflowRunView({
                   />
                 </div>
 
-                <div className="rounded-xl bg-[#FFFDF9] border border-[#E7DED2] px-4 py-3 text-sm text-[#2B2B2B]">
+                <div className="rounded-xl bg-[#FFFFFF] border border-[#E7DED2] px-4 py-3 text-sm text-[#2B2B2B]">
                   {/* Tool activity badges */}
                   {msg.toolActivity && msg.toolActivity.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1831,14 +1831,14 @@ export function WorkflowRunView({
                             key={i}
                             className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
                               isLatest
-                                ? "bg-[#007AFF]/15 text-[#007AFF] shadow-[0_0_12px_rgba(0,122,255,0.2)]"
-                                : "bg-[#F1ECE4] text-[#6F6A64]"
+                                ? "bg-[#7C2DE8]/15 text-[#7C2DE8] shadow-[0_0_12px_rgba(124,45,232,0.2)]"
+                                : "bg-[#F6F3EE] text-[#6F6A64]"
                             }`}
                           >
                             {isLatest && (
                               <span className="relative flex h-2 w-2 shrink-0">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C2DE8] opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7C2DE8]" />
                               </span>
                             )}
                             {tool.type === "web_search" ? (
@@ -1873,11 +1873,11 @@ export function WorkflowRunView({
                   ) : msg.isStreaming ? (
                     <div className="flex items-center gap-3 py-1">
                       <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
-                      <span className="text-sm text-[#007AFF] font-medium animate-pulse">
+                      <span className="text-sm text-[#7C2DE8] font-medium animate-pulse">
                         {msg.toolActivity && msg.toolActivity.length > 0
                           ? msg.toolActivity[msg.toolActivity.length - 1].label
                           : "Working..."}
@@ -1922,7 +1922,7 @@ export function WorkflowRunView({
                               download={f.filename}
                               target={isExternal ? "_blank" : undefined}
                               rel={isExternal ? "noopener noreferrer" : undefined}
-                              className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
+                              className="flex items-center gap-2 text-xs text-[#7C2DE8] hover:underline"
                             >
                               <Download className="h-3.5 w-3.5" />
                               {f.filename}
@@ -1946,10 +1946,10 @@ export function WorkflowRunView({
 
         {/* Streaming tool status when no text yet */}
         {isRunning && toolStatus && chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.content === "" && (
-          <div className="ml-11 text-xs text-[#007AFF] font-medium flex items-center gap-2">
+          <div className="ml-11 text-xs text-[#7C2DE8] font-medium flex items-center gap-2">
             <div className="relative w-2 h-2 shrink-0">
-              <span className="absolute inset-0 rounded-full bg-[#007AFF] animate-ping opacity-75" />
-              <span className="relative block w-2 h-2 rounded-full bg-[#007AFF]" />
+              <span className="absolute inset-0 rounded-full bg-[#7C2DE8] animate-ping opacity-75" />
+              <span className="relative block w-2 h-2 rounded-full bg-[#7C2DE8]" />
             </div>
             {toolStatus}
           </div>
@@ -1957,7 +1957,7 @@ export function WorkflowRunView({
       </div>
 
       {/* Input area */}
-      <div className="px-6 py-3 border-t border-[#E7DED2] bg-[#FFFDF9]">
+      <div className="px-6 py-3 border-t border-[#E7DED2] bg-[#FFFFFF]">
         {canChat ? (
           <div className="flex gap-3 items-end">
             <textarea
@@ -1973,19 +1973,19 @@ export function WorkflowRunView({
               placeholder={t("askPlaceholder")}
               disabled={isChatStreaming}
               rows={2}
-              className="flex-1 px-4 py-3 text-sm bg-[#F6F3EE] border border-[#DDD3C7] rounded-xl outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-[#007AFF]/50 transition-all"
+              className="flex-1 px-4 py-3 text-sm bg-[#F6F3EE] border border-[#DDD3C7] rounded-xl outline-none placeholder:text-[#9B948B] text-[#2B2B2B] disabled:opacity-50 resize-none focus:ring-2 focus:ring-[#7C2DE8]/30 focus:border-[#7C2DE8]/50 transition-all"
             />
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || isChatStreaming}
-              className="px-4 py-3 rounded-xl bg-[#007AFF] text-white hover:bg-[#0066D6] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-3 rounded-xl bg-[#7C2DE8] text-white hover:bg-[#6921C7] active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <div className="flex items-center justify-center gap-2 py-2 text-sm text-[#9B948B]">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-pulse" />
             Workflow is running... Chat will be available after completion.
           </div>
         )}

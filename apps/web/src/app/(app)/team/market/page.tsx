@@ -40,7 +40,7 @@ const CATEGORY_DISPLAY: Record<string, string> = {
 };
 
 // Unified color styles
-const CATEGORY_STYLE = { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", active: "bg-[#007AFF]" };
+const CATEGORY_STYLE = { bg: "bg-[#F6F3EE]", text: "text-[#6F6A64]", active: "bg-[#7C2DE8]" };
 
 function loadHiredIds(): string[] {
   if (typeof window === "undefined") return [];
@@ -138,7 +138,7 @@ export default function AgentMarketPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
-            className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#FFFDF9] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#FFFFFF] border border-[#E7DED2] rounded-xl outline-none focus:ring-2 focus:ring-[#7C2DE8]/30 focus:border-transparent placeholder:text-[#9B948B] text-[#2B2B2B]"
           />
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function AgentMarketPage() {
                   className={`relative rounded-xl border p-4 transition-all group ${
                     isHired
                       ? "border-[#7FB38A]/30 bg-[#7FB38A]/5"
-                      : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#DDD3C7] hover:shadow-[0_4px_12px_rgba(30,34,39,0.06)]"
+                      : "border-[#E7DED2] bg-[#FFFFFF] hover:border-[#DDD3C7] hover:shadow-[0_4px_12px_rgba(30,34,39,0.06)]"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -212,7 +212,7 @@ export default function AgentMarketPage() {
                   ) : (
                     <button
                       onClick={() => handleHire(agent.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#007AFF] text-white text-[11px] font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7C2DE8] text-white text-[11px] font-medium hover:bg-[#6921C7] active:scale-[0.97] transition-all"
                     >
                       <UserPlus className="h-3.5 w-3.5" />
                       {t("hire")}
@@ -243,7 +243,7 @@ export default function AgentMarketPage() {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -255,8 +255,8 @@ export default function AgentMarketPage() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
                       currentPage === page
-                        ? "bg-[#007AFF] text-white"
-                        : "text-[#6F6A64] hover:bg-[#F1ECE4]"
+                        ? "bg-[#7C2DE8] text-white"
+                        : "text-[#6F6A64] hover:bg-[#F6F3EE]"
                     }`}
                   >
                     {page}
@@ -269,7 +269,7 @@ export default function AgentMarketPage() {
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

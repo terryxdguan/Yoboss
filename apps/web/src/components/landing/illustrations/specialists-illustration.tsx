@@ -27,7 +27,7 @@ const ROWS: Pill[][] = [
 function PillChip({ pill }: { pill: Pill }) {
   const Icon = pill.icon;
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-[#E7DED2] bg-[#FFFDF9] px-2.5 py-1.5 shadow-[0_1px_4px_rgba(30,34,39,0.04)]">
+    <div className="flex items-center gap-1.5 rounded-full border border-[#E7DED2] bg-[#FFFFFF] px-2.5 py-1.5 shadow-[0_1px_4px_rgba(30,34,39,0.04)]">
       <Icon
         className="h-3.5 w-3.5 shrink-0"
         strokeWidth={1.75}
@@ -42,7 +42,7 @@ function PillChip({ pill }: { pill: Pill }) {
 
 export function SpecialistsIllustration() {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-start gap-2.5 overflow-hidden rounded-xl bg-[#FFFDF9] px-2 pb-3 pt-1">
+    <div className="flex h-full w-full flex-col items-center justify-start gap-2.5 overflow-hidden rounded-xl bg-[#FFFFFF] px-2 pb-3 pt-1">
       {ROWS.map((row, i) => (
         <div key={i} className="flex items-center justify-center gap-2.5">
           {row.map((p) => (

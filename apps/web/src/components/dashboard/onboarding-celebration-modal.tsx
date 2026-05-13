@@ -32,8 +32,8 @@ export function OnboardingCelebrationModal() {
         className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
         onClick={() => setOpen(false)}
       />
-      <div className="relative w-full max-w-md rounded-2xl bg-[#FFFDF9] p-8 text-center shadow-[0_24px_64px_rgba(30,34,39,0.18)]">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#E6F2FF] text-[#007AFF]">
+      <div className="relative w-full max-w-md rounded-2xl bg-[#FFFFFF] p-8 text-center shadow-[0_24px_64px_rgba(30,34,39,0.18)]">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F3ECFB] text-[#7C2DE8]">
           <Sparkles className="h-7 w-7" />
         </div>
         <h2 className="text-xl font-semibold text-[#2B2B2B]">
@@ -44,7 +44,7 @@ export function OnboardingCelebrationModal() {
         </p>
         <button
           onClick={() => setOpen(false)}
-          className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-[#007AFF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0066D6]"
+          className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#7C2DE8] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6921C7]"
         >
           {t("cta")}
         </button>

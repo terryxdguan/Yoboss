@@ -119,12 +119,12 @@ export function DeliverablesButton({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors bg-[#FFFDF9] border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4]"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors bg-[#FFFFFF] border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F6F3EE]"
       >
         <Package className="h-3.5 w-3.5" />
         Deliverables
         {items.length > 0 && (
-          <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
+          <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#7C2DE8]/10 text-[#7C2DE8]">
             {items.length}
           </span>
         )}
@@ -136,18 +136,18 @@ export function DeliverablesButton({
           <div className="fixed inset-0 z-50" onClick={() => setOpen(false)} />
 
           {/* Popover */}
-          <div className="absolute top-full left-0 mt-2 z-50 w-[520px] bg-[#FFFDF9] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
+          <div className="absolute top-full left-0 mt-2 z-50 w-[520px] bg-[#FFFFFF] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-[#007AFF]" />
+                <Package className="h-4 w-4 text-[#7C2DE8]" />
                 <h3 className="text-sm font-semibold text-[#2B2B2B]">
                   Deliverables
                 </h3>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="p-1 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors"
+                className="p-1 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -165,7 +165,7 @@ export function DeliverablesButton({
             <div className="max-h-[360px] overflow-y-auto">
               {items.length === 0 ? (
                 <div className="py-10 text-center">
-                  <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F1ECE4] flex items-center justify-center">
+                  <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F6F3EE] flex items-center justify-center">
                     <FileText className="h-5 w-5 text-[#9B948B]" />
                   </div>
                   <p className="text-sm text-[#6F6A64]">{tWf("noFiles")}</p>
@@ -174,7 +174,7 @@ export function DeliverablesButton({
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-[#F1ECE4]">
+                <div className="divide-y divide-[#F6F3EE]">
                   {items.map((item, i) => {
                     const status = getFileStatus(item.createdAt);
                     const dlHref = downloadHrefFor(item);
@@ -185,10 +185,10 @@ export function DeliverablesButton({
                       >
                         {/* File icon */}
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#7C2DE8]/10"}`}
                         >
                           <FileText
-                            className={`h-4 w-4 ${status.expired ? "text-[#D5847A]" : "text-[#007AFF]"}`}
+                            className={`h-4 w-4 ${status.expired ? "text-[#D5847A]" : "text-[#7C2DE8]"}`}
                           />
                         </div>
 
@@ -207,7 +207,7 @@ export function DeliverablesButton({
                             <a
                               href={dlHref}
                               download={item.filename}
-                              className="text-sm font-medium text-[#007AFF] hover:underline break-all block"
+                              className="text-sm font-medium text-[#7C2DE8] hover:underline break-all block"
                             >
                               {item.filename}
                             </a>
@@ -249,7 +249,7 @@ export function DeliverablesButton({
                               <a
                                 href={dlHref}
                                 download={item.filename}
-                                className="p-1.5 rounded-lg text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
+                                className="p-1.5 rounded-lg text-[#7C2DE8] hover:bg-[#F3ECFB] transition-colors"
                                 title={tWf("download")}
                               >
                                 <Download className="h-3.5 w-3.5" />
@@ -290,23 +290,23 @@ export function DeliverablesModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+      <div className="relative bg-[#FFFFFF] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#E7DED2]">
           <div className="flex items-center gap-2">
-            <Package className="h-4.5 w-4.5 text-[#007AFF]" />
+            <Package className="h-4.5 w-4.5 text-[#7C2DE8]" />
             <h3 className="text-base font-semibold text-[#2B2B2B]">
               Deliverables
             </h3>
             {items.length > 0 && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#7C2DE8]/10 text-[#7C2DE8]">
                 {items.length} file{items.length !== 1 ? "s" : ""}
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -324,7 +324,7 @@ export function DeliverablesModal({
         <div className="flex-1 overflow-y-auto">
           {items.length === 0 ? (
             <div className="py-12 text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F1ECE4] flex items-center justify-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F6F3EE] flex items-center justify-center">
                 <FileText className="h-6 w-6 text-[#9B948B]" />
               </div>
               <p className="text-sm font-medium text-[#2B2B2B]">
@@ -335,7 +335,7 @@ export function DeliverablesModal({
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#F1ECE4]">
+            <div className="divide-y divide-[#F6F3EE]">
               {items.map((item, i) => {
                 const status = getFileStatus(item.createdAt);
                 const dlHref = downloadHrefFor(item);
@@ -346,10 +346,10 @@ export function DeliverablesModal({
                   >
                     {/* File icon */}
                     <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#007AFF]/10"}`}
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${status.expired ? "bg-[#D5847A]/10" : "bg-[#7C2DE8]/10"}`}
                     >
                       <FileText
-                        className={`h-4.5 w-4.5 ${status.expired ? "text-[#D5847A]" : "text-[#007AFF]"}`}
+                        className={`h-4.5 w-4.5 ${status.expired ? "text-[#D5847A]" : "text-[#7C2DE8]"}`}
                       />
                     </div>
 
@@ -366,7 +366,7 @@ export function DeliverablesModal({
                         <a
                           href={dlHref}
                           download={item.filename}
-                          className="text-sm font-medium text-[#007AFF] hover:underline break-all block"
+                          className="text-sm font-medium text-[#7C2DE8] hover:underline break-all block"
                         >
                           {item.filename}
                         </a>
@@ -408,7 +408,7 @@ export function DeliverablesModal({
                           <a
                             href={dlHref}
                             download={item.filename}
-                            className="p-1.5 rounded-lg text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
+                            className="p-1.5 rounded-lg text-[#7C2DE8] hover:bg-[#F3ECFB] transition-colors"
                             title="Download"
                           >
                             <Download className="h-3.5 w-3.5" />

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default async function TermsPage() {
   const t = await getTranslations("terms");
   return (
-    <div className="min-h-screen bg-[#F6F3EE]">
+    <div className="min-h-screen bg-[#FDFAF6]">
       <div className="max-w-3xl mx-auto px-6 pt-6 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold tracking-tighter text-[#2B2B2B]">
           YoBoss
@@ -63,7 +63,7 @@ export default async function TermsPage() {
                   href="https://www.anthropic.com/legal/aup"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#007AFF] hover:underline"
+                  className="text-[#7C2DE8] hover:underline"
                 >
                   {t("s4L1Link")}
                 </a>
@@ -115,7 +115,7 @@ export default async function TermsPage() {
             <h2 className="text-xl font-semibold text-[#2B2B2B]">{t("s11Title")}</h2>
             <p>
               {t("s11Body")}
-              <a href="mailto:contact@mail.yoboss.ai" className="text-[#007AFF] hover:underline">
+              <a href="mailto:contact@mail.yoboss.ai" className="text-[#7C2DE8] hover:underline">
                 contact@mail.yoboss.ai
               </a>
               .
