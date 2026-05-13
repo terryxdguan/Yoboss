@@ -36,14 +36,14 @@ export type CardVariant = "default" | "schedule" | "todo" | "high";
 
 const VARIANT_BORDER: Record<CardVariant, string> = {
   default: "border-[#E7DED2]",
-  schedule: "border-2 border-[#007AFF]/40",   // blue
+  schedule: "border-2 border-[#7C2DE8]/40",   // blue
   todo: "border-2 border-[#7FB38A]/40",       // green
   high: "border-2 border-[#D5847A]/50",       // red
 };
 
 const VARIANT_TIME_COLOR: Record<CardVariant, string> = {
   default: "text-[#9B948B]",
-  schedule: "text-[#007AFF]",   // blue
+  schedule: "text-[#7C2DE8]",   // blue
   todo: "text-[#7FB38A]",       // green
   high: "text-[#D5847A]",       // red
 };
@@ -91,13 +91,13 @@ export function TodoItemCard({
   };
 
   return (
-    <div className={`rounded-lg border bg-[#FFFDF9] px-3 py-2 group/card hover:border-[#DDD3C7] transition-colors ${VARIANT_BORDER[variant]} ${className || ""}`}>
+    <div className={`rounded-lg border bg-[#FFFFFF] px-3 py-2 group/card hover:border-[#DDD3C7] transition-colors ${VARIANT_BORDER[variant]} ${className || ""}`}>
       {/* Row 1: checkbox + title + actions */}
       <div className="flex items-start gap-2">
         <button
           onClick={onToggle}
           className={`w-[18px] h-[18px] mt-0.5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
-            item.completed ? "border-[#7FB38A] bg-[#7FB38A]" : "border-[#DDD3C7] hover:border-[#007AFF]"
+            item.completed ? "border-[#7FB38A] bg-[#7FB38A]" : "border-[#DDD3C7] hover:border-[#7C2DE8]"
           }`}
         >
           {item.completed && <span className="text-white text-[10px]">✓</span>}
@@ -112,7 +112,7 @@ export function TodoItemCard({
               if (e.key === "Enter") commitTextEdit();
               if (e.key === "Escape") { setEditText(item.text); setEditingText(false); }
             }}
-            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#007AFF] rounded px-1.5 py-0.5 outline-none"
+            className="text-sm text-[#2B2B2B] font-medium leading-snug flex-1 bg-[#F6F3EE] border border-[#7C2DE8] rounded px-1.5 py-0.5 outline-none"
           />
         ) : (
           <span
@@ -125,7 +125,7 @@ export function TodoItemCard({
         {onSendToAI && (
           <button
             onClick={onSendToAI}
-            className="shrink-0 flex items-center gap-1 text-[#007AFF] hover:text-[#0066D6] text-[13px] font-medium transition-colors"
+            className="shrink-0 flex items-center gap-1 text-[#7C2DE8] hover:text-[#6921C7] text-[13px] font-medium transition-colors"
             title={t("sendToTeam")}
           >
             {t("start")}
@@ -149,7 +149,7 @@ export function TodoItemCard({
           </span>
         ) : editingDeadline ? (
           <span className="relative inline-block">
-            <span className="text-xs px-1 py-0.5 rounded bg-[#F1ECE4] border border-[#007AFF] text-[#6F6A64] inline-block">
+            <span className="text-xs px-1 py-0.5 rounded bg-[#F6F3EE] border border-[#7C2DE8] text-[#6F6A64] inline-block">
               {item.deadline ? formatDeadline(item.deadline, locale) : formatDeadline(new Date().toISOString(), locale)}
             </span>
             <DateTimePicker
@@ -200,7 +200,7 @@ export function TodoItemCard({
       {/* Row 3: source label (Goal name or category tag) */}
       {sourceLabel && (
         <div className="mt-1 ml-[26px]">
-          <span className="text-[11px] text-[#9B948B] bg-[#F1ECE4] px-1.5 py-0.5 rounded">
+          <span className="text-[11px] text-[#9B948B] bg-[#F6F3EE] px-1.5 py-0.5 rounded">
             {sourceLabel}
           </span>
         </div>

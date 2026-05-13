@@ -32,7 +32,7 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%]">
-          <div className="bg-[#007AFF] text-white rounded-lg px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+          <div className="bg-[#7C2DE8] text-white rounded-lg px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
           </div>
         </div>
@@ -47,7 +47,7 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
   if (message.adjustRequest) {
     return (
       <div className="flex justify-start gap-3">
-        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
+        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F6F3EE] mt-1">
           <Image
             src={AGENT_AVATAR}
             alt={AGENT_LABEL}
@@ -94,7 +94,7 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
   return (
     <div className="flex justify-start gap-3">
       {/* Avatar */}
-      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F1ECE4] mt-1">
+      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-[#F6F3EE] mt-1">
         <Image
           src={AGENT_AVATAR}
           alt={AGENT_LABEL}
@@ -113,7 +113,7 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
         </div>
 
         {/* Bubble */}
-        <div className="rounded-xl bg-[#FFFDF9] border border-[#E7DED2] px-4 py-3 text-sm text-[#2B2B2B]">
+        <div className="rounded-xl bg-[#FFFFFF] border border-[#E7DED2] px-4 py-3 text-sm text-[#2B2B2B]">
           {/* Tool activity badges — all tool calls observed during this turn,
               latest one gets a pulsing indicator while streaming */}
           {hasActivity && (
@@ -125,14 +125,14 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
                     key={i}
                     className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
                       isLatest
-                        ? "bg-[#007AFF]/15 text-[#007AFF] shadow-[0_0_12px_rgba(0,122,255,0.2)]"
-                        : "bg-[#F1ECE4] text-[#6F6A64]"
+                        ? "bg-[#7C2DE8]/15 text-[#7C2DE8] shadow-[0_0_12px_rgba(124,45,232,0.2)]"
+                        : "bg-[#F6F3EE] text-[#6F6A64]"
                     }`}
                   >
                     {isLatest && (
                       <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C2DE8] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7C2DE8]" />
                       </span>
                     )}
                     {tool.label}
@@ -147,8 +147,8 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
               silent for many seconds. Live char count so users see
               concrete progress instead of a frozen-looking spinner. */}
           {showDraftingCard && (
-            <div className="mt-1 mb-2 flex items-center gap-3 rounded-lg bg-[#007AFF]/8 border border-[#007AFF]/25 px-3.5 py-2.5">
-              <Loader2 className="h-4 w-4 text-[#007AFF] animate-spin shrink-0" />
+            <div className="mt-1 mb-2 flex items-center gap-3 rounded-lg bg-[#7C2DE8]/8 border border-[#7C2DE8]/25 px-3.5 py-2.5">
+              <Loader2 className="h-4 w-4 text-[#7C2DE8] animate-spin shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[#2B2B2B]">
                   {t("drafting")}
@@ -172,19 +172,19 @@ export function ChatMessage({ message, onAnswer, onAdjustSubmit, isStreaming }: 
             <div className="flex items-center gap-3 py-0.5">
               <div className="flex items-center gap-1">
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-bounce"
                   style={{ animationDelay: "0ms" }}
                 />
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-bounce"
                   style={{ animationDelay: "150ms" }}
                 />
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#007AFF] animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-[#7C2DE8] animate-bounce"
                   style={{ animationDelay: "300ms" }}
                 />
               </div>
-              <span className="text-sm text-[#007AFF] font-medium animate-pulse">
+              <span className="text-sm text-[#7C2DE8] font-medium animate-pulse">
                 {latestActivity
                   ? t("working", { label: AGENT_LABEL })
                   : t("thinking", { label: AGENT_LABEL })}

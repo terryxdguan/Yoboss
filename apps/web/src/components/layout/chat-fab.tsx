@@ -18,9 +18,9 @@ export function ChatFab({ onClick, pulse = false }: ChatFabProps) {
         "fixed bottom-6 right-6 z-50",
         "flex items-center justify-center",
         "h-12 w-12 rounded-full",
-        "bg-[#007AFF] text-white",
+        "bg-[#7C2DE8] text-white",
         "shadow-[0_2px_8px_rgba(0,0,0,0.10)]",
-        "hover:bg-[#0066D6] transition-colors",
+        "hover:bg-[#6921C7] transition-colors",
         "cursor-pointer",
         pulse && "animate-pulse-gentle"
       )}

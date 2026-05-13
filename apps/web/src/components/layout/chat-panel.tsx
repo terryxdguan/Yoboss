@@ -52,7 +52,7 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
           </span>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
             aria-label={t("closeAria")}
           >
             <X className="h-4 w-4" />
@@ -61,7 +61,7 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           <div className="max-w-[85%]">
-            <div className="bg-[#F1ECE4] rounded-md px-3 py-2.5">
+            <div className="bg-[#F6F3EE] rounded-md px-3 py-2.5">
               <p className="text-sm leading-relaxed text-[#2B2B2B]">
                 {t("greeting")}
               </p>
@@ -83,7 +83,7 @@ export function ChatPanel({ open, onClose }: ChatPanelProps) {
               }}
             />
             <button
-              className="p-1.5 text-[#007AFF] hover:text-[#0066D6] transition-colors"
+              className="p-1.5 text-[#7C2DE8] hover:text-[#6921C7] transition-colors"
               aria-label={t("sendAria")}
             >
               <Send className="h-4 w-4" />

@@ -19,7 +19,7 @@ interface GoalWithPhases extends Goal {
 // are available. Color is hashed by goal.id (not list index) so a goal's
 // color stays stable even if other goals around it are added or removed.
 const GOAL_COLORS = [
-  "bg-[#007AFF]", // blue
+  "bg-[#7C2DE8]", // blue
   "bg-[#C9A968]", // gold
   "bg-[#9CC4A4]", // green
   "bg-[#9B6B5C]", // brown
@@ -121,14 +121,14 @@ export default function GoalsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#2B2B2B]">{t("title")}</h1>
+            <h1 className="font-display text-3xl font-bold tracking-[-0.022em] text-[#1A1829]">{t("title")}</h1>
             <p className="text-sm text-[#6F6A64] mt-1">{t("subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             {archivedGoals.length > 0 && (
               <button
                 onClick={() => setShowHistory(true)}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors"
               >
                 <Clock className="h-4 w-4" />
                 {t("history")}
@@ -136,7 +136,7 @@ export default function GoalsPage() {
             )}
             <button
               onClick={() => setWizardState({ open: true, autoStart: false })}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-medium hover:bg-[#0066D6] transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7C2DE8] text-white text-sm font-medium hover:bg-[#6921C7] transition-colors"
             >
               <Plus className="h-4 w-4" />
               {t("newGoal")}
@@ -147,12 +147,12 @@ export default function GoalsPage() {
         {/* All Goals */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <Flag className="h-4 w-4 text-[#007AFF]" />
+            <Flag className="h-4 w-4 text-[#7C2DE8]" />
             <h2 className="text-base font-semibold text-[#2B2B2B]">{t("all")}</h2>
           </div>
 
           {!loading && activeGoals.length === 0 && (
-            <div className="text-center py-16 bg-[#FFFDF9] rounded-xl border border-dashed border-[#E7DED2]">
+            <div className="text-center py-16 bg-[#FFFFFF] rounded-xl border border-dashed border-[#E7DED2]">
               <Flag className="h-8 w-8 text-[#E7DED2] mx-auto mb-3" />
               <p className="text-sm text-[#9B948B] mb-1">{t("empty")}</p>
               <p className="text-xs text-[#9B948B]">{t("emptyHint")}</p>
@@ -240,7 +240,7 @@ function GoalCard({
   return (
     <div
       onClick={onClick}
-      className="group rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-5 cursor-pointer transition-all hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7]"
+      className="group rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-5 cursor-pointer transition-all hover:shadow-[0_10px_28px_rgba(43,43,43,0.08)] hover:border-[#DDD3C7]"
     >
       {/* Letter avatar + Title + Status */}
       <div className="flex items-start gap-3 mb-3">
@@ -285,7 +285,7 @@ function GoalCard({
             </span>
             <span className="text-[11px] font-medium text-[#2B2B2B]">{progress}%</span>
           </div>
-          <div className="h-1.5 bg-[#F1ECE4] rounded-full overflow-hidden">
+          <div className="h-1.5 bg-[#F6F3EE] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all bg-[#7FB38A]"
               style={{ width: `${progress}%` }}
@@ -299,14 +299,14 @@ function GoalCard({
       )}
 
       {/* Footer: date + actions */}
-      <div className="flex items-center justify-between pt-2 border-t border-[#F1ECE4]">
+      <div className="flex items-center justify-between pt-2 border-t border-[#F6F3EE]">
         <span className="text-[10px] text-[#9B948B]">
           {new Date(goal.created_at).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" })}
         </span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onArchive}
-            className="p-1.5 rounded-lg text-[#9B948B] hover:text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors"
+            className="p-1.5 rounded-lg text-[#9B948B] hover:text-[#6F6A64] hover:bg-[#F6F3EE] transition-colors"
             title={t("archive")}
           >
             <Archive className="h-3.5 w-3.5" />
@@ -342,13 +342,13 @@ function HistoryModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[70vh] flex flex-col overflow-hidden">
+      <div className="relative bg-[#FFFFFF] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[70vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
           <div>
             <h2 className="text-lg font-semibold text-[#2B2B2B]">{t("historyTitle")}</h2>
             <p className="text-sm text-[#6F6A64] mt-0.5">{t("historySubtitle", { count: goals.length })}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F1ECE4]">
+          <button onClick={onClose} className="p-2 rounded-lg text-[#6F6A64] hover:bg-[#F6F3EE]">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -357,7 +357,7 @@ function HistoryModal({
           {goals.map((goal) => (
             <div
               key={goal.id}
-              className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 hover:border-[#007AFF]/30 transition-all"
+              className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-4 hover:border-[#7C2DE8]/30 transition-all"
             >
               <div
                 className="flex-1 min-w-0 cursor-pointer"
@@ -373,7 +373,7 @@ function HistoryModal({
               </span>
               <button
                 onClick={() => onRestore(goal.id)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors shrink-0"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7C2DE8] hover:bg-[#7C2DE8]/10 transition-colors shrink-0"
                 title={t("restoreTitle")}
               >
                 <RotateCcw className="h-3.5 w-3.5" />

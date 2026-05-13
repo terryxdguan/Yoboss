@@ -80,7 +80,7 @@ export function DailyEmailToggle({
             value={timezone}
             disabled={tzPending}
             onChange={(e) => onTimezoneChange(e.target.value)}
-            className="w-full rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 text-sm text-[#2B2B2B] outline-none transition-colors hover:border-[#DDD3C7] focus:border-[#007AFF] disabled:opacity-60 sm:w-auto sm:min-w-64"
+            className="w-full rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-2 text-sm text-[#2B2B2B] outline-none transition-colors hover:border-[#DDD3C7] focus:border-[#7C2DE8] disabled:opacity-60 sm:w-auto sm:min-w-64"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -111,7 +111,7 @@ export function DailyEmailToggle({
             disabled={pending}
             onClick={() => onChange(!enabled)}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-60 ${
-              enabled ? "bg-[#007AFF]" : "bg-[#DDD3C7]"
+              enabled ? "bg-[#7C2DE8]" : "bg-[#DDD3C7]"
             }`}
           >
             <span

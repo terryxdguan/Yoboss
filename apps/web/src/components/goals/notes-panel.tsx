@@ -62,11 +62,11 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
   }, []);
 
   return (
-    <div className="fixed right-0 top-16 bottom-0 z-[45] w-96 border-l border-[#E7DED2] bg-[#FFFDF9] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]">
+    <div className="fixed right-0 top-16 bottom-0 z-[45] w-96 border-l border-[#E7DED2] bg-[#FFFFFF] flex flex-col shadow-[0_0_48px_rgba(30,34,39,0.08)]">
       {/* Header */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-[#E7DED2]">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-[#007AFF]" />
+          <FileText className="h-4 w-4 text-[#7C2DE8]" />
           <span className="text-sm font-medium text-[#2B2B2B]">{t("title")}</span>
           {saveStatus === "saving" && (
             <span className="text-[10px] text-[#9B948B]">{t("saving")}</span>
@@ -80,7 +80,7 @@ export function NotesPanel({ goalId, onClose }: NotesPanelProps) {
         </div>
         <button
           onClick={() => { handleBlur(); onClose(); }}
-          className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+          className="p-1.5 rounded-md text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>

@@ -41,8 +41,8 @@ export function Sidebar() {
     pathname === "/team" || pathname?.startsWith("/team/");
 
   return (
-    <aside className="fixed left-0 top-16 z-[45] h-[calc(100vh-64px)] w-20 hover:w-64 overflow-hidden overflow-y-auto border-r border-[#E7DED2] bg-[#F6F3EE]/96 backdrop-blur-xl transition-all duration-300 group">
-      <div className="flex h-full flex-col px-4 py-4">
+    <aside className="fixed left-0 top-16 z-[45] h-[calc(100vh-64px)] w-20 hover:w-64 overflow-hidden overflow-y-auto border-r border-[#E7DED2] bg-white/96 backdrop-blur-xl transition-all duration-300 group">
+      <div className="flex h-full flex-col px-3 py-4">
         <div className="space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive =
@@ -52,17 +52,25 @@ export function Sidebar() {
             const Icon = item.icon;
 
             return (
-              <div key={item.href}>
+              <div key={item.href} className="relative">
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-[#7C2DE8]"
+                  />
+                )}
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-4 rounded-xl px-3 py-3 transition-colors",
+                    "flex items-center gap-4 rounded-xl px-4 py-3 transition-colors",
                     isActive
-                      ? "bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B] shadow-[0_8px_24px_rgba(30,34,39,0.05)]"
-                      : "text-[#6F6A64] hover:bg-[#FFFDF9] hover:text-[#2B2B2B]"
+                      ? "bg-[#F3ECFB] text-[#7C2DE8] font-semibold"
+                      : "text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#1A1829]"
                   )}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
+                  <Icon
+                    className={cn("h-5 w-5 shrink-0", isActive && "text-[#7C2DE8]")}
+                  />
                   <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">
                     {t(item.key)}
                   </span>
@@ -73,7 +81,7 @@ export function Sidebar() {
         </div>
 
         <div className="mt-8 border-t border-[#E7DED2] pt-4">
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9B948B] opacity-0 transition-opacity group-hover:opacity-100">
+          <p className="mb-2 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9B948B] opacity-0 transition-opacity group-hover:opacity-100">
             {t("advanced")}
           </p>
           <div className="space-y-1">
@@ -83,21 +91,30 @@ export function Sidebar() {
               const Icon = item.icon;
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-4 rounded-xl px-3 py-3 transition-colors",
-                    isActive
-                      ? "bg-[#FFFDF9] border border-[#E7DED2] text-[#2B2B2B] shadow-[0_8px_24px_rgba(30,34,39,0.05)]"
-                      : "text-[#9B948B] hover:bg-[#FFFDF9] hover:text-[#2B2B2B]"
+                <div key={item.href} className="relative">
+                  {isActive && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-[#7C2DE8]"
+                    />
                   )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">
-                    {t(item.key)}
-                  </span>
-                </Link>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-4 rounded-xl px-4 py-3 transition-colors",
+                      isActive
+                        ? "bg-[#F3ECFB] text-[#7C2DE8] font-semibold"
+                        : "text-[#9B948B] hover:bg-[#F6F3EE] hover:text-[#1A1829]"
+                    )}
+                  >
+                    <Icon
+                      className={cn("h-5 w-5 shrink-0", isActive && "text-[#7C2DE8]")}
+                    />
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">
+                      {t(item.key)}
+                    </span>
+                  </Link>
+                </div>
               );
             })}
           </div>
@@ -108,7 +125,7 @@ export function Sidebar() {
           <div className="h-px bg-[#E7DED2] my-2" />
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-4 rounded-xl px-3 py-3 text-[#6F6A64] hover:bg-[#FFFDF9] hover:text-[#2B2B2B] transition-colors"
+            className="w-full flex items-center gap-4 rounded-xl px-4 py-3 text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#1A1829] transition-colors"
           >
             <LogOut className="h-5 w-5 shrink-0" />
             <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-sm">

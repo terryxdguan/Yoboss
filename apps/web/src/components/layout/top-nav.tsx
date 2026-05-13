@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { getUnreadNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/db/actions";
 import type { Notification } from "@/lib/types/notification";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
+import { Wordmark } from "@/components/brand/wordmark";
 
 interface TopNavProps {
   userAvatar?: string | null;
@@ -46,11 +47,11 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
   };
 
   return (
-    <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-[#E7DED2] bg-[#F6F3EE]/90 backdrop-blur-xl shadow-[0_6px_18px_rgba(30,34,39,0.04)]">
+    <nav className="fixed top-0 inset-x-0 z-50 h-16 border-b border-[#E7DED2] bg-[#FDFAF6]/92 backdrop-blur-xl shadow-[0_6px_18px_rgba(26,24,41,0.04)]">
       <div className="h-full pl-6 pr-6 md:pl-7 md:pr-8 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="text-[22px] font-semibold tracking-tight text-[#2B2B2B] hover:opacity-80 transition-opacity">
-            YoBoss
+          <Link href="/" aria-label="YoBoss home" className="hover:opacity-80 transition-opacity">
+            <Wordmark className="h-7" />
           </Link>
         </div>
 
@@ -62,7 +63,7 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
           <div className="relative">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="relative h-10 w-10 flex items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFDF9] text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+              className="relative h-10 w-10 flex items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFFFF] text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
             >
               <Bell className="h-5 w-5" />
               {notifications.length > 0 && (
@@ -73,13 +74,13 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
             {showDropdown && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
-                <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-[#FFFDF9] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-[#FFFFFF] border border-[#E7DED2] rounded-xl shadow-[0_12px_40px_rgba(30,34,39,0.12)] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7DED2]">
                     <h3 className="text-sm font-semibold text-[#2B2B2B]">{t("notifications")}</h3>
                     {notifications.length > 0 && (
                       <button
                         onClick={handleMarkAllRead}
-                        className="text-[10px] font-medium text-[#007AFF] hover:underline"
+                        className="text-[10px] font-medium text-[#7C2DE8] hover:underline"
                       >
                         {t("markAllRead")}
                       </button>
@@ -122,7 +123,7 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
           {/* Settings */}
           <Link
             href="/settings"
-            className="h-10 w-10 flex items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFDF9] text-[#6F6A64] hover:bg-[#F1ECE4] hover:text-[#2B2B2B] transition-colors"
+            className="h-10 w-10 flex items-center justify-center rounded-full border border-[#E7DED2] bg-[#FFFFFF] text-[#6F6A64] hover:bg-[#F6F3EE] hover:text-[#2B2B2B] transition-colors"
           >
             <Settings className="h-5 w-5" />
           </Link>
@@ -139,7 +140,7 @@ export function TopNav({ userAvatar, userName }: TopNavProps) {
 
 function AvatarImg({ src, name, size }: { src?: string | null; name?: string; size: number }) {
   const [failed, setFailed] = useState(false);
-  const cls = `rounded-full object-cover border border-[#E7DED2] hover:ring-2 hover:ring-[#007AFF]/30 transition-shadow`;
+  const cls = `rounded-full object-cover border border-[#E7DED2] hover:ring-2 hover:ring-[#7C2DE8]/30 transition-shadow`;
 
   if (src && !failed) {
     return (
@@ -156,7 +157,7 @@ function AvatarImg({ src, name, size }: { src?: string | null; name?: string; si
 
   return (
     <div
-      className={`bg-[#007AFF] flex items-center justify-center text-white text-xs font-semibold border border-[#E7DED2] hover:ring-2 hover:ring-[#007AFF]/30 transition-shadow rounded-full`}
+      className={`bg-[#7C2DE8] flex items-center justify-center text-white text-xs font-semibold border border-[#E7DED2] hover:ring-2 hover:ring-[#7C2DE8]/30 transition-shadow rounded-full`}
       style={{ width: size, height: size }}
     >
       {(name || "U").charAt(0).toUpperCase()}

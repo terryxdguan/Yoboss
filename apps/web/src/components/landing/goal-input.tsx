@@ -37,40 +37,37 @@ export function GoalInput({ value, onChange, onSubmit }: GoalInputProps) {
   const [hintBefore, hintAfter] = hintTemplate.split("__KEY__");
 
   return (
-    <div className="relative max-w-4xl mx-auto group mb-16 rounded-2xl p-[1.5px] overflow-hidden">
-      {/* Spinning gradient background */}
-      <div className="absolute inset-[-50%] animate-spin-slow bg-[conic-gradient(#007AFF,#a78bfa,#f59e0b,#ef4444,#007AFF)]" />
-
-      {/* Glow layer */}
-      <div className="absolute inset-[-50%] animate-spin-slow bg-[conic-gradient(#007AFF,#a78bfa,#f59e0b,#ef4444,#007AFF)] blur-lg opacity-50" />
-
-      {/* Card */}
-      <div className="relative bg-[#FFFDF9] rounded-xl p-3">
+    <div className="relative max-w-4xl mx-auto mb-4">
+      {/* Card — violet focus ring via :focus-within */}
+      <div className="relative rounded-2xl border border-[#E7DED2] bg-white p-3 transition-all focus-within:border-[#7C2DE8] focus-within:shadow-[0_0_0_4px_rgba(124,45,232,0.12)]">
         <textarea
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-lg md:text-xl py-4 px-7 min-h-[90px] resize-none text-[#2B2B2B] placeholder:text-[#9B948B]"
+          className="w-full bg-transparent border-none focus:ring-0 focus:outline-none font-display text-xl md:text-2xl font-bold tracking-[-0.015em] py-3 px-5 min-h-[80px] resize-none text-[#1A1829] placeholder:text-[#9B948B] placeholder:font-normal"
           placeholder={placeholder}
         />
-        <div className="flex justify-between items-center px-4 pb-2 gap-3">
+        <div className="flex justify-between items-center px-3 pb-1 gap-3">
           <span className="text-xs text-[#9B948B] leading-snug text-left">
             {hintBefore}
-            <kbd className="px-1.5 py-0.5 rounded border border-[#E7DED2] bg-[#F1ECE4] text-[10px] font-medium text-[#6F6A64]">Tab</kbd>
+            <kbd className="px-1.5 py-0.5 rounded border border-[#E7DED2] bg-[#F6F3EE] text-[10px] font-medium text-[#6F6A64]">Tab</kbd>
             {hintAfter}
           </span>
           <button
             onClick={() => value.trim() && onSubmit(value.trim())}
-            className="bg-[#007AFF] text-white h-12 w-12 flex items-center justify-center rounded-lg hover:bg-[#0066D6] transition-all active:scale-95 shadow-sm shrink-0"
+            className="bg-[#7C2DE8] text-white h-11 px-5 flex items-center gap-2 rounded-xl text-sm font-semibold hover:bg-[#6921C7] transition-all active:scale-95 shadow-brand shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            disabled={!value.trim()}
             aria-label={t("goalInputSubmitLabel")}
           >
+            {t("goalInputSubmitLabel")}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="currentColor"
+              aria-hidden="true"
             >
               <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
             </svg>

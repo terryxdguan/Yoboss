@@ -137,7 +137,7 @@ export function RoadmapPreview({
       <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-sm" />
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-[#FFFDF9] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.12)] w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_0_48px_rgba(30,34,39,0.12)] w-full max-w-2xl max-h-[85vh] flex flex-col">
           {/* Header */}
           <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#E7DED2]">
             <div className="min-w-0 flex-1 pr-3">
@@ -166,17 +166,16 @@ export function RoadmapPreview({
             </div>
             <button
               onClick={onEdit}
-              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors shrink-0"
+              className="p-1.5 rounded-md text-[#9B948B] hover:text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors shrink-0"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* Inline-edit hint banner — first-time users won't know fields
-              are editable until the modal hints at it. Uses the brand
-              action blue + medium weight (not the soft #7FAEE6) so it
-              reads as instruction, not decorative caption. */}
-          <div className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#007AFF] bg-[#E6F2FF] border-b border-[#BDD8F2]">
+              are editable until the modal hints at it. Reads as instruction
+              (violet + medium weight) rather than decorative caption. */}
+          <div className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#7C2DE8] bg-[#F3ECFB] border-b border-[#E7D8FB]">
             <Pencil className="h-4 w-4 shrink-0" />
             <span>{t("editHint")}</span>
           </div>
@@ -188,7 +187,7 @@ export function RoadmapPreview({
             {hasSchedule && edited.weekly_schedule && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="h-4 w-4 text-[#007AFF]" />
+                  <Calendar className="h-4 w-4 text-[#7C2DE8]" />
                   <h3 className="text-sm font-semibold text-[#2B2B2B]">{t("weeklyScheduleTitle")}</h3>
                 </div>
                 <p className="text-xs text-[#6F6A64] mb-3">
@@ -261,7 +260,7 @@ export function RoadmapPreview({
                       )}
 
                       <div className="flex items-start gap-3 mb-1">
-                        <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-[#007AFF] text-white text-sm font-semibold">
+                        <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-lg bg-[#7C2DE8] text-white text-sm font-semibold">
                           {phaseIdx + 1}
                         </div>
                         <div className="pt-1 min-w-0 flex-1">
@@ -306,7 +305,7 @@ export function RoadmapPreview({
                             key={mIdx}
                             className="flex items-start gap-2.5 py-1.5"
                           >
-                            <Flag className="h-3.5 w-3.5 shrink-0 text-[#007AFF] mt-0.5" />
+                            <Flag className="h-3.5 w-3.5 shrink-0 text-[#7C2DE8] mt-0.5" />
                             <span className="text-sm text-[#2B2B2B] min-w-0 flex-1">
                               <EditableText
                                 value={m.title}
@@ -337,14 +336,14 @@ export function RoadmapPreview({
             <button
               onClick={onEdit}
               disabled={isSaving}
-              className="px-4 py-2.5 text-sm font-medium text-[#6F6A64] hover:text-[#2B2B2B] hover:bg-[#F1ECE4] rounded-lg transition-colors disabled:opacity-50"
+              className="px-4 py-2.5 text-sm font-medium text-[#6F6A64] hover:text-[#2B2B2B] hover:bg-[#F6F3EE] rounded-lg transition-colors disabled:opacity-50"
             >
               {t("continueEditing")}
             </button>
             <button
               onClick={() => onConfirm(edited)}
               disabled={isSaving}
-              className="flex items-center gap-2 bg-[#007AFF] text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-50"
+              className="flex items-center gap-2 bg-[#7C2DE8] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-[#6921C7] active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
               {isSaving ? t("creating") : t("confirm")}

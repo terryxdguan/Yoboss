@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Check, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
+import { Wordmark } from "@/components/brand/wordmark";
 import { getBillingState } from "@/lib/db/actions";
 
 type TierId = "free" | "basic" | "pro";
@@ -187,10 +188,10 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F3EE]">
+    <div className="min-h-screen bg-[#FDFAF6]">
       <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold tracking-tighter text-[#2B2B2B]">
-          YoBoss
+        <Link href="/" aria-label="YoBoss home" className="hover:opacity-80 transition-opacity">
+          <Wordmark className="h-7" />
         </Link>
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
@@ -205,7 +206,7 @@ export default function PricingPage() {
           ) : (
             <Link
               href="/"
-              className="text-sm text-[#007AFF] hover:text-[#0066D6] font-semibold"
+              className="text-sm text-[#7C2DE8] hover:text-[#6921C7] font-semibold"
             >
               {t("signupArrow")}
             </Link>
@@ -228,19 +229,19 @@ export default function PricingPage() {
                 key={tier.id}
                 className={`rounded-2xl border p-8 relative ${
                   isCurrent
-                    ? "border-[#7FB38A] bg-[#F3F8F3]"
+                    ? "border-[#C9A8F7] bg-[#F8F4FE]"
                     : tier.highlight
-                    ? "border-[#007AFF] bg-[#E6F2FF] shadow-lg"
-                    : "border-[#E7DED2] bg-[#FFFDF9]"
+                    ? "border-[#7C2DE8] bg-[#F3ECFB] shadow-lg"
+                    : "border-[#E7DED2] bg-[#FFFFFF]"
                 }`}
               >
                 {isCurrent && (
-                  <span className="absolute -top-3 left-6 inline-block text-xs font-semibold text-white bg-[#7FB38A] px-2 py-0.5 rounded-full">
+                  <span className="absolute -top-3 left-6 inline-block text-[10px] font-bold tracking-[0.12em] uppercase text-white bg-[#7C2DE8] px-2.5 py-1 rounded-full shadow-brand">
                     {t("currentPlan")}
                   </span>
                 )}
                 {!isCurrent && tier.highlight && (
-                  <span className="inline-block text-xs font-semibold text-white bg-[#007AFF] px-2 py-0.5 rounded-full mb-3">
+                  <span className="inline-block text-xs font-semibold text-white bg-[#7C2DE8] px-2 py-0.5 rounded-full mb-3">
                     {t("mostPopular")}
                   </span>
                 )}
@@ -261,7 +262,7 @@ export default function PricingPage() {
                 {cta.href ? (
                   <Link
                     href={cta.href}
-                    className="block text-center w-full py-2.5 rounded-lg font-semibold text-sm transition-colors bg-[#007AFF] text-white hover:bg-[#0066D6]"
+                    className="block text-center w-full py-2.5 rounded-lg font-semibold text-sm transition-colors bg-[#7C2DE8] text-white hover:bg-[#6921C7]"
                   >
                     {cta.label}
                   </Link>
@@ -271,8 +272,8 @@ export default function PricingPage() {
                     disabled={cta.disabled}
                     className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
                       cta.disabled
-                        ? "bg-[#F1ECE4] text-[#9B948B] cursor-not-allowed"
-                        : "bg-[#007AFF] text-white hover:bg-[#0066D6]"
+                        ? "bg-[#F6F3EE] text-[#9B948B] cursor-not-allowed"
+                        : "bg-[#7C2DE8] text-white hover:bg-[#6921C7]"
                     }`}
                   >
                     {cta.label}
@@ -285,13 +286,13 @@ export default function PricingPage() {
 
         <div className="border-t border-[#E7DED2] pt-12">
           <div className="flex items-center gap-2 mb-2 justify-center">
-            <Zap className="h-5 w-5 text-[#007AFF]" />
+            <Zap className="h-5 w-5 text-[#7C2DE8]" />
             <h2 className="text-2xl font-bold text-[#2B2B2B]">{t("creditsTitle")}</h2>
           </div>
           <p className="text-center text-sm text-[#6F6A64] mb-8">{t("creditsSubtitle")}</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {CREDIT_PACKS.map((pack) => (
-              <div key={pack.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6 text-center">
+              <div key={pack.id} className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-6 text-center">
                 <h3 className="text-lg font-bold text-[#2B2B2B]">{t(pack.nameKey)}</h3>
                 <div className="text-3xl font-bold my-2">{pack.price}</div>
                 <p className="text-sm text-[#7FB38A] font-semibold">{t("packCredits", { amount: pack.creditsAmount })}</p>
@@ -302,14 +303,14 @@ export default function PricingPage() {
                   <button
                     onClick={() => startCheckout("credits", pack.id)}
                     disabled={loading === pack.id}
-                    className="mt-4 w-full py-2 rounded-lg bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6]"
+                    className="mt-4 w-full py-2 rounded-lg bg-[#7C2DE8] text-white text-sm font-semibold hover:bg-[#6921C7]"
                   >
                     {loading === pack.id ? tCommon("loading") : t("buy")}
                   </button>
                 ) : (
                   <Link
                     href="/"
-                    className="block text-center mt-4 w-full py-2 rounded-lg bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6]"
+                    className="block text-center mt-4 w-full py-2 rounded-lg bg-[#7C2DE8] text-white text-sm font-semibold hover:bg-[#6921C7]"
                   >
                     {t("signupToBuy")}
                   </Link>

@@ -391,7 +391,7 @@ export default function GoalDetailPage() {
         <p className="text-[#6F6A64]">{t("notFound")}</p>
         <button
           onClick={() => router.push("/goals")}
-          className="text-sm text-[#007AFF] mt-2 hover:underline"
+          className="text-sm text-[#7C2DE8] mt-2 hover:underline"
         >
           {t("back")}
         </button>
@@ -440,12 +440,12 @@ export default function GoalDetailPage() {
             buttons (instead of being squeezed into a narrow left column). */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold text-[#2B2B2B]">
+            <h1 className="font-display text-3xl font-bold tracking-[-0.022em] text-[#1A1829]">
               <EditableText
                 value={goal.title}
                 onSave={(next) => handleSaveGoalField("title", next)}
                 placeholder={t("titlePlaceholder")}
-                className="text-2xl font-semibold text-[#2B2B2B]"
+                className="font-display text-3xl font-bold tracking-[-0.022em] text-[#1A1829]"
               />
             </h1>
             {(() => {
@@ -478,10 +478,10 @@ export default function GoalDetailPage() {
                   key={key}
                   type="button"
                   onClick={() => togglePanel(key)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-semibold active:scale-95 transition-all whitespace-nowrap shadow-[0_2px_8px_rgba(0,122,255,0.25)] ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-semibold active:scale-95 transition-all whitespace-nowrap shadow-[0_2px_8px_rgba(124,45,232,0.25)] ${
                     active
-                      ? "bg-[#0052B0] ring-2 ring-[#007AFF]/40 ring-offset-2 ring-offset-[#FFFDF9]"
-                      : "bg-[#007AFF] hover:bg-[#0066D6]"
+                      ? "bg-[#0052B0] ring-2 ring-[#7C2DE8]/40 ring-offset-2 ring-offset-[#FFFFFF]"
+                      : "bg-[#7C2DE8] hover:bg-[#6921C7]"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -510,10 +510,10 @@ export default function GoalDetailPage() {
         <div className="mb-6 relative">
           <div
             aria-hidden
-            className="pointer-events-none absolute -inset-1 animate-glow-pulse rounded-2xl bg-[#007AFF] opacity-50 blur-xl"
+            className="pointer-events-none absolute -inset-2 animate-glow-pulse rounded-3xl bg-[#C9A8F7] blur-2xl"
           />
-          <div className="relative rounded-2xl border-2 border-[#007AFF] bg-[#FFFDF9] p-8 text-center shadow-[0_8px_28px_rgba(0,122,255,0.18)]">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E6F2FF] text-[#007AFF] text-[11px] font-semibold uppercase tracking-wider mb-3">
+          <div className="relative rounded-2xl border border-[#C9A8F7] bg-[#FFFFFF] p-8 text-center shadow-[0_8px_28px_rgba(124,45,232,0.10)]">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F3ECFB] text-[#7C2DE8] text-[11px] font-semibold uppercase tracking-wider mb-3">
               <Sparkles className="h-3 w-3" />
               {t("nextStep")}
             </div>
@@ -523,7 +523,7 @@ export default function GoalDetailPage() {
             </p>
             <button
               onClick={() => setShowWeeklyWizard(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,122,255,0.35)]"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7C2DE8] text-white text-sm font-semibold hover:bg-[#6921C7] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(124,45,232,0.35)]"
             >
               <Sparkles className="h-4 w-4" />
               {t("generateCta")}
@@ -536,7 +536,7 @@ export default function GoalDetailPage() {
       {hasTasks && (
         <div className="mb-6">
           <h2 className="text-base font-semibold text-[#2B2B2B] mb-4">{t("thisWeek")}</h2>
-          <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+          <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
             <div className="h-2 bg-[#E7DED2] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#7FB38A] rounded-full transition-all duration-500"
@@ -566,7 +566,7 @@ export default function GoalDetailPage() {
           {!hasTasks ? (
             <button
               onClick={() => setShowAllPhases((v) => !v)}
-              className="text-xs text-[#007AFF] font-medium hover:underline"
+              className="text-xs text-[#7C2DE8] font-medium hover:underline"
             >
               {showAllPhases ? "Show current phase only" : `Show all ${phases.length} phases`}
             </button>
@@ -576,7 +576,7 @@ export default function GoalDetailPage() {
         </div>
 
         {!hasTasks && !showAllPhases ? (
-          <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+          <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
             <div className="flex items-center pb-5 px-1">
               {phases.map((phase, idx) => {
                 const color = PHASE_COLORS[idx % PHASE_COLORS.length];
@@ -673,7 +673,7 @@ export default function GoalDetailPage() {
           {/* Left rail card */}
           <div
             ref={railRef}
-            className="space-y-2.5 rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-3 shadow-[0_2px_8px_rgba(30,34,39,0.04)]"
+            className="space-y-2.5 rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] p-3 shadow-[0_2px_8px_rgba(30,34,39,0.04)]"
           >
             {phases.map((phase, idx) => {
               const color = PHASE_COLORS[idx % PHASE_COLORS.length];
@@ -690,8 +690,8 @@ export default function GoalDetailPage() {
                   onClick={() => setSelectedPhaseId(phase.id)}
                   className={`flex w-full gap-3 rounded-xl border p-3 text-left transition-colors ${
                     isSelected
-                      ? "border-[#007AFF] bg-[#F8FBFF] shadow-[0_2px_10px_rgba(0,122,255,0.18)]"
-                      : "border-[#E7DED2] bg-[#FFFDF9] hover:border-[#DDD3C7] hover:bg-[#F8F5EF]"
+                      ? "border-[#7C2DE8] bg-[#F3ECFB] shadow-[0_2px_10px_rgba(124,45,232,0.18)]"
+                      : "border-[#E7DED2] bg-[#FFFFFF] hover:border-[#DDD3C7] hover:bg-[#F8F5EF]"
                   }`}
                 >
                   {/* Colored number badge */}
@@ -715,7 +715,7 @@ export default function GoalDetailPage() {
                       <Clock className="h-3 w-3" />
                       {phase.estimated_weeks} week{phase.estimated_weeks !== 1 ? "s" : ""}
                       {isActive && (
-                        <span className="font-semibold text-[#007AFF]">· You are here</span>
+                        <span className="font-semibold text-[#7C2DE8]">· You are here</span>
                       )}
                     </div>
                   </div>
@@ -725,7 +725,7 @@ export default function GoalDetailPage() {
           </div>
 
           {/* Right pane card */}
-          <div className="relative min-w-0 rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+          <div className="relative min-w-0 rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] p-5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
             {/* Tail pointer — diamond rotated 45°, only the bottom-left
                 edges are visible to form a left-pointing triangle that
                 "punches through" the card's left border at the same Y as
@@ -736,7 +736,7 @@ export default function GoalDetailPage() {
                 className="pointer-events-none absolute hidden lg:block"
                 style={{ top: `${tailTop - 8}px`, left: "-8px" }}
               >
-                <div className="h-4 w-4 rotate-45 border-b border-l border-[#E7DED2] bg-[#FFFDF9]" />
+                <div className="h-4 w-4 rotate-45 border-b border-l border-[#E7DED2] bg-[#FFFFFF]" />
               </div>
             )}
 
@@ -796,12 +796,12 @@ export default function GoalDetailPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-[#007AFF]" />
+              <Calendar className="h-4 w-4 text-[#7C2DE8]" />
               <h2 className="text-base font-semibold text-[#2B2B2B]">{t("weeklySchedule")}</h2>
             </div>
             <button
               onClick={() => setShowWeeklyWizard(true)}
-              className="flex items-center gap-1.5 text-xs text-[#007AFF] font-medium hover:underline"
+              className="flex items-center gap-1.5 text-xs text-[#7C2DE8] font-medium hover:underline"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Regenerate
@@ -913,7 +913,7 @@ export default function GoalDetailPage() {
 // Per-phase color used by the roadmap left rail. Cycles by index so any
 // number of phases gets a distinct hue without hand-coding per name.
 const PHASE_COLORS: { bg: string }[] = [
-  { bg: "#007AFF" }, // blue
+  { bg: "#7C2DE8" }, // blue
   { bg: "#C9A968" }, // gold
   { bg: "#9CC4A4" }, // green
   { bg: "#9B6B5C" }, // brown
@@ -978,7 +978,7 @@ function PhaseMilestoneList({
                 key={m.id}
                 className="group flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[#F8F5EF]"
               >
-                <Flag className="mt-1 h-4 w-4 shrink-0 text-[#007AFF]" />
+                <Flag className="mt-1 h-4 w-4 shrink-0 text-[#7C2DE8]" />
                 <div className="min-w-0 flex-1">
                   <EditableText
                     value={m.title}
@@ -1023,7 +1023,7 @@ function PhaseMilestoneList({
 
       {adding ? (
         <div className="flex items-start gap-2.5 rounded-lg px-2 py-1.5">
-          <Flag className="mt-1 h-4 w-4 shrink-0 text-[#007AFF]" />
+          <Flag className="mt-1 h-4 w-4 shrink-0 text-[#7C2DE8]" />
           <input
             ref={inputRef}
             type="text"
@@ -1046,7 +1046,7 @@ function PhaseMilestoneList({
               setDraft("");
             }}
             placeholder={t("newMilestonePlaceholder")}
-            className="min-w-0 flex-1 rounded-md border border-[#007AFF] bg-[#FFFDF9] px-2 py-1 text-sm text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+            className="min-w-0 flex-1 rounded-md border border-[#7C2DE8] bg-[#FFFFFF] px-2 py-1 text-sm text-[#2B2B2B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/30"
           />
         </div>
       ) : (
@@ -1089,7 +1089,7 @@ function DayCard({
   const allDone = tasks.length > 0 && completedCount === tasks.length;
 
   return (
-    <div className="break-inside-avoid mb-3 rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-2.5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
+    <div className="break-inside-avoid mb-3 rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-2.5 shadow-[0_2px_8px_rgba(30,34,39,0.04)]">
       <div className="flex flex-col gap-2">
       {/* Pastel header band — mirrors ToDos column-header pill. Today is
           marked by a bold "(Today)" suffix instead of a blue ring so the
@@ -1173,7 +1173,7 @@ function TaskItem({
   };
 
   return (
-    <div className="group/item rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-2 hover:border-[#DDD3C7] transition-colors">
+    <div className="group/item rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-2 hover:border-[#DDD3C7] transition-colors">
       {/* Single-row layout: checkbox · time · title · ▶ · ✕. Title gets
           flex-1 + min-w-0 so it's the only element that wraps when long;
           everything else stays on the first line, with action buttons
@@ -1186,7 +1186,7 @@ function TaskItem({
           {task.completed ? (
             <CheckCircle2 className="h-4 w-4 text-[#7FB38A] fill-[#7FB38A] stroke-white" />
           ) : (
-            <Circle className="h-4 w-4 text-[#9B948B] group-hover/item:text-[#007AFF] transition-colors" />
+            <Circle className="h-4 w-4 text-[#9B948B] group-hover/item:text-[#7C2DE8] transition-colors" />
           )}
         </button>
 
@@ -1198,7 +1198,7 @@ function TaskItem({
             onChange={(e) => setTimeDraft(e.target.value)}
             onBlur={commitTime}
             onKeyDown={(e) => { if (e.key === "Enter") commitTime(); if (e.key === "Escape") { setTimeDraft(task.time_slot || ""); setEditingTime(false); } }}
-            className="shrink-0 w-32 text-sm text-[#9B948B] bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1 py-0.5 outline-none"
+            className="shrink-0 w-32 text-sm text-[#9B948B] bg-[#FFFFFF] border border-[#7C2DE8]/40 rounded px-1 py-0.5 outline-none"
           />
         ) : (
           task.time_slot && (
@@ -1220,7 +1220,7 @@ function TaskItem({
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setTitleDraft(task.title); setEditingTitle(false); } }}
-              className="text-sm text-[#2B2B2B] bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1 py-0.5 outline-none w-full"
+              className="text-sm text-[#2B2B2B] bg-[#FFFFFF] border border-[#7C2DE8]/40 rounded px-1 py-0.5 outline-none w-full"
             />
           ) : (
             <p
@@ -1240,7 +1240,7 @@ function TaskItem({
             call-to-action reads at a glance. */}
         <button
           onClick={(e) => { e.stopPropagation(); onAskAI(task); }}
-          className="shrink-0 mt-0.5 flex items-center gap-1 text-[#007AFF] hover:text-[#0066D6] text-[13px] font-medium transition-colors"
+          className="shrink-0 mt-0.5 flex items-center gap-1 text-[#7C2DE8] hover:text-[#6921C7] text-[13px] font-medium transition-colors"
           title={t("sendToTeam")}
         >
           Start

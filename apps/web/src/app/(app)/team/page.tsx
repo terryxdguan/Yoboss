@@ -43,12 +43,12 @@ function AgentRow({
   const [confirmFire, setConfirmFire] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFDF9] shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden">
+    <div className="rounded-2xl border border-[#E7DED2] bg-[#FFFFFF] shadow-[0_2px_8px_rgba(30,34,39,0.04)] overflow-hidden">
       <div className="flex items-stretch">
         {/* Avatar — fixed square, object-fit cover */}
         <div
           onClick={onChat}
-          className="w-36 shrink-0 bg-[#F1ECE4] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
+          className="w-36 shrink-0 bg-[#F6F3EE] relative overflow-hidden cursor-pointer hover:brightness-95 transition-all"
           title={t("chatWith", { name: agent.label })}
         >
           <Image
@@ -67,7 +67,7 @@ function AgentRow({
             <div className="flex items-center gap-2">
               {/* Only show name for the first default agent (Eve) */}
               <h2 className="text-sm font-semibold text-[#2B2B2B]">{agent.label}</h2>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#007AFF]/10 text-[#007AFF]">
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7C2DE8]/10 text-[#7C2DE8]">
                 {CATEGORY_LABELS[agent.category]}
               </span>
             </div>
@@ -104,7 +104,7 @@ function AgentRow({
             <p className="text-xs text-[#6F6A64] flex-1">{agent.description}</p>
             <button
               onClick={() => setShowExpertise(!showExpertise)}
-              className="shrink-0 flex items-center gap-0.5 text-[11px] text-[#007AFF] hover:underline mt-0.5"
+              className="shrink-0 flex items-center gap-0.5 text-[11px] text-[#7C2DE8] hover:underline mt-0.5"
             >
               {t("expertise")}
               {showExpertise ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -202,7 +202,7 @@ export default function TeamPage() {
         </div>
         <button
           onClick={() => router.push("/team/market")}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-medium hover:bg-[#0066D6] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#7C2DE8] text-white text-sm font-medium hover:bg-[#6921C7] active:scale-[0.98] transition-all"
         >
           <Plus className="h-4 w-4" />
           {t("hire")}

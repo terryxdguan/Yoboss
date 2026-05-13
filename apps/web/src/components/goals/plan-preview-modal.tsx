@@ -69,11 +69,11 @@ export function PlanPreviewModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
-      <div className="relative bg-[#FFFDF9] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="relative bg-[#FFFFFF] rounded-2xl shadow-[0_24px_64px_rgba(30,34,39,0.15)] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         <div className="px-6 pt-6 pb-4 border-b border-[#E7DED2]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#007AFF]/10">
-              <Calendar className="h-5 w-5 text-[#007AFF]" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#7C2DE8]/10">
+              <Calendar className="h-5 w-5 text-[#7C2DE8]" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-[#2B2B2B]">{t("title")}</h2>
@@ -98,7 +98,7 @@ export function PlanPreviewModal({
             realize the modal is editable. Single-line, no dismissal.
             Uses the brand action blue + medium weight (not the soft
             #7FAEE6) so it reads as instruction, not decorative caption. */}
-        <div className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#007AFF] bg-[#E6F2FF] border-b border-[#BDD8F2]">
+        <div className="flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#7C2DE8] bg-[#F3ECFB] border-b border-[#BDD8F2]">
           <Pencil className="h-4 w-4 shrink-0" />
           <span>{t("editHint")}</span>
         </div>
@@ -162,7 +162,7 @@ export function PlanPreviewModal({
           <button
             onClick={onEdit}
             disabled={isSaving}
-            className="flex items-center justify-center gap-2 text-sm font-medium py-3 px-5 rounded-xl border border-[#DDD3C7] text-[#6F6A64] hover:bg-[#F1ECE4] active:scale-[0.98] transition-all disabled:opacity-50"
+            className="flex items-center justify-center gap-2 text-sm font-medium py-3 px-5 rounded-xl border border-[#DDD3C7] text-[#6F6A64] hover:bg-[#F6F3EE] active:scale-[0.98] transition-all disabled:opacity-50"
           >
             <Pencil className="h-3.5 w-3.5" />
             {t("adjust")}

@@ -75,9 +75,9 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {/* Goals */}
-        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
+        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
+            <span className="rounded-lg bg-[#F3ECFB] p-1.5 text-[#7C2DE8]">
               <Flag className="h-4 w-4" />
             </span>
             <span className="text-[10px] font-semibold text-[#7FB38A] bg-[rgba(77,139,106,0.10)] px-2 py-0.5 rounded-full">
@@ -87,7 +87,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
             {t("goals")}
           </p>
-          <h3 className="text-2xl font-semibold text-[#2B2B2B]">
+          <h3 className="font-display text-2xl font-bold text-[#1A1829] tracking-[-0.015em]">
             {stats.activeGoals}
           </h3>
           <p className="text-xs text-[#6F6A64]">
@@ -96,19 +96,19 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
         </div>
 
         {/* To-Dos */}
-        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
+        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
+            <span className="rounded-lg bg-[#F3ECFB] p-1.5 text-[#7C2DE8]">
               <ListChecks className="h-4 w-4" />
             </span>
-            <span className="text-[10px] font-semibold text-[#007AFF] bg-[#E6F2FF] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold text-[#7C2DE8] bg-[#F3ECFB] px-2 py-0.5 rounded-full">
               {t("todosPending")}
             </span>
           </div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
             {t("todos")}
           </p>
-          <h3 className="text-2xl font-semibold text-[#2B2B2B]">
+          <h3 className="font-display text-2xl font-bold text-[#1A1829] tracking-[-0.015em]">
             {totalPendingTodos}
           </h3>
           <div className="flex items-center gap-3 text-xs text-[#6F6A64]">
@@ -119,9 +119,9 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
         </div>
 
         {/* Workflows */}
-        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
+        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
+            <span className="rounded-lg bg-[#F3ECFB] p-1.5 text-[#7C2DE8]">
               <RefreshCw className="h-4 w-4" />
             </span>
             <button
@@ -129,7 +129,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
               className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors hover:opacity-80"
               style={{
                 color: stats.todayRunCount > 0 ? "#7FB38A" : "#6F6A64",
-                backgroundColor: stats.todayRunCount > 0 ? "rgba(77,139,106,0.10)" : "#F1ECE4",
+                backgroundColor: stats.todayRunCount > 0 ? "rgba(77,139,106,0.10)" : "#F6F3EE",
               }}
             >
               {t("workflowsRunsToday", { count: stats.todayRunCount })}
@@ -141,26 +141,26 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
             {t("workflows")}
           </p>
-          <h3 className="text-2xl font-semibold text-[#2B2B2B]">
+          <h3 className="font-display text-2xl font-bold text-[#1A1829] tracking-[-0.015em]">
             {stats.totalWorkflows}
           </h3>
           <p className="text-xs text-[#6F6A64]">{t("workflowsTotal")}</p>
         </div>
 
         {/* Team */}
-        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
+        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] px-4 py-3.5 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="rounded-lg bg-[#E6F2FF] p-1.5 text-[#007AFF]">
+            <span className="rounded-lg bg-[#F3ECFB] p-1.5 text-[#7C2DE8]">
               <Users className="h-4 w-4" />
             </span>
-            <span className="text-[10px] font-semibold text-[#6F6A64] bg-[#F1ECE4] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold text-[#6F6A64] bg-[#F6F3EE] px-2 py-0.5 rounded-full">
               {t("teamActive")}
             </span>
           </div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#9B948B] font-semibold">
             {t("team")}
           </p>
-          <h3 className="text-2xl font-semibold text-[#2B2B2B]">
+          <h3 className="font-display text-2xl font-bold text-[#1A1829] tracking-[-0.015em]">
             {teamCount}
           </h3>
           <p className="text-xs text-[#6F6A64]">{t("teamMembers")}</p>
@@ -169,7 +169,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
 
       {/* Expandable today's workflow runs */}
       {showRuns && (
-        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
+        <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-4 shadow-[0_4px_12px_rgba(30,34,39,0.04)]">
           <h3 className="text-sm font-semibold text-[#2B2B2B] mb-2">{t("todaysRuns")}</h3>
           {stats.todayRuns.length === 0 ? (
             <p className="text-xs text-[#9B948B] py-3 text-center">{t("noRunsToday")}</p>
@@ -184,7 +184,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                     className={`h-2 w-2 rounded-full shrink-0 ${
                       run.status === "success" ? "bg-[#7FB38A]" :
                       run.status === "failed" ? "bg-[#D5847A]" :
-                      "bg-[#007AFF]"
+                      "bg-[#7C2DE8]"
                     }`}
                   />
                   <span className="text-sm font-medium text-[#2B2B2B] flex-1 truncate">
@@ -195,7 +195,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                   <button
                     onClick={() => handleViewDetails(run.id, run.workflowId)}
                     disabled={loadingRunId === run.id}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#E6F2FF] transition-colors shrink-0 disabled:opacity-50"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#7C2DE8] hover:bg-[#F3ECFB] transition-colors shrink-0 disabled:opacity-50"
                   >
                     {t("viewDetail")}
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -204,7 +204,7 @@ export function DashboardStats({ stats, workflows }: DashboardStatsProps) {
                     <button
                       onClick={() => handleDeliverables(run.id)}
                       disabled={loadingRunId === run.id}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F1ECE4] transition-colors shrink-0 disabled:opacity-50"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#6F6A64] hover:bg-[#F6F3EE] transition-colors shrink-0 disabled:opacity-50"
                     >
                       <Package className="h-3.5 w-3.5" />
                       {t("deliverables")}

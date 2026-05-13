@@ -137,7 +137,7 @@ export default async function AdminFeedbackPage({
               className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                 active
                   ? "border-[#2B2B2B] bg-[#2B2B2B] text-white"
-                  : "border-[#E7DED2] bg-[#FFFDF9] text-[#2B2B2B] hover:bg-[#F1ECE4]"
+                  : "border-[#E7DED2] bg-[#FFFFFF] text-[#2B2B2B] hover:bg-[#F6F3EE]"
               }`}
             >
               {label}
@@ -152,7 +152,7 @@ export default async function AdminFeedbackPage({
           {(rows as FeedbackRow[]).map((row) => (
             <div
               key={row.id}
-              className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-4"
+              className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-4"
             >
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -189,7 +189,7 @@ export default async function AdminFeedbackPage({
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFDF9] p-8 text-center">
+        <div className="rounded-xl border border-dashed border-[#E7DED2] bg-[#FFFFFF] p-8 text-center">
           <p className="text-sm text-[#6F6A64]">No feedback yet.</p>
         </div>
       )}
@@ -200,7 +200,7 @@ export default async function AdminFeedbackPage({
           <Link
             href={pageHref(Math.max(1, page - 1))}
             aria-disabled={page <= 1}
-            className={`inline-flex items-center gap-1 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-1.5 text-xs font-semibold text-[#2B2B2B] transition-colors hover:bg-[#F1ECE4] ${
+            className={`inline-flex items-center gap-1 rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-1.5 text-xs font-semibold text-[#2B2B2B] transition-colors hover:bg-[#F6F3EE] ${
               page <= 1 ? "pointer-events-none opacity-40" : ""
             }`}
           >
@@ -212,7 +212,7 @@ export default async function AdminFeedbackPage({
           <Link
             href={pageHref(Math.min(totalPages, page + 1))}
             aria-disabled={page >= totalPages}
-            className={`inline-flex items-center gap-1 rounded-lg border border-[#E7DED2] bg-[#FFFDF9] px-3 py-1.5 text-xs font-semibold text-[#2B2B2B] transition-colors hover:bg-[#F1ECE4] ${
+            className={`inline-flex items-center gap-1 rounded-lg border border-[#E7DED2] bg-[#FFFFFF] px-3 py-1.5 text-xs font-semibold text-[#2B2B2B] transition-colors hover:bg-[#F6F3EE] ${
               page >= totalPages ? "pointer-events-none opacity-40" : ""
             }`}
           >

@@ -606,7 +606,7 @@ export default function AgentChatPage() {
     return (
       <div className="text-center py-24">
         <p className="text-[#6F6A64]">{t("notFound")}</p>
-        <button onClick={() => router.push("/team")} className="text-sm text-[#007AFF] mt-2 hover:underline">
+        <button onClick={() => router.push("/team")} className="text-sm text-[#7C2DE8] mt-2 hover:underline">
           {t("back")}
         </button>
       </div>
@@ -646,7 +646,7 @@ export default function AgentChatPage() {
         <div className="px-3 py-2">
           <button
             onClick={handleNewSession}
-            className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#007AFF] hover:bg-[#007AFF]/5 transition-colors"
+            className="w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#7C2DE8] hover:bg-[#7C2DE8]/5 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             {t("newChat")}
@@ -663,7 +663,7 @@ export default function AgentChatPage() {
                 key={session.id}
                 className={`group relative flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer mb-0.5 transition-colors ${
                   activeSessionId === session.id
-                    ? "bg-[#007AFF]/10 text-[#2B2B2B]"
+                    ? "bg-[#7C2DE8]/10 text-[#2B2B2B]"
                     : "text-[#6F6A64] hover:bg-[#E7DED2]/50"
                 }`}
                 onClick={() => setActiveSessionId(session.id)}
@@ -676,7 +676,7 @@ export default function AgentChatPage() {
                     onChange={(e) => setEditTitleText(e.target.value)}
                     onBlur={() => handleTitleSave(session.id)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleTitleSave(session.id); if (e.key === "Escape") setEditingTitleId(null); }}
-                    className="flex-1 min-w-0 text-sm bg-[#FFFDF9] border border-[#007AFF]/40 rounded px-1.5 py-1 outline-none"
+                    className="flex-1 min-w-0 text-sm bg-[#FFFFFF] border border-[#7C2DE8]/40 rounded px-1.5 py-1 outline-none"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
@@ -750,7 +750,7 @@ export default function AgentChatPage() {
       {/* Right pane — chat OR deliverables, depending on which view the
           three-dot menu put us in. Both share the wrapper so the page
           frame stays put as the user toggles between them. */}
-      <div className="flex-1 flex flex-col bg-[#FFFDF9] min-w-0">
+      <div className="flex-1 flex flex-col bg-[#FFFFFF] min-w-0">
         {rightView === "deliverables" ? (
           <DeliverablesView
             title={sessions.find((s) => s.id === activeSessionId)?.title || displayName}
@@ -774,7 +774,7 @@ export default function AgentChatPage() {
             <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm ${
                 msg.role === "user"
-                  ? "bg-[#007AFF] text-white"
+                  ? "bg-[#7C2DE8] text-white"
                   : "bg-[#F6F3EE] border border-[#E7DED2] text-[#2B2B2B]"
               }`}>
                 {/* Agent name + timer for assistant messages */}
@@ -790,11 +790,11 @@ export default function AgentChatPage() {
                     {msg.toolActivity.map((tool, i) => {
                       const isLatest = isStreaming && msg === messages[messages.length - 1] && i === msg.toolActivity!.length - 1;
                       return (
-                        <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#007AFF]/10 text-[#007AFF]" : "bg-[#F1ECE4] text-[#6F6A64]"}`}>
+                        <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${isLatest ? "bg-[#7C2DE8]/10 text-[#7C2DE8]" : "bg-[#F6F3EE] text-[#6F6A64]"}`}>
                           {isLatest && (
                             <span className="relative flex h-2 w-2 shrink-0">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#007AFF] opacity-75" />
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#007AFF]" />
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C2DE8] opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7C2DE8]" />
                             </span>
                           )}
                           {tool.type === "web_search" || tool.type === "web_fetch" ? (
@@ -815,8 +815,8 @@ export default function AgentChatPage() {
                       att.type === "image" && att.preview ? (
                         <img key={i} src={att.preview} alt="attachment" className="rounded-lg max-h-32 max-w-full object-cover" />
                       ) : (
-                        <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F1ECE4] text-[10px] text-[#6F6A64]">
-                          <FileText className="h-3 w-3 text-[#007AFF]" />
+                        <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#F6F3EE] text-[10px] text-[#6F6A64]">
+                          <FileText className="h-3 w-3 text-[#7C2DE8]" />
                           {att.filename}
                         </div>
                       )
@@ -858,7 +858,7 @@ export default function AgentChatPage() {
                         key={i}
                         href={f.isDataUri ? f.fileId : `/api/ai/files/${f.fileId}`}
                         download={f.filename}
-                        className="flex items-center gap-2 text-xs text-[#007AFF] hover:underline"
+                        className="flex items-center gap-2 text-xs text-[#7C2DE8] hover:underline"
                       >
                         <Download className="h-3.5 w-3.5" />
                         {f.filename}
@@ -915,7 +915,7 @@ export default function AgentChatPage() {
           </div>
 
           <div
-            className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] focus-within:ring-2 focus-within:ring-[#007AFF]/30 focus-within:border-[#007AFF]/50 transition-all flex flex-col"
+            className="rounded-xl border border-[#DDD3C7] bg-[#F6F3EE] focus-within:ring-2 focus-within:ring-[#7C2DE8]/30 focus-within:border-[#7C2DE8]/50 transition-all flex flex-col"
             style={{ height: inputHeight }}
           >
             {/* Pending attachments */}
@@ -927,7 +927,7 @@ export default function AgentChatPage() {
                       <img src={att.preview} alt="" className="h-16 rounded-lg border border-[#E7DED2] object-cover" />
                     ) : (
                       <div className="h-16 px-3 rounded-lg border border-[#E7DED2] bg-[#F6F3EE] flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
+                        <FileText className="h-4 w-4 text-[#7C2DE8] shrink-0" />
                         <span className="text-[10px] text-[#6F6A64] max-w-[100px] truncate">{att.filename}</span>
                       </div>
                     )}
@@ -960,7 +960,7 @@ export default function AgentChatPage() {
             <div className="flex items-center justify-between px-3 pb-2 shrink-0">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-md text-[#9B948B] hover:text-[#007AFF] hover:bg-[#E7DED2] transition-colors"
+                className="p-1.5 rounded-md text-[#9B948B] hover:text-[#7C2DE8] hover:bg-[#E7DED2] transition-colors"
                 title={t("attachFile")}
               >
                 <Paperclip className="h-4 w-4" />
@@ -969,7 +969,7 @@ export default function AgentChatPage() {
               <button
                 onClick={handleSend}
                 disabled={(!inputText.trim() && pendingAttachments.length === 0) || isStreaming}
-                className="px-4 py-1.5 rounded-lg bg-[#007AFF] text-white text-xs font-medium hover:bg-[#0066D6] active:scale-[0.97] transition-all disabled:opacity-40"
+                className="px-4 py-1.5 rounded-xl bg-[#7C2DE8] text-white text-xs font-medium hover:bg-[#6921C7] active:scale-[0.97] transition-all disabled:opacity-40"
               >
                 {t("send")}
               </button>
@@ -1000,13 +1000,13 @@ function DeliverablesView({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between h-14 px-6 border-b border-[#E7DED2] shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <FolderOpen className="h-4 w-4 text-[#007AFF] shrink-0" />
+          <FolderOpen className="h-4 w-4 text-[#7C2DE8] shrink-0" />
           <span className="text-sm font-semibold text-[#2B2B2B] truncate">{title}</span>
         </div>
         <button
           type="button"
           onClick={onBackToChat}
-          className="text-xs text-[#007AFF] hover:underline font-medium"
+          className="text-xs text-[#7C2DE8] hover:underline font-medium"
         >
           ← {backLabel}
         </button>

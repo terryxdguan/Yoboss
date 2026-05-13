@@ -135,15 +135,15 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#FFFDF9] border border-[#DDD3C7] rounded-xl shadow-[0_8px_32px_rgba(30,34,39,0.15)] p-3 select-none"
+      className="absolute left-0 top-[calc(100%+4px)] z-50 bg-[#FFFFFF] border border-[#DDD3C7] rounded-xl shadow-[0_8px_32px_rgba(30,34,39,0.15)] p-3 select-none"
       style={{ width: 300 }}
     >
       {/* Calendar */}
       <div className="mb-2">
         <div className="flex items-center justify-between mb-2">
-          <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1ECE4] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">◀</button>
+          <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-[#F6F3EE] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">◀</button>
           <span className="text-sm font-semibold text-[#2B2B2B]">{tMonths(MONTH_KEYS[month])} {year}</span>
-          <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-[#F1ECE4] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">▶</button>
+          <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-[#F6F3EE] text-[#9B948B] hover:text-[#2B2B2B] flex items-center justify-center text-sm">▶</button>
         </div>
 
         <div className="grid grid-cols-7 gap-px mb-1">
@@ -162,8 +162,8 @@ export function DateTimePicker({ value, onChange, onClose }: Props) {
                 d === null
                   ? ""
                   : d === day
-                    ? "bg-[#007AFF] text-white font-bold"
-                    : "text-[#2B2B2B] hover:bg-[#F1ECE4]"
+                    ? "bg-[#7C2DE8] text-white font-bold"
+                    : "text-[#2B2B2B] hover:bg-[#F6F3EE]"
               }`}
             >
               {d ?? ""}
@@ -217,7 +217,7 @@ function TimeControls({
               if (!isNaN(v) && v >= 1 && v <= 12) setHour12(v);
               else if (e.target.value === "" || e.target.value === "0") setHour12(12);
             }}
-            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#007AFF]"
+            className="w-9 h-7 rounded bg-[#F6F3EE] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7C2DE8]"
           />
           <button {...hourDown} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▼</button>
         </div>
@@ -234,20 +234,20 @@ function TimeControls({
               if (!isNaN(v) && v >= 0 && v <= 59) setMinute(v);
               else if (e.target.value === "") setMinute(0);
             }}
-            className="w-9 h-7 rounded bg-[#F1ECE4] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#007AFF]"
+            className="w-9 h-7 rounded bg-[#F6F3EE] text-[#2B2B2B] text-sm font-semibold text-center outline-none focus:ring-1 focus:ring-[#7C2DE8]"
           />
           <button {...minDown} className="text-[#9B948B] hover:text-[#2B2B2B] text-[10px] select-none">▼</button>
         </div>
         <button
           onClick={() => setAmpm((p) => (p === "AM" ? "PM" : "AM"))}
-          className="w-10 h-7 rounded bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] text-xs font-bold flex items-center justify-center transition-colors"
+          className="w-10 h-7 rounded bg-[#7C2DE8]/10 hover:bg-[#7C2DE8]/20 text-[#7C2DE8] text-xs font-bold flex items-center justify-center transition-colors"
         >
           {ampm}
         </button>
         <div className="flex-1" />
         <button
           onClick={onConfirm}
-          className="px-3 py-1.5 rounded-lg bg-[#007AFF] hover:bg-[#0066D6] text-white text-xs font-semibold transition-colors"
+          className="px-3 py-1.5 rounded-lg bg-[#7C2DE8] hover:bg-[#6921C7] text-white text-xs font-semibold transition-colors"
         >
           {confirmLabel}
         </button>

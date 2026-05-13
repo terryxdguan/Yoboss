@@ -37,7 +37,7 @@ export function AdjustRequestCard({
   const question = kind === "weekly" ? t("weeklyPrompt") : t("goalPrompt");
 
   return (
-    <div className="border border-[#E7DED2] rounded-lg bg-[#FFFDF9] p-4 mt-2">
+    <div className="border border-[#E7DED2] rounded-lg bg-[#FFFFFF] p-4 mt-2">
       <p className="text-sm font-medium text-[#2B2B2B] mb-3">{question}</p>
       <textarea
         value={text}
@@ -52,14 +52,14 @@ export function AdjustRequestCard({
             handleSubmit();
           }
         }}
-        className="w-full resize-none border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/40 focus:border-transparent bg-[#FFFDF9] mb-3 disabled:opacity-60"
+        className="w-full resize-none border border-[#DDD3C7] rounded-lg px-3 py-2 text-sm text-[#2B2B2B] placeholder:text-[#9B948B] focus:outline-none focus:ring-2 focus:ring-[#7C2DE8]/40 focus:border-transparent bg-[#FFFFFF] mb-3 disabled:opacity-60"
       />
       {!disabled && (
         <div className="flex items-center gap-2">
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="bg-[#007AFF] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#0066D6] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="bg-[#7C2DE8] text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-[#6921C7] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t("submit")}
           </button>

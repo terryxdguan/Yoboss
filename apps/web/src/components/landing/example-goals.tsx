@@ -69,7 +69,7 @@ export const EXAMPLES: Array<{
   },
   {
     icon: Plane,
-    color: "#007AFF",
+    color: "#7C2DE8",
     title: "Plan a six-day trip",
     description: "Map the itinerary, routes, and key bookings for both cities.",
     text: "I want to plan a 6-day trip to Tokyo and Kyoto",
@@ -86,7 +86,7 @@ const EXAMPLE_KEYS: {
   { key: "marathon", icon: Timer, color: "#C9B88C" },
   { key: "language", icon: Globe, color: "#7BA8D9" },
   { key: "shop", icon: ShoppingBag, color: "#8BC5A3" },
-  { key: "trip", icon: Plane, color: "#007AFF" },
+  { key: "trip", icon: Plane, color: "#7C2DE8" },
 ];
 
 export function ExampleGoals({ onSelect, compact }: ExampleGoalsProps) {
@@ -101,7 +101,7 @@ export function ExampleGoals({ onSelect, compact }: ExampleGoalsProps) {
           <button
             key={key}
             onClick={() => onSelect(text)}
-            className={`group cursor-pointer bg-[#F1ECE4] hover:bg-[#FFFDF9] rounded-xl text-left transition-all duration-200 border border-transparent hover:border-[#E7DED2] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0 ${
+            className={`group cursor-pointer bg-[#F6F3EE] hover:bg-[#FFFFFF] rounded-xl text-left transition-all duration-200 border border-transparent hover:border-[#E7DED2] hover:shadow-[0_0_24px_0_rgba(30,34,39,0.06)] min-w-0 ${
               compact ? "px-3.5 py-2.5" : "px-5 py-3"
             }`}
           >

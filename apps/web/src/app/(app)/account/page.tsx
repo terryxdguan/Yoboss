@@ -14,9 +14,9 @@ import type { UserQuota, AiUsageRecord } from "@/lib/types/database";
 import { trackPurchase } from "@/lib/meta-pixel";
 
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  free: { bg: "bg-[#F1ECE4]", text: "text-[#6F6A64]", label: "Free" },
+  free: { bg: "bg-[#F6F3EE]", text: "text-[#6F6A64]", label: "Free" },
   basic: { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", label: "Basic" },
-  pro: { bg: "bg-[#007AFF]/10", text: "text-[#007AFF]", label: "Pro" },
+  pro: { bg: "bg-[#7C2DE8]/10", text: "text-[#7C2DE8]", label: "Pro" },
   team: { bg: "bg-[#7FB38A]/10", text: "text-[#7FB38A]", label: "Team" },
 };
 
@@ -280,7 +280,7 @@ export default function AccountPage() {
           <p className="mt-1 text-sm text-[#6F6A64]">{t("subtitle")}</p>
         </div>
         <div className="flex items-center justify-center py-20">
-          <div className="h-6 w-6 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+          <div className="h-6 w-6 border-2 border-[#7C2DE8] border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -295,7 +295,7 @@ export default function AccountPage() {
       </div>
 
       {/* Section 1: Profile Card */}
-      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
+      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-6">
         <div className="flex items-start gap-5">
           {/* Avatar */}
           <AccountAvatar src={user?.avatar} name={user?.name} />
@@ -349,10 +349,10 @@ export default function AccountPage() {
       </div>
 
       {/* Section: Subscription & Billing */}
-      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
+      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#007AFF]/10">
-            <CreditCard className="h-4 w-4 text-[#007AFF]" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7C2DE8]/10">
+            <CreditCard className="h-4 w-4 text-[#7C2DE8]" />
           </div>
           <h2 className="text-sm font-semibold text-[#2B2B2B]">{t("billingTitle")}</h2>
         </div>
@@ -422,14 +422,14 @@ export default function AccountPage() {
             {tier === "free" ? (
               <a
                 href="/pricing"
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#007AFF] text-white hover:bg-[#0066D6] transition-colors"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#7C2DE8] text-white hover:bg-[#6921C7] transition-colors"
               >
                 {t("upgradePlan")}
               </a>
             ) : (
               <a
                 href="/pricing"
-                className="px-3 py-1.5 text-xs font-medium text-[#007AFF] hover:text-[#0066D6] hover:underline transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-[#7C2DE8] hover:text-[#6921C7] hover:underline transition-colors"
               >
                 {t("viewPlans")}
               </a>
@@ -438,7 +438,7 @@ export default function AccountPage() {
               <button
                 onClick={handleManageSubscription}
                 disabled={portalLoading}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors disabled:opacity-50"
               >
                 {portalLoading ? t("loading") : t("manage")}
               </button>
@@ -454,7 +454,7 @@ export default function AccountPage() {
                 {t("usedOf", { used: formatCost(allowanceUsed), total: formatCost(monthlyAllowance) })}
               </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#F6F3EE]">
               <div
                 className={`h-full rounded-full transition-all ${progressColor(allowancePct)}`}
                 style={{ width: `${allowancePct}%` }}
@@ -462,7 +462,7 @@ export default function AccountPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#E7DED2] bg-[#FAF9F6] px-5 py-4">
+          <div className="rounded-xl border border-[#E7DED2] bg-white px-5 py-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#D4B06A]/10">
@@ -480,13 +480,13 @@ export default function AccountPage() {
               </div>
               <a
                 href="/pricing"
-                className="inline-flex justify-center rounded-lg border border-[#007AFF] px-3.5 py-1.5 text-xs font-semibold text-[#007AFF] transition-colors hover:bg-[#E6F2FF]"
+                className="inline-flex justify-center rounded-lg border border-[#7C2DE8] px-3.5 py-1.5 text-xs font-semibold text-[#7C2DE8] transition-colors hover:bg-[#F3ECFB]"
               >
                 {t("buyCredits")}
               </a>
             </div>
 
-            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#F1ECE4]">
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#F6F3EE]">
               <div
                 className={`h-full rounded-full transition-all ${progressColor(creditsPct)}`}
                 style={{ width: `${creditsPct}%` }}
@@ -497,10 +497,10 @@ export default function AccountPage() {
       </div>
 
       {/* Section 2: Usage History */}
-      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
+      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#007AFF]/10">
-            <BarChart3 className="h-4 w-4 text-[#007AFF]" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7C2DE8]/10">
+            <BarChart3 className="h-4 w-4 text-[#7C2DE8]" />
           </div>
           <h2 className="text-sm font-semibold text-[#2B2B2B]">{t("usageHistoryTitle")}</h2>
         </div>
@@ -525,7 +525,7 @@ export default function AccountPage() {
                 </thead>
                 <tbody>
                   {usage.map((r) => (
-                    <tr key={r.id} className="border-b border-[#F1ECE4] last:border-0 hover:bg-[#F6F3EE]/50 transition-colors">
+                    <tr key={r.id} className="border-b border-[#F6F3EE] last:border-0 hover:bg-[#F6F3EE]/50 transition-colors">
                       <td className="py-2.5 text-xs text-[#6F6A64]">{formatDate(r.created_at)}</td>
                       <td className="py-2.5 text-xs text-[#2B2B2B] font-medium">{ROUTE_LABELS[r.route] || r.route}</td>
                       <td className="py-2.5 text-xs text-[#9B948B]">{shortModel(r.model)}</td>
@@ -544,7 +544,7 @@ export default function AccountPage() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="px-4 py-2 text-xs font-medium text-[#007AFF] hover:bg-[#007AFF]/5 rounded-lg transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-medium text-[#7C2DE8] hover:bg-[#7C2DE8]/5 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {loadingMore ? t("loading") : t("loadMore")}
                 </button>
@@ -557,7 +557,7 @@ export default function AccountPage() {
       {/* Section: Privacy / Danger Zone — GDPR data export + account
           deletion. Lives at the bottom of the account page so it isn't
           stumbled into accidentally. */}
-      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFDF9] p-6">
+      <div className="rounded-xl border border-[#E7DED2] bg-[#FFFFFF] p-6">
         <div className="flex items-center gap-2 mb-5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D5847A]/10">
             <AlertTriangle className="h-4 w-4 text-[#D5847A]" />
@@ -576,14 +576,14 @@ export default function AccountPage() {
               type="button"
               onClick={handleExport}
               disabled={exporting}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50 shrink-0"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors disabled:opacity-50 shrink-0"
             >
               <Download className="h-3.5 w-3.5" />
               {exporting ? t("exporting") : t("exportButton")}
             </button>
           </div>
 
-          <div className="border-t border-[#F1ECE4]" />
+          <div className="border-t border-[#F6F3EE]" />
 
           {/* Delete */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -611,7 +611,7 @@ export default function AccountPage() {
           <div
             role="dialog"
             aria-label={t("deleteConfirmTitle")}
-            className="w-full max-w-md rounded-xl bg-[#FFFDF9] border border-[#E7DED2] p-6 shadow-xl"
+            className="w-full max-w-md rounded-xl bg-[#FFFFFF] border border-[#E7DED2] p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -642,7 +642,7 @@ export default function AccountPage() {
                 type="button"
                 onClick={() => setDeleteOpen(false)}
                 disabled={deleting}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F1ECE4] transition-colors disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#E7DED2] text-[#2B2B2B] hover:bg-[#F6F3EE] transition-colors disabled:opacity-50"
               >
                 {t("deleteCancel")}
               </button>
@@ -678,7 +678,7 @@ function AccountAvatar({ src, name }: { src?: string | null; name?: string }) {
   }
 
   return (
-    <div className="h-16 w-16 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-xl font-semibold shrink-0">
+    <div className="h-16 w-16 rounded-full bg-[#7C2DE8] flex items-center justify-center text-white text-xl font-semibold shrink-0">
       {(name || "U").charAt(0).toUpperCase()}
     </div>
   );

@@ -62,9 +62,9 @@ export function WelcomeBanner({ onboarding, onOpenAddTodo }: WelcomeBannerProps)
   })();
 
   return (
-    <div className="rounded-2xl bg-[#E6F2FF] border border-[#007AFF]/30 px-6 py-5 flex items-center gap-6 shadow-[0_4px_16px_rgba(0,122,255,0.10)]">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#007AFF]/15 shrink-0">
-        <Sparkles className="h-5 w-5 text-[#007AFF]" />
+    <div className="rounded-2xl bg-[#F3ECFB] border border-[#7C2DE8]/30 px-6 py-5 flex items-center gap-6 shadow-[0_4px_16px_rgba(124,45,232,0.10)]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7C2DE8]/15 shrink-0">
+        <Sparkles className="h-5 w-5 text-[#7C2DE8]" />
       </div>
       <div className="flex-1 min-w-0">
         <h3 className="text-base font-semibold text-[#2B2B2B]">{content.title}</h3>
@@ -72,7 +72,7 @@ export function WelcomeBanner({ onboarding, onOpenAddTodo }: WelcomeBannerProps)
       </div>
       <button
         onClick={content.onClick}
-        className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-semibold hover:bg-[#0066D6] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,122,255,0.35)]"
+        className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#7C2DE8] text-white text-sm font-semibold hover:bg-[#6921C7] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(124,45,232,0.35)]"
       >
         {content.ctaLabel}
         <ArrowRight className="h-4 w-4" />

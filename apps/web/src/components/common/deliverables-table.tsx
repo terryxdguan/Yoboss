@@ -29,7 +29,7 @@ function expiresAtMs(d: GoalDeliverable): number {
 
 function fileTypeIcon(fileType: string | null) {
   if (!fileType) return <File className="h-4 w-4 text-[#9B948B]" />;
-  if (fileType.startsWith("image/")) return <ImageIcon className="h-4 w-4 text-[#007AFF]" />;
+  if (fileType.startsWith("image/")) return <ImageIcon className="h-4 w-4 text-[#7C2DE8]" />;
   if (fileType.includes("pdf") || fileType.includes("document")) return <FileText className="h-4 w-4 text-[#D5847A]" />;
   return <File className="h-4 w-4 text-[#9B948B]" />;
 }
@@ -98,7 +98,7 @@ export function DeliverablesTable({ deliverables, loading }: DeliverablesTablePr
 
   return (
     <table className="w-full text-sm border-separate border-spacing-0">
-      <thead className="sticky top-0 z-[1] bg-[#FFFDF9]">
+      <thead className="sticky top-0 z-[1] bg-[#FFFFFF]">
         <tr>
           <SortHeader label={t("colCreated")} active={sortKey === "created"} dir={sortDir} onClick={() => toggleSort("created")} className="w-[140px]" />
           <SortHeader label={t("colFile")} active={sortKey === "filename"} dir={sortDir} onClick={() => toggleSort("filename")} />
@@ -110,12 +110,12 @@ export function DeliverablesTable({ deliverables, loading }: DeliverablesTablePr
           const exp = expiresAtMs(d);
           const expired = exp < now;
           return (
-            <tr key={d.id} className="border-t border-[#F1ECE4] hover:bg-[#F8F5EF] transition-colors">
-              <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F1ECE4]">
+            <tr key={d.id} className="border-t border-[#F6F3EE] hover:bg-[#F8F5EF] transition-colors">
+              <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F6F3EE]">
                 <div className="text-[#6F6A64]">{fmtDate(d.created_at)}</div>
                 <div className="text-[#9B948B] text-[11px] mt-0.5">{fmtTime(d.created_at)}</div>
               </td>
-              <td className="px-3 py-2.5 align-top border-t border-[#F1ECE4]">
+              <td className="px-3 py-2.5 align-top border-t border-[#F6F3EE]">
                 <div className="flex items-start gap-2 min-w-0">
                   <span className="shrink-0 mt-0.5">{fileTypeIcon(d.file_type)}</span>
                   {expired || !d.url ? (
@@ -125,7 +125,7 @@ export function DeliverablesTable({ deliverables, loading }: DeliverablesTablePr
                       href={d.url}
                       download={d.title}
                       title={t("downloadTitle")}
-                      className="min-w-0 flex-1 text-[#007AFF] hover:underline break-words"
+                      className="min-w-0 flex-1 text-[#7C2DE8] hover:underline break-words"
                     >
                       {d.title}
                     </a>
@@ -135,14 +135,14 @@ export function DeliverablesTable({ deliverables, loading }: DeliverablesTablePr
                       href={d.url}
                       download={d.title}
                       title={t("downloadTitle")}
-                      className="shrink-0 p-1 rounded text-[#007AFF] hover:bg-[#E6F2FF] transition-colors"
+                      className="shrink-0 p-1 rounded text-[#7C2DE8] hover:bg-[#F3ECFB] transition-colors"
                     >
                       <Download className="h-3.5 w-3.5" />
                     </a>
                   ) : null}
                 </div>
               </td>
-              <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F1ECE4]">
+              <td className="px-3 py-2.5 align-top text-xs whitespace-nowrap border-t border-[#F6F3EE]">
                 {expired ? (
                   <span className="inline-block px-1.5 py-0.5 rounded text-[#D5847A] bg-[#D5847A]/10 font-medium">
                     {t("expired")}

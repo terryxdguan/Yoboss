@@ -137,7 +137,7 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
           return (
             <div
               key={draft.id}
-              className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFDF9] px-4 py-3 hover:border-[#DDD3C7] transition-colors"
+              className="flex items-center gap-3 rounded-xl border border-[#E7DED2] bg-[#FFFFFF] px-4 py-3 hover:border-[#DDD3C7] transition-colors"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -154,7 +154,7 @@ export function GoalDraftList({ onResume, refreshKey = 0 }: GoalDraftListProps) 
               <button
                 onClick={() => handleResume(draft.id)}
                 disabled={isResuming || isDeleting}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#007AFF] text-white hover:bg-[#0066D6] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-xs font-medium rounded-xl bg-[#7C2DE8] text-white hover:bg-[#6921C7] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isResuming ? t("draftLoading") : t("draftContinue")}
               </button>

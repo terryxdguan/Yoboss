@@ -7,12 +7,12 @@ import { Flag, Calendar } from "lucide-react";
 
 export function RoadmapIllustration() {
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl bg-[#FFFDF9] px-4 py-3">
+    <div className="relative h-full w-full overflow-hidden rounded-xl bg-[#FFFFFF] px-4 py-3">
       {/* Mini "This week" calendar — visual nod to the weekly plan
           half of the body copy. */}
-      <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1 rounded-md border border-[#E7DED2] bg-[#FFFDF9] px-1.5 py-1 shadow-[0_1px_3px_rgba(30,34,39,0.06)]">
+      <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1 rounded-md border border-[#E7DED2] bg-[#FFFFFF] px-1.5 py-1 shadow-[0_1px_3px_rgba(30,34,39,0.06)]">
         <div className="flex items-center gap-1">
-          <Calendar className="h-2.5 w-2.5 text-[#007AFF]" strokeWidth={2} />
+          <Calendar className="h-2.5 w-2.5 text-[#7C2DE8]" strokeWidth={2} />
           <span className="text-[7px] font-semibold text-[#2B2B2B]">
             This week
           </span>
@@ -37,7 +37,7 @@ export function RoadmapIllustration() {
         aria-hidden
       >
         {/* Subtle baseline */}
-        <line x1="0" y1="60" x2="200" y2="60" stroke="#F1ECE4" strokeWidth="1" />
+        <line x1="0" y1="60" x2="200" y2="60" stroke="#F6F3EE" strokeWidth="1" />
         {/* Rising path */}
         <path
           d="M 10 55 Q 50 50 80 35 T 150 20 L 180 12"
@@ -47,7 +47,7 @@ export function RoadmapIllustration() {
           strokeDasharray="3 3"
         />
         {/* Milestone dots */}
-        <circle cx="10" cy="55" r="4" fill="#007AFF" />
+        <circle cx="10" cy="55" r="4" fill="#7C2DE8" />
         <circle cx="80" cy="35" r="4" fill="#7FB38A" />
         <circle cx="150" cy="20" r="3" fill="#C9A968" opacity="0.55" />
         <circle cx="180" cy="12" r="3" fill="#9B6B5C" opacity="0.4" />
