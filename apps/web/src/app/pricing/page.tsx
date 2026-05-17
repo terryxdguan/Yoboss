@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Zap } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { LanguageSwitcher } from "@/components/common/language-switcher";
 import { Wordmark } from "@/components/brand/wordmark";
 import { getBillingState } from "@/lib/db/actions";
@@ -14,6 +14,7 @@ const TIERS: Array<{
   id: TierId;
   nameKey: "tierFreeName" | "tierBasicName" | "tierProName";
   price: string;
+  originalPrice?: string;
   priceLabelKey: "tierFreePriceLabel" | "tierBasicPriceLabel" | "tierProPriceLabel";
   allowanceKey: "tierFreeAllowance" | "tierBasicAllowance" | "tierProAllowance";
   featureKeys: string[];
@@ -30,7 +31,8 @@ const TIERS: Array<{
   {
     id: "basic",
     nameKey: "tierBasicName",
-    price: "$9.99",
+    price: "$6.99",
+    originalPrice: "$9.99",
     priceLabelKey: "tierBasicPriceLabel",
     allowanceKey: "tierBasicAllowance",
     featureKeys: ["tierBasicF1", "tierBasicF2", "tierBasicF3"],
@@ -38,7 +40,8 @@ const TIERS: Array<{
   {
     id: "pro",
     nameKey: "tierProName",
-    price: "$19.99",
+    price: "$14.99",
+    originalPrice: "$19.99",
     priceLabelKey: "tierProPriceLabel",
     allowanceKey: "tierProAllowance",
     featureKeys: ["tierProF1", "tierProF2", "tierProF3", "tierProF4"],
@@ -61,9 +64,12 @@ const CREDIT_PACKS: Array<{
 export default function PricingPage() {
   const t = useTranslations("pricing");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [loading, setLoading] = useState<string | null>(null);
   const [currentTier, setCurrentTier] = useState<TierId>("free");
   const [hasActiveSub, setHasActiveSub] = useState(false);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
   const [billingLoaded, setBillingLoaded] = useState(false);
   // signedIn is determined by whether getBillingState resolves; on the
   // public landing-style entry to this page we render sign-up CTAs
@@ -86,6 +92,8 @@ export default function PricingPage() {
         // live subscription for this user, so plan changes must go through
         // the portal rather than creating a new checkout session.
         setHasActiveSub(!!q.stripe_subscription_id && tier !== "free");
+        setCancelAtPeriodEnd(!!q.cancel_at_period_end);
+        setPeriodEnd(q.subscription_current_period_end ?? null);
       } catch {
         // Unexpected DB / network failure — fall back to logged-out CTAs.
         setSignedIn(false);
@@ -150,20 +158,32 @@ export default function PricingPage() {
       }
       return { label: t("ctaSignupTier", { tier: tierName }), disabled: false, href: "/" };
     }
-    if (tierId === currentTier) {
-      return { label: t("ctaCurrent"), disabled: true };
-    }
-
     const portalLoadingLabel = loading === "portal" ? tCommon("loading") : null;
 
-    // Free user (no active subscription) paths
-    if (!hasActiveSub) {
-      if (tierId === "free") {
-        // Free → Free never happens (caught by "currentTier" check above)
-        // but guard against the edge case of data inconsistency.
+    // The user's current tier card is also the action hub for that tier:
+    // Free users see a passive "Current Plan" label; paid users get the
+    // Cancel / Resume entry point here instead of on the Free card, which
+    // is otherwise tier-agnostic.
+    if (tierId === currentTier) {
+      if (!hasActiveSub) {
         return { label: t("ctaCurrent"), disabled: true };
       }
-      // Free → Basic/Pro: normal checkout flow
+      if (cancelAtPeriodEnd) {
+        return {
+          label: portalLoadingLabel ?? t("ctaResume"),
+          disabled: loading === "portal",
+          onClick: openPortal,
+        };
+      }
+      return {
+        label: portalLoadingLabel ?? t("ctaCancel"),
+        disabled: loading === "portal",
+        onClick: openPortal,
+      };
+    }
+
+    // Free user (no active subscription) on a paid card → checkout
+    if (!hasActiveSub) {
       return {
         label: loading === tierId ? tCommon("loading") : t("ctaUpgradeTo", { tier: tierName }),
         disabled: loading === tierId,
@@ -171,14 +191,11 @@ export default function PricingPage() {
       };
     }
 
-    // Paid user paths — all plan changes go through the Stripe portal,
-    // but the label should describe the action, not the tool.
+    // Paid user looking at a non-current tier card.
+    // Free card stays purely descriptive — no subscription state, no cancel
+    // action (that lives on the current paid card above).
     if (tierId === "free") {
-      return {
-        label: portalLoadingLabel ?? t("ctaCancel"),
-        disabled: loading === "portal",
-        onClick: openPortal,
-      };
+      return { label: t("ctaFreePlan"), disabled: true };
     }
     return {
       label: portalLoadingLabel ?? t("ctaSwitchTo", { tier: tierName }),
@@ -236,9 +253,16 @@ export default function PricingPage() {
                 }`}
               >
                 {isCurrent && (
-                  <span className="absolute -top-3 left-6 inline-block text-[10px] font-bold tracking-[0.12em] uppercase text-white bg-[#7C2DE8] px-2.5 py-1 rounded-full shadow-brand">
-                    {t("currentPlan")}
-                  </span>
+                  <div className="absolute -top-3 left-6 flex items-center gap-1.5">
+                    <span className="inline-block text-[10px] font-bold tracking-[0.12em] uppercase text-white bg-[#7C2DE8] px-2.5 py-1 rounded-full shadow-brand">
+                      {t("currentPlan")}
+                    </span>
+                    {cancelAtPeriodEnd && (
+                      <span className="inline-block text-[10px] font-bold tracking-[0.12em] uppercase text-[#C99442] bg-[#FAF2E0] border border-[#E8D5A5] px-2.5 py-1 rounded-full">
+                        {t("canceling")}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {!isCurrent && tier.highlight && (
                   <span className="inline-block text-xs font-semibold text-white bg-[#7C2DE8] px-2 py-0.5 rounded-full mb-3">
@@ -246,11 +270,34 @@ export default function PricingPage() {
                   </span>
                 )}
                 <h2 className="text-2xl font-bold text-[#2B2B2B]">{t(tier.nameKey)}</h2>
-                <div className="mt-2 mb-1">
+                <div className="mt-2 mb-1 flex items-baseline flex-wrap gap-x-2">
                   <span className="text-4xl font-bold text-[#2B2B2B]">{tier.price}</span>
-                  <span className="text-sm text-[#6F6A64] ml-2">{t(tier.priceLabelKey)}</span>
+                  {tier.originalPrice && (
+                    <span className="text-lg text-[#9B948B] line-through">
+                      {tier.originalPrice}
+                    </span>
+                  )}
+                  <span className="text-sm text-[#6F6A64]">{t(tier.priceLabelKey)}</span>
                 </div>
-                <p className="text-sm font-semibold text-[#7FB38A] mb-6">{t(tier.allowanceKey)}</p>
+                {tier.originalPrice && (
+                  <p className="text-xs font-semibold text-[#C99442] mb-1">
+                    {t("launchPrice")}
+                  </p>
+                )}
+                <p className="text-sm font-semibold text-[#7FB38A]">{t(tier.allowanceKey)}</p>
+                {isCurrent && cancelAtPeriodEnd && periodEnd ? (
+                  <p className="text-xs text-[#9B948B] mt-1 mb-6">
+                    {t("ctaCancelsOn", {
+                      date: new Date(periodEnd).toLocaleDateString(locale, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }),
+                    })}
+                  </p>
+                ) : (
+                  <div className="mb-6" />
+                )}
                 <ul className="space-y-2 mb-8">
                   {tier.featureKeys.map((fk) => (
                     <li key={fk} className="flex items-start gap-2 text-sm text-[#2B2B2B]">
