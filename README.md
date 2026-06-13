@@ -1,8 +1,22 @@
 # YoBoss
 
-AI goal coaching web app. Describe a goal, get a phased roadmap, a weekly
-plan, and a small team of digital "employees" that plan and ship work
-alongside you.
+**You set the goal. Your team makes it happen.**
+
+YoBoss turns any goal into a phased roadmap, a weekly plan, and real work
+shipped by a small team of digital "employees" — an editor, designer,
+researcher, and growth specialist staffed to your goal. No coaching, no
+empty motivation: just the path, the team, and deliverables you can ship
+today.
+
+- **Phased roadmap** — break any ambition into phases with timelines,
+  deliverables, and milestones you can adjust as you go.
+- **Your team** — specialists ready on day one that handle the work and
+  remember your roadmap, this week's plan, and what you shipped yesterday.
+- **Real output** — drafts, plans, decks, outreach lists, even generated
+  files (your team writes the code, runs it, and hands you the file).
+
+Pay only for what you use: a free tier for casual use, with credits to top
+up — no surprise bills.
 
 Live: [yoboss.ai](https://yoboss.ai)
 
@@ -47,8 +61,8 @@ shared code; today everything ships from `apps/web`.
 Prereqs: Node 20+, npm, a Supabase project, an Anthropic API key.
 
 ```bash
-git clone https://github.com/terryxdguan/goalweek.git
-cd goalweek
+git clone https://github.com/terryxdguan/Yoboss.git
+cd Yoboss
 npm install
 cp apps/web/.env.local.example apps/web/.env.local
 # fill in the keys — see "Environment" below
