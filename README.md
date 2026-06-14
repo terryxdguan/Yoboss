@@ -163,5 +163,4 @@ matching environment.
 
 ## License
 
-Source-available; no public license granted yet. Contact the repo owner
-before reuse.
+Released under the [MIT License](LICENSE).
